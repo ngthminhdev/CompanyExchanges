@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
+import { redisStore } from 'cache-manager-redis-store';
 
 @Injectable()
 export class ConfigServiceProvider {
@@ -11,7 +12,8 @@ export class ConfigServiceProvider {
       port: parseInt(process.env.MSSQL_PORT),
       username: process.env.MSSQL_USERNAME,
       password: process.env.MSSQL_PASSWORD,
-      database: process.env.MSSQL_DB_NAME,
+      schema: 'dbo',
+      // database: process.env.MSSQL_DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       options: { encrypt: false },
       synchronize: true,
@@ -26,5 +28,13 @@ export class ConfigServiceProvider {
         expiresIn: parseInt(process.env.EXPIRE_TIME),
       },
     };
+  }
+
+  async createRedisOptions(): Promise<any> {
+    return {
+      store: await redisStore({
+        url: process.env.REDIS_URL,
+      })
+    }
   }
 }

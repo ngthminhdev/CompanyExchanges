@@ -51,7 +51,7 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
-    console.log(`Server is running at ${process.env.SERVER_PORT}`);
+    console.log(`Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT}`);
   });
 }
 
