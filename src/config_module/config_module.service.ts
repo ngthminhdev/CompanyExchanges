@@ -34,7 +34,8 @@ export class ConfigServiceProvider {
     return {
       store: await redisStore({
         url: process.env.REDIS_URL,
-      })
-    }
+      }),
+      ttl: 43200,
+    };
   }
 }

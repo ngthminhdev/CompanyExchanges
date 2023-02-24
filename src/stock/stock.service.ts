@@ -2,6 +2,7 @@ import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { DataSource } from 'typeorm';
+import { RedisKeys } from '../enums/redis-keys.enum';
 import { CatchException } from '../exceptions/common.exception';
 import { MarketBreadthInterface } from '../interfaces/market-breadth.interface';
 import { MarketVolatilityInterface } from '../interfaces/market-volatility.interfaces';
@@ -12,7 +13,7 @@ import { MarketVolatilityResponse } from '../responses/MarketVolatiliy.response'
 export class StockService {
   constructor(
     @Inject(CACHE_MANAGER)
-    private readonly manager: Cache,
+    private readonly redis: Cache,
     @InjectDataSource() private readonly db: DataSource,
   ) {}
 
@@ -51,7 +52,13 @@ export class StockService {
   //Độ rộng ngành
   async getMarketBreadth() {
     try {
-      const result: MarketBreadthInterface[] = await this.db.query(`
+      //Check caching data is existed
+      const redisData: string = await this.redis.get(RedisKeys.MarketBreadth);
+      if (redisData) return redisData;
+
+      const result: MarketBreadthInterface[] =
+        new MarketBreadthRespone().mapToList(
+          await this.db.query(`
       SELECT
       company.LV2 AS industry,
       SUM(
@@ -103,9 +110,12 @@ export class StockService {
     WHERE price.date_time >= DATEADD(day, -1, CAST(GETDATE() AS date))
       AND price.date_time < CAST(GETDATE() AS date)
     GROUP BY company.LV2    
-    `);
-
-      return new MarketBreadthRespone().mapToList(result);
+    `),
+        );
+      
+      //Caching data for the next request
+      await this.redis.set(RedisKeys.MarketBreadth, result);
+      return result;
     } catch (error) {
       throw new CatchException(error);
     }
