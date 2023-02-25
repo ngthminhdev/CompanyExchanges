@@ -4,7 +4,8 @@ services:
     image: ngthminhdev/stock-docker-hub:${TAG}
     deploy:
       replicas: 1
-    port: '3001:3001'
+    ports: 
+      - '3001:3001'
     environment:
       - CONFIG_SERVER_HOST=192.168.15.181
       - CONFIG_SERVER_PORT=3000
@@ -21,4 +22,4 @@ services:
       - CONFIG_EXPIRE_TIME=3600
       - CONFIG_NODEMAILER_USER=minhcloudinary@gmail.com
       - CONFIG_NODEMAILER_PASSWORD=wenqafmrinypywot
-      - CONFIG_REDIS_URL=redis://52.221.246.188:6379
+      - CONFIG_REDIS_URL=redis://:redis_demo_password@52.221.246.188:6379
