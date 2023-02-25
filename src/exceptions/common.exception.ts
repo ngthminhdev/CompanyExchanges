@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {HttpException, HttpStatus, Logger} from '@nestjs/common';
 
 export class ExceptionResponse extends HttpException {
   constructor(status?: HttpStatus, message?: string, data?: any) {
@@ -8,7 +8,7 @@ export class ExceptionResponse extends HttpException {
         message: message ? message : 'Dữ liệu không hợp lệ!',
         data: data || null,
       },
-      (status = HttpStatus.OK),
+      HttpStatus.OK,
     );
   }
 }

@@ -1,15 +1,5 @@
-import {
-    Column,
-    Entity,
-    Index,
-    JoinColumn,
-    OneToOne,
-    PrimaryGeneratedColumn,
-} from 'typeorm';
-import { CityEntity } from '../../models/city.entity';
-import { DistrictEntity } from '../../models/district.entity';
-import { WardEntity } from '../../models/ward.entity';
-import { BaseModel } from '../../models/base.entity';
+import {Column, Entity, Index, PrimaryGeneratedColumn,} from 'typeorm';
+import {BaseModel} from '../../models/base.entity';
 
 @Entity({
     database:'user',

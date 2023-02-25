@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsInt } from 'class-validator';
+import {ApiProperty} from '@nestjs/swagger';
+import {Transform} from 'class-transformer';
+import {IsInt, IsNotEmpty, IsString} from 'class-validator';
 
 export class AuthDto {
   @ApiProperty({

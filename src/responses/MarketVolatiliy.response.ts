@@ -1,5 +1,5 @@
-import { ApiProperty, ApiResponse, ApiResponseProperty, PartialType } from "@nestjs/swagger";
-import { BaseResponse } from "../utils/utils.response";
+import {ApiProperty, PartialType} from "@nestjs/swagger";
+import {BaseResponse} from "../utils/utils.response";
 
 
 export class MarketVolatilityResponse {

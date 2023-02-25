@@ -11,7 +11,7 @@ import {
 import { UserResponse } from '../responses/UserResponse';
 import { UserEntity } from '../user/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
-import { ReigsterDto } from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
 import { AuthEntity } from './entities/auth.entity';
 
 @Injectable()
@@ -37,7 +37,7 @@ export class AuthService {
     };
   }
 
-  async register(data: ReigsterDto) {
+  async register(data: RegisterDto) {
     try {
       const user = await this.userRepo.findOne({
         where: { email: data.email },
@@ -85,7 +85,6 @@ export class AuthService {
         );
       console.log(userByEmail);
       delete userByEmail.password;
-      // userByEmail.date_of_birth = UtilCommonTemplate.toDate(userByEmail.date_of_birth);
 
       const accessToken: string = this.generateAccessToken(userByEmail);
       const refreshToken: string = this.generateRefreshToken(userByEmail);

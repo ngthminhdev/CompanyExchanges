@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { BaseResponse } from '../utils/utils.response';
 import { Response } from 'express';
 import { LoginDto } from './dto/login.dto';
-import { ReigsterDto } from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
 import { UserResponseSwagger } from '../responses/UserResponse';
 
 @ApiTags('Auth - API')
@@ -15,9 +15,9 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register',
   })
-  @ApiBody({ type: ReigsterDto })
+  @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: HttpStatus.CREATED, type: BaseResponse })
-  async register(@Body() body: any, @Res() res: Response) {
+  async register(@Body() body: RegisterDto, @Res() res: Response) {
     const data = await this.authService.register(body);
     return res
       .status(HttpStatus.CREATED)

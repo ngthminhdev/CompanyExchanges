@@ -1,18 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import {ApiProperty} from '@nestjs/swagger';
+import {Transform, Type} from 'class-transformer';
 import {
+    IsDate,
     IsEmail,
+    IsInt,
+    IsNotEmpty,
+    IsPhoneNumber,
     IsString,
     Matches,
     MaxLength,
     MinLength,
-    IsNotEmpty,
-    IsPhoneNumber,
-    IsInt,
-    IsDate,
 } from 'class-validator';
 
-export class ReigsterDto {
+export class RegisterDto {
     @ApiProperty({
         type: String,
         example: 'nguyenvana@gmail.com',
@@ -30,7 +30,7 @@ export class ReigsterDto {
     @IsString()
     @MinLength(8)
     @MaxLength(30)
-    @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
         message: 'password too weak',
     })
     password: string;
