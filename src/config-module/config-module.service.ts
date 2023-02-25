@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { redisStore } from 'cache-manager-redis-store';
 
 @Injectable()
@@ -15,8 +15,10 @@ export class ConfigServiceProvider {
       schema: 'dbo',
       // database: process.env.MSSQL_DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      options: { encrypt: false },
+      // entities: [CityEntity, DistrictEntity, WardEntity, UserEntity, AuthEntity],
+      autoLoadEntities: true,
       synchronize: true,
+      options: { encrypt: false },
       // logging: true,
     };
   }
@@ -35,7 +37,7 @@ export class ConfigServiceProvider {
       store: await redisStore({
         url: process.env.REDIS_URL,
       }),
-      ttl: 43200,
+      ttl: 1800,
     };
   }
 }

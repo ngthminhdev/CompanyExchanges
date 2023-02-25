@@ -10,11 +10,12 @@ import { BaseModel } from '../../models/base.entity';
 import { UserEntity } from '../../user/entities/user.entity';
 
 @Entity({
+    database: 'user',
     name: 'auth',
 })
 export class AuthEntity extends BaseModel {
     @PrimaryGeneratedColumn('increment', {
-        type: 'integer',
+        type: 'int',
     })
     auth_id: number;
 
@@ -27,21 +28,24 @@ export class AuthEntity extends BaseModel {
 
     @Index()
     @Column({
-        type: 'text',
+        type: 'nvarchar',
+        length: '610',
         default: '',
     })
     access_token: string;
 
     @Index()
     @Column({
-        type: 'text',
+        type: 'nvarchar',
+        length: '610',
         default: '',
     })
     refresh_token: string;
 
     @Index()
     @Column({
-        type: 'text',
+        type: 'nvarchar',
+        length: '610',
         default: '',
     })
     verified_token: string;

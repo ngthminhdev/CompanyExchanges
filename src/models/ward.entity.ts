@@ -2,6 +2,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { BaseModel } from './base.entity';
 
 @Entity({
+  database: 'user',
   name: 'ward',
 })
 export class WardEntity extends BaseModel {
@@ -17,7 +18,7 @@ export class WardEntity extends BaseModel {
   ward_id: number;
 
   @Column({
-    type: 'text',
+    type: 'varchar',
     default: '',
   })
   name: string;
