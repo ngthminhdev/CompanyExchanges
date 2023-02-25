@@ -3,8 +3,11 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModuleModule } from './config_module/config_module.module';
-import { ConfigServiceProvider } from './config_module/config_module.service';
+import { ConfigModuleModule } from './config-module/config-module.module';
+import { ConfigServiceProvider } from './config-module/config-module.service';
+import { CityEntity } from './models/city.entity';
+import { DistrictEntity } from './models/district.entity';
+import { WardEntity } from './models/ward.entity';
 import { StockModule } from './stock/stock.module';
 import { UserModule } from './user/user.module';
 
@@ -20,7 +23,7 @@ import { UserModule } from './user/user.module';
         config.createTypeOrmOptions(),
       inject: [ConfigServiceProvider],
     }),
-    // TypeOrmModule.forFeature([CityEntity, DistrictEntity, WardEntity]),
+    TypeOrmModule.forFeature([CityEntity, DistrictEntity, WardEntity]),
 
     //jwt
     JwtModule.registerAsync({
@@ -39,8 +42,8 @@ import { UserModule } from './user/user.module';
     //aplication modules
     ConfigModuleModule,
     StockModule,
-    // AuthModule,
-    // UserModule,
+    AuthModule,
+    UserModule,
   ]
 })
 export class AppModule {}
