@@ -82,13 +82,6 @@ export class UserResponse {
   })
   access_token: string;
 
-  @ApiResponseProperty({
-    type: String,
-    example:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-  })
-  refresh_token: string;
-
   constructor(data?: UserResponse | any) {
     this.user_id = data?.user_id ?? 0;
     this.email = data?.email ?? '';
@@ -102,7 +95,6 @@ export class UserResponse {
     this.ward = data?.ward ?? 0;
     this.address = data?.address ?? '';
     this.access_token = data?.access_token ?? '';
-    this.refresh_token = data?.refresh_token ?? '';
   }
 
   public mapToList(data?: UserResponse[] | any[]): UserResponse[] {
@@ -116,8 +108,7 @@ export class UserResponse {
 
 export class UserResponseSwagger extends PartialType(BaseResponse) {
   @ApiResponseProperty({
-    type: Number,
-    example: 1,
+    type: UserResponse,
   })
   data: UserResponse;
 }
