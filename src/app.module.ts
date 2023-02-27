@@ -46,19 +46,19 @@ import { KafkaModule } from './kafka/kafka.module';
     }),
 
     //kakfa
-    KafkaConfigModule.registerAsync({
-      imports: [ConfigModuleModule],
-      useFactory: (config: ConfigServiceProvider) =>
-        ClientProxyFactory.create(config.createKafkaConfig()),
-      inject: [ConfigServiceProvider],
-    }),
+    // KafkaConfigModule.registerAsync({
+    //   imports: [ConfigModuleModule],
+    //   useFactory: (config: ConfigServiceProvider) =>
+    //     ClientProxyFactory.create(config.createKafkaConfig()),
+    //   inject: [ConfigServiceProvider],
+    // }),
 
     //aplication modules
     ConfigModuleModule,
     StockModule,
     AuthModule,
     UserModule,
-    KafkaModule,
+    // KafkaModule,
   ],
 })
 export class AppModule {}
