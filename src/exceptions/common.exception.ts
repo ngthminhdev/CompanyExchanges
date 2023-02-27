@@ -1,4 +1,4 @@
-import {HttpException, HttpStatus, Logger} from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 
 export class ExceptionResponse extends HttpException {
   constructor(status?: HttpStatus, message?: string, data?: any) {

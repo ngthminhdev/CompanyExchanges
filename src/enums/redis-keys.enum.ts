@@ -1,3 +1,3 @@
 export enum RedisKeys {
-    MarketBreadth = 'market-breadth',
+  MarketBreadth = 'market-breadth',
 }

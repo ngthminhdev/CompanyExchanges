@@ -9,7 +9,7 @@ exports.__esModule = true;
 exports.ConfigModuleModule = void 0;
 var common_1 = require("@nestjs/common");
 var config_module_service_1 = require("./config_module.service");
-var constanst_1 = require("../constanst");
+var constanst_1 = require("../constants");
 var ConfigModuleModule = /** @class */ (function () {
     function ConfigModuleModule() {
     }

@@ -12,26 +12,26 @@ export class StockController {
   constructor(private readonly stockService: StockService) {}
 
   @Get('market-volatility')
-  @ApiOperation({summary: 'Danh sách biến động thị trường'})
-  @ApiOkResponse({type: MarketVolatilitySwagger})
+  @ApiOperation({ summary: 'Danh sách biến động thị trường' })
+  @ApiOkResponse({ type: MarketVolatilitySwagger })
   async getMarketVolatility(@Res() res: Response) {
     const data = await this.stockService.getMarketVolatility();
-    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
   @Get('market-liquidity')
-  @ApiOperation({summary: 'Thanh khoản thị trường'})
+  @ApiOperation({ summary: 'Thanh khoản thị trường' })
   // @ApiOkResponse({type: MarketVolatilitySwagger})
   async getMarketLiquidity(@Res() res: Response) {
     const data = await this.stockService.getMarketLiquidity();
-    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
   @Get('market-breadth')
-  @ApiOperation({summary: 'Độ rộng ngành'})
-  @ApiOkResponse({type: MarketBreadthSwagger})
+  @ApiOperation({ summary: 'Độ rộng ngành' })
+  @ApiOkResponse({ type: MarketBreadthSwagger })
   async getMarketBreadth(@Res() res: Response) {
     const data = await this.stockService.getMarketBreadth();
-    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

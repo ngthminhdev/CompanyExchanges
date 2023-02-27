@@ -112,7 +112,7 @@ export class StockService {
     GROUP BY company.LV2    
     `),
         );
-      
+
       //Caching data for the next request
       await this.redis.set(RedisKeys.MarketBreadth, result);
       return result;

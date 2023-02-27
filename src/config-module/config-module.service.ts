@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { redisStore } from 'cache-manager-redis-store';
+import { KafkaOptions, Transport } from '@nestjs/microservices';
+import { Partitioners } from 'kafkajs';
 
 @Injectable()
 export class ConfigServiceProvider {
@@ -38,6 +40,35 @@ export class ConfigServiceProvider {
         url: process.env.REDIS_URL,
       }),
       ttl: 1800,
+    };
+  }
+
+  createKafkaConfig(): KafkaOptions {
+    return {
+      transport: Transport.KAFKA,
+      options: {
+        client: {
+          brokers: [`${process.env.KAFKA_HOST}:${process.env.KAFKA_PORT}`],
+          clientId: process.env.KAFKA_CLIENT_ID,
+          // logCreator: () => () => {},
+        },
+
+        consumer: {
+          groupId: process.env.KAFKA_GROUP_ID,
+          // allowAutoTopicCreation: true,
+          readUncommitted: true,
+          heartbeatInterval: 59 * 1000,
+          sessionTimeout: 60 * 1000,
+        },
+        producer: {
+          createPartitioner: Partitioners.LegacyPartitioner,
+        },
+        // producerOnlyMode: true,
+        subscribe: { fromBeginning: false },
+        send: {
+          acks: 0,
+        },
+      },
     };
   }
 }
