@@ -1,5 +1,6 @@
 import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { KafkaModule as KafkaConfigModule } from 'nestjs-config-kafka';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +11,8 @@ import { DistrictEntity } from './models/district.entity';
 import { WardEntity } from './models/ward.entity';
 import { StockModule } from './stock/stock.module';
 import { UserModule } from './user/user.module';
+import { ClientProxyFactory } from '@nestjs/microservices';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -35,7 +38,18 @@ import { UserModule } from './user/user.module';
     //redis
     CacheModule.registerAsync({
       imports: [ConfigModuleModule],
-      useFactory: async (config: ConfigServiceProvider) => {return await config.createRedisOptions()} , isGlobal: true,
+      useFactory: async (config: ConfigServiceProvider) => {
+        return await config.createRedisOptions();
+      },
+      isGlobal: true,
+      inject: [ConfigServiceProvider],
+    }),
+
+    //kakfa
+    KafkaConfigModule.registerAsync({
+      imports: [ConfigModuleModule],
+      useFactory: (config: ConfigServiceProvider) =>
+        ClientProxyFactory.create(config.createKafkaConfig()),
       inject: [ConfigServiceProvider],
     }),
 
@@ -44,6 +58,7 @@ import { UserModule } from './user/user.module';
     StockModule,
     AuthModule,
     UserModule,
-  ]
+    KafkaModule,
+  ],
 })
 export class AppModule {}

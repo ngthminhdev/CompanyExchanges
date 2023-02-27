@@ -13,6 +13,7 @@ import { ExceptionResponse } from './exceptions/common.exception';
 import { UtilCommonTemplate } from './utils/utils.common';
 import { ValidationFilter } from './filters/validation.filter';
 import { HttpLogger } from './interceptors/http-logger';
+import { CONFIG_SERVICE } from './constants';
 
 async function bootstrap() {
   const logger = new Logger('AppLogger');
@@ -50,10 +51,15 @@ async function bootstrap() {
   );
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
+
+  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+
+  await app.startAllMicroservices().catch((e) => console.log(e));
+
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
-    // console.log(__dirname + );
-    
-    console.log(`Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT}`);
+    console.log(
+      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT}`,
+    );
   });
 }
 
