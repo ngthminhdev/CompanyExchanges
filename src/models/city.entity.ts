@@ -18,7 +18,7 @@ export class CityEntity extends BaseModel {
   country_id: number;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     default: '',
   })
   name: string;

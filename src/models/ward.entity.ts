@@ -18,7 +18,7 @@ export class WardEntity extends BaseModel {
   ward_id: number;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     default: '',
   })
   name: string;

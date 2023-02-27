@@ -18,7 +18,7 @@ export class DistrictEntity extends BaseModel {
   city_id: number;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     default: '',
   })
   name: string;
