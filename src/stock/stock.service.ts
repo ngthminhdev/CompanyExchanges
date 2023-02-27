@@ -56,6 +56,9 @@ export class StockService {
       const redisData: string = await this.redis.get(RedisKeys.MarketBreadth);
       if (redisData) return redisData;
 
+      const latest_date = await this.db.query(`
+        SELECT TOP(1) yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
+      `);
       const result: MarketBreadthInterface[] =
         new MarketBreadthRespone().mapToList(
           await this.db.query(`
@@ -104,13 +107,13 @@ export class StockService {
     JOIN (
       SELECT ticker, close_price, ref_price, high, low
       FROM PHANTICH.dbo.database_mkt 
-      WHERE date_time = DATEADD(day, -2, CAST(GETDATE() AS date))
+      WHERE date_time = DATEADD(day, -2, @0)
     ) AS prev_price 
       ON company.TICKER = prev_price.ticker
-    WHERE price.date_time >= DATEADD(day, -1, CAST(GETDATE() AS date))
-      AND price.date_time < CAST(GETDATE() AS date)
-    GROUP BY company.LV2    
-    `),
+    WHERE price.date_time >= DATEADD(day, -1, @0)
+      AND price.date_time < @0
+    GROUP BY company.LV2
+    `, [latest_date[0].yyyymmdd]),
         );
 
       //Caching data for the next request
