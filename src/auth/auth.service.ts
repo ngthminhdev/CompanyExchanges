@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {CACHE_MANAGER, HttpStatus, Inject, Injectable} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -13,6 +13,10 @@ import { UserEntity } from '../user/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthEntity } from './entities/auth.entity';
+import { Cache } from "cache-manager";
+import {RedisKeys} from "../enums/redis-keys.enum";
+import {Response} from "express";
+import {CommonEnum} from "../enums/common.enum";
 
 @Injectable()
 export class AuthService {
@@ -22,6 +26,8 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    @Inject(CACHE_MANAGER)
+    private readonly redis: Cache
   ) {}
 
   userSign(user: UserEntity) {
@@ -65,7 +71,7 @@ export class AuthService {
   /**
    * Tạo thêm auth Record sau khi user đăng nhập
    */
-  async login(loginDto: LoginDto): Promise<UserResponse> {
+  async login(loginDto: LoginDto, res: Response): Promise<UserResponse> {
     try {
       //logic
       const { email, password } = loginDto;
@@ -83,7 +89,6 @@ export class AuthService {
           HttpStatus.BAD_REQUEST,
           'password is not match',
         );
-      console.log(userByEmail);
       delete userByEmail.password;
 
       const accessToken: string = this.generateAccessToken(userByEmail);
@@ -93,6 +98,14 @@ export class AuthService {
         { user: { user_id: userByEmail.user_id } },
         { access_token: accessToken, refresh_token: refreshToken },
       );
+
+      await this.redis.set(`${RedisKeys.RefreshTokenStorage}:${userByEmail.user_id}`, refreshToken);
+      res.cookie(CommonEnum.RefreshToken, refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        path: '/',
+      });
 
       return new UserResponse({
         ...userByEmail,
