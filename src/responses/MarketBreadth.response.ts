@@ -45,6 +45,27 @@ export class MarketBreadthRespone {
   })
   decrease: number;
 
+  @ApiProperty({
+    type: 'float',
+    description: '% Giá giảm ngày',
+    example: 99.99,
+  })
+  day_change_percent: number;
+
+  @ApiProperty({
+    type: 'float',
+    description: '% Giá giảm tuần',
+    example: 99.99,
+  })
+  week_change_percent: number;
+
+  @ApiProperty({
+    type: 'float',
+    description: '% Giá giảm tháng',
+    example: 99.99,
+  })
+  month_change_percent: number;
+
   constructor(data?: MarketBreadthInterface) {
     const total =
       data?.equal + data?.high + data?.low + data?.increase + data?.decrease;
@@ -54,6 +75,9 @@ export class MarketBreadthRespone {
     this.low = this.precent(data?.low, total) || 0;
     this.increase = this.precent(data?.increase, total) || 0;
     this.decrease = this.precent(data?.decrease, total) || 0;
+    this.day_change_percent = data?.day_change_percent || 0;
+    this.week_change_percent = data?.week_change_percent || 0;
+    this.month_change_percent = data?.month_change_percent || 0;
   }
 
   public mapToList(data?: MarketBreadthInterface[]) {

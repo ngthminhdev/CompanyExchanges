@@ -7,9 +7,11 @@ import {MarketVolatilityInterface} from '../interfaces/market-volatility.interfa
 import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
 import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
-import {MarketBreadthInterface} from "../interfaces/market-breadth.interface";
+import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface";
 import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
+import {BooleanEnum} from "../enums/common.enum";
+import {UtilCommonTemplate} from "../utils/utils.common";
 
 @Injectable()
 export class StockService {
@@ -53,10 +55,10 @@ export class StockService {
     }
 
     //Độ rộng ngành
-    async getMarketBreadth() {
+    async getMarketBreadth(): Promise<MarketBreadthRespone[]> {
         try {
             //Check caching data is existed
-            const redisData: string = await this.redis.get(RedisKeys.MarketBreadth);
+            const redisData: any = await this.redis.get(RedisKeys.MarketBreadth);
             if (redisData) return redisData;
 
             //Get 2 latest date
@@ -64,65 +66,83 @@ export class StockService {
                 `SELECT DISTINCT TOP 2 yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
             `);
 
+            const query = `
+                SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
+                FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
+                ON company.TICKER = p.ticker WHERE p.date_time = @0
+            `;
+            const marketCapQuery = (type: string, amount: number): string => `
+                SELECT c.LV2 AS industry, SUM(p.mkt_cap) AS total_market_cap
+                FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
+                ON p.ticker = c.TICKER WHERE p.date_time = DATEADD(${type}, ${amount}, @0) GROUP BY c.LV2
+            `;
 
-              const result: MarketBreadthInterface[] =
-                new MarketBreadthRespone().mapToList(
-                  await this.db.query(`
-              SELECT
-              company.LV2 AS industry,
-              SUM(
-                CASE WHEN price.close_price = prev_price.ref_price
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS equal,
-              SUM(
-                CASE WHEN price.close_price >= prev_price.high
-                  AND price.close_price != prev_price.ref_price
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS high,
-              SUM(
-                CASE WHEN price.close_price <= prev_price.low
-                  AND price.close_price != prev_price.ref_price
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS low,
-              SUM(
-                CASE WHEN price.close_price > prev_price.ref_price
-                  AND price.close_price < prev_price.high
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS increase,
-              SUM(
-                CASE WHEN price.close_price < prev_price.ref_price
-                  AND price.close_price > prev_price.low
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS decrease
-            FROM (
-              SELECT TICKER, LV2
-              FROM PHANTICH.dbo.ICBID
-            ) company
-            JOIN PHANTICH.dbo.database_mkt price
-              ON company.TICKER = price.ticker
-            JOIN (
-              SELECT ticker, close_price, ref_price, high, low
-              FROM PHANTICH.dbo.database_mkt
-              WHERE date_time = @1
-            ) AS prev_price
-              ON company.TICKER = prev_price.ticker
-            WHERE price.date_time = @0
-            GROUP BY company.LV2
-            `, [selectedDate[0].yyyymmdd, selectedDate[1].yyyymmdd]));
+            //Sum total_market_cap by industry (ICBID.LV2)
+            const marketCapToday: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
+            const marketCapYesterday: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
+            const marketLastWeek: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('week', -1),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
+            const marketLastMonth: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('month', -1),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
+
+            //Calculate % change total_market_cap
+            const dayChange = this.getChangePercent(marketCapToday, marketCapYesterday);
+            const weekChange = this.getChangePercent(marketCapToday, marketLastWeek);
+            const monthChange = this.getChangePercent(marketCapToday, marketLastMonth);
+
+            //Get data of the 1st day and the 2nd day
+            const dataToday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[0].yyyymmdd]);
+            const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[1].yyyymmdd]);
+
+            //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
+            const result: any = [];
+            for await (const item of dataToday) {
+                const yesterdayItem = dataYesterday.find(i => i.ticker = item.ticker);
+
+                const change = item.ref_price - yesterdayItem.ref_price;
+                const isIncrease = item.close_price > yesterdayItem.ref_price;
+                const isDecrease = item.close_price < yesterdayItem.ref_price;
+                const isHigh = item.close_price >= yesterdayItem.high;
+                const isLow = item.close_price <= yesterdayItem.low;
+
+                result.push({
+                    industry: item.industry,
+                    equal: change === BooleanEnum.False ? BooleanEnum.True : BooleanEnum.False,
+                    increase: isIncrease && !isHigh ? BooleanEnum.True : BooleanEnum.False,
+                    decrease: isDecrease && !isLow ? BooleanEnum.True : BooleanEnum.False,
+                    high: isHigh ? BooleanEnum.True : BooleanEnum.False,
+                    low: isLow ? BooleanEnum.True : BooleanEnum.False,
+                });
+            }
+            const final = result.reduce((stats, record) => {
+                const existingStats = stats.find((s) => s.industry === record.industry);
+                if (existingStats) {
+                    existingStats.equal += record.equal;
+                    existingStats.increase += record.increase;
+                    existingStats.decrease += record.decrease;
+                    existingStats.high += record.high;
+                    existingStats.low += record.low;
+                } else {
+                    stats.push({
+                        industry: record.industry,
+                        market_cap: record.market_cap,
+                        equal: record.equal,
+                        increase: record.increase,
+                        decrease: record.decrease,
+                        high: record.high,
+                        low: record.low,
+                        day_change_percent: (dayChange.find(i => i.industry == record.industry)).change,
+                        week_change_percent: (weekChange.find(i => i.industry == record.industry)).change,
+                        month_change_percent: (monthChange.find(i => i.industry == record.industry)).change,
+                    });
+                };
+                return stats;
+            }, []);
+
+            //Map response
+            const mappedData = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketBreadth, result);
-            return result;
+            await this.redis.set(RedisKeys.MarketBreadth, final, 10);
+            return mappedData;
         } catch (error) {
             throw new CatchException(error);
         }
@@ -161,5 +181,15 @@ export class StockService {
         } catch (e) {
             throw new CatchException(e)
         }
+    }
+
+    private getChangePercent(arr1: any[], arr2: any[]) {
+        return arr1.map(item => {
+            const matching = arr2.find(i => i.industry == item.industry);
+            return {
+                industry: item.industry,
+                change: ((item.total_market_cap - matching.total_market_cap) / matching.total_market_cap) * 100,
+            }
+        })
     }
 }
