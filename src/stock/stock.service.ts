@@ -141,7 +141,7 @@ export class StockService {
             const mappedData = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketBreadth, final, 10);
+            await this.redis.set(RedisKeys.MarketBreadth, mappedData, 10);
             return mappedData;
         } catch (error) {
             throw new CatchException(error);
