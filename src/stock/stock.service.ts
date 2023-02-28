@@ -7,6 +7,9 @@ import {MarketVolatilityInterface} from '../interfaces/market-volatility.interfa
 import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
 import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
+import {MarketBreadthInterface} from "../interfaces/market-breadth.interface";
+import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
+import {RedisKeys} from "../enums/redis-keys.enum";
 
 @Injectable()
 export class StockService {
@@ -53,83 +56,73 @@ export class StockService {
     async getMarketBreadth() {
         try {
             //Check caching data is existed
-            // const redisData: string = await this.redis.get(RedisKeys.MarketBreadth);
-            // if (redisData) return redisData;
+            const redisData: string = await this.redis.get(RedisKeys.MarketBreadth);
+            if (redisData) return redisData;
 
-            const latest_date = await this.db.query(`
-        SELECT TOP(1) yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
-      `);
+            //Get 2 latest date
+            const selectedDate = await this.db.query(
+                `SELECT DISTINCT TOP 2 yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
+            `);
 
-            //   const result: MarketBreadthInterface[] =
-            //     new MarketBreadthRespone().mapToList(
-            //       await this.db.query(`
-            //   SELECT
-            //   company.LV2 AS industry,
-            //   SUM(
-            //     CASE WHEN price.close_price = prev_price.ref_price
-            //       THEN 1
-            //       ELSE 0
-            //     END
-            //   ) AS equal,
-            //   SUM(
-            //     CASE WHEN price.close_price >= prev_price.high
-            //       AND price.close_price != prev_price.ref_price
-            //       THEN 1
-            //       ELSE 0
-            //     END
-            //   ) AS high,
-            //   SUM(
-            //     CASE WHEN price.close_price <= prev_price.low
-            //       AND price.close_price != prev_price.ref_price
-            //       THEN 1
-            //       ELSE 0
-            //     END
-            //   ) AS low,
-            //   SUM(
-            //     CASE WHEN price.close_price > prev_price.ref_price
-            //       AND price.close_price < prev_price.high
-            //       THEN 1
-            //       ELSE 0
-            //     END
-            //   ) AS increase,
-            //   SUM(
-            //     CASE WHEN price.close_price < prev_price.ref_price
-            //       AND price.close_price > prev_price.low
-            //       THEN 1
-            //       ELSE 0
-            //     END
-            //   ) AS decrease
-            // FROM (
-            //   SELECT TICKER, LV2
-            //   FROM PHANTICH.dbo.ICBID
-            // ) company
-            // JOIN PHANTICH.dbo.database_mkt price
-            //   ON company.TICKER = price.ticker
-            // JOIN (
-            //   SELECT ticker, close_price, ref_price, high, low
-            //   FROM PHANTICH.dbo.database_mkt
-            //   WHERE date_time = DATEADD(day, -2, @0)
-            // ) AS prev_price
-            //   ON company.TICKER = prev_price.ticker
-            // WHERE price.date_time >= DATEADD(day, -1, @0)
-            //   AND price.date_time < @0
-            // GROUP BY company.LV2
-            // `, [latest_date[0].yyyymmdd]),
-            //     );
 
-            const data = await this.db.query(` 
-        SELECT indus.[LV2] AS industry, SUM(price.[total_value_mil]) AS total_value
-        FROM [PHANTICH].[dbo].[ICBID] indus
-        JOIN [PHANTICH].[dbo].[database_mkt] price
-        ON indus.[TICKER] = price.[ticker]
-        WHERE price.[date_time] >= DATEADD(day, -2, GETDATE()) AND date_time < GETDATE()
-        GROUP BY indus.[LV2]    
-      `);
-
+              const result: MarketBreadthInterface[] =
+                new MarketBreadthRespone().mapToList(
+                  await this.db.query(`
+              SELECT
+              company.LV2 AS industry,
+              SUM(
+                CASE WHEN price.close_price = prev_price.ref_price
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS equal,
+              SUM(
+                CASE WHEN price.close_price >= prev_price.high
+                  AND price.close_price != prev_price.ref_price
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS high,
+              SUM(
+                CASE WHEN price.close_price <= prev_price.low
+                  AND price.close_price != prev_price.ref_price
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS low,
+              SUM(
+                CASE WHEN price.close_price > prev_price.ref_price
+                  AND price.close_price < prev_price.high
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS increase,
+              SUM(
+                CASE WHEN price.close_price < prev_price.ref_price
+                  AND price.close_price > prev_price.low
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS decrease
+            FROM (
+              SELECT TICKER, LV2
+              FROM PHANTICH.dbo.ICBID
+            ) company
+            JOIN PHANTICH.dbo.database_mkt price
+              ON company.TICKER = price.ticker
+            JOIN (
+              SELECT ticker, close_price, ref_price, high, low
+              FROM PHANTICH.dbo.database_mkt
+              WHERE date_time = @1
+            ) AS prev_price
+              ON company.TICKER = prev_price.ticker
+            WHERE price.date_time = @0
+            GROUP BY company.LV2
+            `, [selectedDate[0].yyyymmdd, selectedDate[1].yyyymmdd]));
 
             //Caching data for the next request
-            // await this.redis.set(RedisKeys.MarketBreadth, result);
-            return data;
+            await this.redis.set(RedisKeys.MarketBreadth, result);
+            return result;
         } catch (error) {
             throw new CatchException(error);
         }
