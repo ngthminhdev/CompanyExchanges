@@ -78,10 +78,14 @@ export class StockService {
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
-            const marketCapToday: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
-            const marketCapYesterday: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
-            const marketLastWeek: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('week', -1),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
-            const marketLastMonth: MarketBreadthRawInterface[] = await this.db.query(marketCapQuery('month', -1),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
+            const marketCapToday: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
+            const marketCapYesterday: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
+            const marketLastWeek: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery('week', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
+            const marketLastMonth: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery('month', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
 
             //Calculate % change total_market_cap
             const dayChange = this.getChangePercent(marketCapToday, marketCapYesterday);
@@ -95,17 +99,17 @@ export class StockService {
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result: any = [];
             for await (const item of dataToday) {
-                const yesterdayItem = dataYesterday.find(i => i.ticker = item.ticker);
+                const yesterdayItem = dataYesterday.find(i => i.ticker == item.ticker);
 
-                const change = item.ref_price - yesterdayItem.ref_price;
-                const isIncrease = item.close_price > yesterdayItem.ref_price;
-                const isDecrease = item.close_price < yesterdayItem.ref_price;
-                const isHigh = item.close_price >= yesterdayItem.high;
-                const isLow = item.close_price <= yesterdayItem.low;
+                const change = item.close_price - yesterdayItem.ref_price;
+                const isIncrease = item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07;
+                const isDecrease = item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93;
+                const isHigh = item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price != yesterdayItem.ref_price;
+                const isLow = item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price != yesterdayItem.ref_price;
 
                 result.push({
                     industry: item.industry,
-                    equal: change === BooleanEnum.False ? BooleanEnum.True : BooleanEnum.False,
+                    equal: change === 0 ? BooleanEnum.True : BooleanEnum.False,
                     increase: isIncrease && !isHigh ? BooleanEnum.True : BooleanEnum.False,
                     decrease: isDecrease && !isLow ? BooleanEnum.True : BooleanEnum.False,
                     high: isHigh ? BooleanEnum.True : BooleanEnum.False,
@@ -142,7 +146,7 @@ export class StockService {
 
             //Caching data for the next request
             await this.redis.set(RedisKeys.MarketBreadth, mappedData, 10);
-            return mappedData;
+            return mappedData
         } catch (error) {
             throw new CatchException(error);
         }
