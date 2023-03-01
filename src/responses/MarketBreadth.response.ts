@@ -70,11 +70,11 @@ export class MarketBreadthRespone {
     const total =
       data?.equal + data?.high + data?.low + data?.increase + data?.decrease;
     this.industry = data?.industry || '';
-    this.equal = this.precent(data?.equal, total) || 0;
-    this.high = this.precent(data?.high, total) || 0;
-    this.low = this.precent(data?.low, total) || 0;
-    this.increase = this.precent(data?.increase, total) || 0;
-    this.decrease = this.precent(data?.decrease, total) || 0;
+    this.equal = this.percent(data?.equal, total) || 0;
+    this.high = this.percent(data?.high, total) || 0;
+    this.low = this.percent(data?.low, total) || 0;
+    this.increase = this.percent(data?.increase, total) || 0;
+    this.decrease = this.percent(data?.decrease, total) || 0;
     this.day_change_percent = data?.day_change_percent || 0;
     this.week_change_percent = data?.week_change_percent || 0;
     this.month_change_percent = data?.month_change_percent || 0;
@@ -84,8 +84,8 @@ export class MarketBreadthRespone {
     return data.map((item) => new MarketBreadthRespone(item));
   }
 
-  private precent(value: number, total: number): number {
-    return +((value / total) * 100).toFixed(2);
+  private percent(value: number, total: number): number {
+    return +(value / total) * 100;
   }
 }
 
