@@ -23,21 +23,21 @@ export class NetTransactionValueResponse {
     description: 'Giá trị ròng tự doanh',
     example: 263.0218810000001,
   })
-  total_proprietary: number;
+  net_proprietary: number;
 
   @ApiProperty({
     type: 'float',
     description: 'Giá trị ròng cá nhân',
     example: 3.12,
   })
-  total_retail: number;
+  net_retail: number;
 
   @ApiProperty({
     type: 'float',
     description: 'Giá trị ròng khối ngoại',
     example: 12.09,
   })
-  total_foreign: number;
+  net_foreign: number;
 
   @ApiProperty({
     type: Date,
@@ -49,9 +49,9 @@ export class NetTransactionValueResponse {
   constructor(data?: NetTransactionValueResponse) {
     this.exchange = data?.exchange || "";
     this.exchange_price = data?.exchange_price || 0;
-    this.total_foreign = data?.total_foreign || 0;
-    this.total_proprietary = data?.total_proprietary || 0;
-    this.total_retail = data?.total_retail || 0;
+    this.net_foreign = data?.net_foreign || 0;
+    this.net_proprietary = data?.net_proprietary || 0;
+    this.net_retail = data?.net_retail || 0;
     this.date = UtilCommonTemplate.toDate(data?.date) || "2022/02/22"
   }
 
