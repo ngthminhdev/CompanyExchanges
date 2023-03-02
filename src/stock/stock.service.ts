@@ -10,7 +10,6 @@ import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface"
 import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {BooleanEnum} from "../enums/common.enum";
-import {UtilCommonTemplate} from "../utils/utils.common";
 import * as moment from "moment";
 
 @Injectable()
@@ -92,39 +91,49 @@ export class StockService {
             if (redisData) return redisData;
 
             //Get 2 latest date
-            const selectedDate = await this.db.query(
-                `SELECT DISTINCT TOP 2 yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
-            `);
+            const {latestDate, previousDate, weekDate, monthDate} =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
             const query = `
                 SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
                 ON company.TICKER = p.ticker WHERE p.date_time = @0
             `;
-            const marketCapQuery = (type: string, amount: number): string => `
-                SELECT c.LV2 AS industry, SUM(p.mkt_cap) AS total_market_cap
+            const marketCapQuery: string = `
+                SELECT c.LV2 AS industry, p.yyyymmdd as date, SUM(p.mkt_cap) AS total_market_cap
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
-                ON p.ticker = c.TICKER WHERE p.date_time = DATEADD(${type}, ${amount}, @0) GROUP BY c.LV2
+                ON p.ticker = c.TICKER 
+                WHERE p.yyyymmdd = @0 
+                OR p.yyyymmdd = @1
+                OR p.yyyymmdd = @2
+                OR p.yyyymmdd = @3
+                GROUP BY c.LV2, p.yyyymmdd
+                ORDER BY p.yyyymmdd DESC
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
-            const marketCapToday: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
-            const marketCapYesterday: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
-            const marketLastWeek: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('week', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
-            const marketLastMonth: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('month', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
+            const marketCap: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery,[latestDate, previousDate, weekDate, monthDate]);
 
-            //Calculate % change total_market_cap
-            const dayChange = this.getChangePercent(marketCapToday, marketCapYesterday);
-            const weekChange = this.getChangePercent(marketCapToday, marketLastWeek);
-            const monthChange = this.getChangePercent(marketCapToday, marketLastMonth);
+            //Group by industry
+            const groupByIndustry = marketCap.reduce((result, item) => {
+                (result[item.industry] || (result[item.industry] = [])).push(item);
+                return result;
+            }, {});
+
+            //Calculate change percent per day, week, month
+            const industryChanges = Object.entries(groupByIndustry).map(([industry, values]: any) => {
+                return {
+                    industry,
+                    day_change_percent: ((values[0].total_market_cap - values[1].total_market_cap) / values[1].total_market_cap) * 100,
+                    week_change_percent: ((values[0].total_market_cap - values[2].total_market_cap) / values[2].total_market_cap) * 100,
+                    month_change_percent: ((values[0].total_market_cap - values[3].total_market_cap) / values[3].total_market_cap) * 100,
+                };
+            });
 
             //Get data of the 1st day and the 2nd day
-            const dataToday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[0].yyyymmdd]);
-            const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[1].yyyymmdd]);
+            const dataToday: MarketBreadthRawInterface[] = await this.db.query(query, [latestDate]);
+            const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [previousDate]);
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result: any = [];
@@ -148,6 +157,8 @@ export class StockService {
             }
             const final = result.reduce((stats, record) => {
                 const existingStats = stats.find((s) => s.industry === record.industry);
+                const industryChange = industryChanges.find(i => i.industry == record.industry);
+
                 if (existingStats) {
                     existingStats.equal += record.equal;
                     existingStats.increase += record.increase;
@@ -163,9 +174,7 @@ export class StockService {
                         decrease: record.decrease,
                         high: record.high,
                         low: record.low,
-                        day_change_percent: (dayChange.find(i => i.industry == record.industry)).change,
-                        week_change_percent: (weekChange.find(i => i.industry == record.industry)).change,
-                        month_change_percent: (monthChange.find(i => i.industry == record.industry)).change,
+                        ...industryChange
                     });
                 };
                 return stats;

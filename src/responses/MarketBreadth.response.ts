@@ -67,14 +67,12 @@ export class MarketBreadthRespone {
   month_change_percent: number;
 
   constructor(data?: MarketBreadthInterface) {
-    const total =
-      data?.equal + data?.high + data?.low + data?.increase + data?.decrease;
     this.industry = data?.industry || '';
-    this.equal = this.percent(data?.equal, total) || 0;
-    this.high = this.percent(data?.high, total) || 0;
-    this.low = this.percent(data?.low, total) || 0;
-    this.increase = this.percent(data?.increase, total) || 0;
-    this.decrease = this.percent(data?.decrease, total) || 0;
+    this.equal = data?.equal || 0;
+    this.high = data?.high || 0;
+    this.low = data?.low || 0;
+    this.increase = data?.increase || 0;
+    this.decrease = data?.decrease || 0;
     this.day_change_percent = data?.day_change_percent || 0;
     this.week_change_percent = data?.week_change_percent || 0;
     this.month_change_percent = data?.month_change_percent || 0;
