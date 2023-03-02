@@ -3,7 +3,6 @@ import {InjectDataSource} from '@nestjs/typeorm';
 import {Cache} from 'cache-manager';
 import {DataSource} from 'typeorm';
 import {CatchException} from '../exceptions/common.exception';
-import {MarketVolatilityInterface} from '../interfaces/market-volatility.interfaces';
 import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
 import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
@@ -12,6 +11,7 @@ import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {BooleanEnum} from "../enums/common.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
+import * as moment from "moment";
 
 @Injectable()
 export class StockService {
@@ -25,33 +25,42 @@ export class StockService {
     //Biến động thị trường
     async getMarketVolatility(): Promise<any> {
         try {
-            const dates = this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
+            const redisData = await this.redis.get(RedisKeys.MarketVolatility);
+            if (redisData) return redisData;
 
-            const query = (type: string, amount: number): string => `
-                SELECT ticker, close_price, yyyymmdd as date_time
-                FROM [PHANTICH].[dbo].[database_chisotoday]
-                WHERE date_time = @0
-                ORDER BY yyyymmdd DESC
+            const {latestDate, previousDate, weekDate, monthDate, yearDate} =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
+
+            const query = `
+                SELECT ticker, close_price FROM [PHANTICH].[dbo].[database_chisotoday]
+                WHERE date_time = @0 ORDER BY yyyymmdd DESC
             `;
 
-            // const dataToday = await this.db.query(query('day', 0), [today]);
-            // const dataYesterDay = await this.db.query(query('day', -1), [yesterday]);
-            // const dataLastWeek = await this.db.query(query('week', -1), [today]);
-            // const dataLastMonth = await this.db.query(query('month', -1), [today]);
+            const dataToday = await this.db.query(query, [latestDate]);
+            const dataYesterday = await this.db.query(query, [previousDate]);
+            const dataLastWeek = await this.db.query(query, [weekDate]);
+            const dataLastMonth = await this.db.query(query, [monthDate]);
+            const dataLastYear = await this.db.query(query, [yearDate]);
 
-            const data = await this.db.query(`SELECT DISTINCT TOP 30 yyyymmdd
-                FROM [PHANTICH].[dbo].[database_chisotoday] t1
-                WHERE (
-                    SELECT COUNT (DISTINCT yyyymmdd)
-                    FROM [PHANTICH].[dbo].[database_chisotoday] t2
-                    WHERE t2.yyyymmdd >= t1.yyyymmdd
-                ) IN (1, 2, 7, 30)
-                ORDER BY yyyymmdd DESC`)
+            console.log({dataToday})
+            console.log({dataLastYear})
 
-            return true
-//             return selectedDate.map(i => UtilCommonTemplate.toDate(i.yyyymmdd))
+            const result = new MarketVolatilityResponse().mapToList(dataToday.map((item) => {
+                const previousData = dataYesterday.find(i => i.ticker === item.ticker);
+                const weekData = dataLastWeek.find(i => i.ticker === item.ticker);
+                const monthData = dataLastMonth.find(i => i.ticker === item.ticker);
+                const yearData = dataLastYear.find(i => i.ticker === item.ticker);
 
-            // return new MarketVolatilityResponse().mapToList();
+                return {
+                    ticker: item.ticker,
+                    day_change_percent: ((item.close_price - previousData.close_price) / previousData.close_price) * 100,
+                    week_change_percent: ((item.close_price - weekData.close_price) / weekData.close_price) * 100,
+                    month_change_percent: ((item.close_price - monthData.close_price) / monthData.close_price) * 100,
+                    year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
+                }
+            }))
+            await this.redis.set(RedisKeys.MarketVolatility, result, 30)
+            return result;
         } catch (error) {
             throw new CatchException(error);
         }
@@ -166,13 +175,14 @@ export class StockService {
             const mappedData = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketBreadth, mappedData, 10);
+            await this.redis.set(RedisKeys.MarketBreadth, mappedData, 30);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
         }
     }
 
+    //Giao dịch ròng
     async getNetTransactionValue(q: GetPageLimitStockDto) {
         try {
             const {page = 0, limit = 20, exchange} = q;
@@ -217,15 +227,28 @@ export class StockService {
             }
         })
     }
+
+    //Get the nearest day have transaction in session, week, month...
     private async getSessionDate(table: string) {
-        let query = `SELECT DISTINCT TOP 21 yyyymmdd 
-        FROM ${table} ORDER BY yyyymmdd DESC`
-        const data = await this.db.query(query);
+        const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
+        const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
+        const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+
+        const latestDates = await this.db.query(`
+            SELECT DISTINCT TOP 2 yyyymmdd FROM ${table}
+            WHERE yyyymmdd IS NOT NULL ORDER BY yyyymmdd DESC 
+        `, [table]);
+
+        let query = `
+            SELECT TOP 1 yyyymmdd FROM ${table} 
+            WHERE yyyymmdd IS NOT NULL
+            ORDER BY ABS(DATEDIFF(day, yyyymmdd, @0))`
         return {
-            latestDate: data[0].yyyymmdd,
-            previousDate: data[1].yyyymmdd,
-            weekDate: data[6].yyyymmdd,
-            monthDate: data[20].yyyymmdd,
+            latestDate: latestDates[0].yyyymmdd,
+            previousDate: latestDates[1].yyyymmdd,
+            weekDate: (await this.db.query(query,[lastWeek]))[0].yyyymmdd,
+            monthDate: (await this.db.query(query,[lastMonth]))[0].yyyymmdd,
+            yearDate: (await this.db.query(query,[lastYear]))[0].yyyymmdd,
         }
     }
 }
