@@ -1,5 +1,5 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { BaseResponse } from '../utils/utils.response';
+import {ApiProperty, PartialType} from '@nestjs/swagger';
+import {BaseResponse} from '../utils/utils.response';
 
 export class MarketVolatilityResponse {
   @ApiProperty({
@@ -10,47 +10,39 @@ export class MarketVolatilityResponse {
   ticker: string;
 
   @ApiProperty({
-    type: 'float',
-    description: 'Giá hiện tại',
-    example: '1650.1',
-  })
-  current_price: number;
-
-  @ApiProperty({
     type: String,
     description: 'Tỷ lệ thay đổi so với phiên trước',
     example: '-1',
   })
-  last_price: number;
+  day_change_percent: number;
 
   @ApiProperty({
     type: String,
     description: 'Tỷ lệ thay đổi trung bình tuần ',
     example: '0.4',
   })
-  week_avg: number;
+  week_change_percent: number;
 
   @ApiProperty({
     type: String,
     description: 'Tỷ lệ thay đổi trung bình tháng',
     example: '2',
   })
-  month_avg: number;
+  month_change_percent: number;
 
   @ApiProperty({
     type: String,
     description: 'Tỷ lệ thay đổi trung bình năm',
     example: '-5',
   })
-  year_avg: number;
+  year_change_percent: number;
 
   constructor(data?: any) {
     this.ticker = data?.ticker ?? '';
-    this.current_price = data?.open_price ?? 0;
-    this.last_price = data?.percent_d ?? '';
-    this.week_avg = data?.percent_w ?? '';
-    this.month_avg = data?.percent_m ?? '';
-    this.year_avg = data?.percent_y ?? '';
+    this.day_change_percent = data?.day_change_percent ?? 0;
+    this.week_change_percent = data?.week_change_percent ?? 0;
+    this.month_change_percent = data?.month_change_percent ?? 0;
+    this.year_change_percent = data?.year_change_percent ?? 0;
   }
 
   public mapToList(data?: any[]) {
