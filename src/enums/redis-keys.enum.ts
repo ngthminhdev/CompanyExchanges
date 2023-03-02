@@ -1,4 +1,5 @@
 export enum RedisKeys {
   MarketBreadth = 'market-breadth',
-  MarketVolatility = 'market-volatility'
+  MarketVolatility = 'market-volatility',
+  NetTransactionValue = 'net-transaction-value'
 }

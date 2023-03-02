@@ -4,7 +4,7 @@ import {Cache} from 'cache-manager';
 import {DataSource} from 'typeorm';
 import {CatchException} from '../exceptions/common.exception';
 import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
-import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
+import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
 import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface";
 import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
@@ -113,7 +113,7 @@ export class StockService {
 
             //Sum total_market_cap by industry (ICBID.LV2)
             const marketCap: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery,[latestDate, previousDate, weekDate, monthDate]);
+                = await this.db.query(marketCapQuery, [latestDate, previousDate, weekDate, monthDate]);
 
             //Group by industry
             const groupByIndustry = marketCap.reduce((result, item) => {
@@ -176,7 +176,8 @@ export class StockService {
                         low: record.low,
                         ...industryChange
                     });
-                };
+                }
+                ;
                 return stats;
             }, []);
 
@@ -192,14 +193,14 @@ export class StockService {
     }
 
     //Giao dịch ròng
-    async getNetTransactionValue(q: GetPageLimitStockDto) {
+    async getNetTransactionValue(q: GetExchangeQuery) {
         try {
-            const {page = 0, limit = 20, exchange} = q;
-            const parameters = [+page == 1 ? 0 : page * +limit, +limit, exchange.toUpperCase()];
-
-            const total_record: number = (await this.db.query(`SELECT COUNT(*) OVER () AS total_record 
-                FROM PHANTICH.dbo.BCN_netvalue GROUP BY date_time`))[0].total_record;
-
+            const {exchange} = q;
+            const parameters = [
+                moment().format('YYYY-MM-DD'),
+                moment().subtract(3, 'month').format('YYYY-MM-DD'),
+                exchange.toUpperCase()
+            ];
             const query = `
                 SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
                     SUM(n.net_value_td) AS net_proprietary,
@@ -207,34 +208,17 @@ export class StockService {
                     SUM(n.net_value_foreign) AS net_foreign
                 FROM PHANTICH.dbo.database_chisotoday e
                 JOIN PHANTICH.dbo.BCN_netvalue n ON e.date_time = n.date_time
-                WHERE e.ticker = @2
+                WHERE e.ticker = @2 
+                AND e.date_time <= @0 
+                AND e.date_time >= @1
                 GROUP BY e.date_time, e.close_price, e.ticker
                 ORDER BY date DESC
-                OFFSET @0 ROWS
-                FETCH NEXT @1 ROWS ONLY
             `;
-            const result = new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters))
-
-
-            return {
-                per_page: +limit,
-                total_page: Math.round(total_record / limit),
-                total_records: total_record,
-                data: result,
-            };
+            const result = new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters));
+            return result;
         } catch (e) {
             throw new CatchException(e)
         }
-    }
-
-    private getChangePercent(arr1: any[], arr2: any[]) {
-        return arr1.map(item => {
-            const matching = arr2.find(i => i.industry == item.industry);
-            return {
-                industry: item.industry,
-                change: ((item.total_market_cap - matching.total_market_cap) / matching.total_market_cap) * 100,
-            }
-        })
     }
 
     //Get the nearest day have transaction in session, week, month...
@@ -255,9 +239,9 @@ export class StockService {
         return {
             latestDate: latestDates[0].yyyymmdd,
             previousDate: latestDates[1].yyyymmdd,
-            weekDate: (await this.db.query(query,[lastWeek]))[0].yyyymmdd,
-            monthDate: (await this.db.query(query,[lastMonth]))[0].yyyymmdd,
-            yearDate: (await this.db.query(query,[lastYear]))[0].yyyymmdd,
+            weekDate: (await this.db.query(query, [lastWeek]))[0].yyyymmdd,
+            monthDate: (await this.db.query(query, [lastMonth]))[0].yyyymmdd,
+            yearDate: (await this.db.query(query, [lastYear]))[0].yyyymmdd,
         }
     }
 }

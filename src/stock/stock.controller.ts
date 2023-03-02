@@ -1,11 +1,11 @@
 import {Controller, Get, HttpStatus, Query, Res} from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
-import { MarketBreadthSwagger } from '../responses/MarketBreadth.response';
-import { MarketVolatilitySwagger } from '../responses/MarketVolatiliy.response';
-import { BaseResponse } from '../utils/utils.response';
-import { StockService } from './stock.service';
-import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
+import {ApiOkResponse, ApiOperation, ApiTags} from '@nestjs/swagger';
+import {Response} from 'express';
+import {MarketBreadthSwagger} from '../responses/MarketBreadth.response';
+import {MarketVolatilitySwagger} from '../responses/MarketVolatiliy.response';
+import {BaseResponse} from '../utils/utils.response';
+import {StockService} from './stock.service';
+import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
 
 @Controller('stock')
@@ -40,7 +40,7 @@ export class StockController {
   @Get('net-transaction-value')
   @ApiOperation({ summary: 'Giá trị giao dịch ròng' })
   @ApiOkResponse({ type: NetTransactionValueResponse })
-  async getNetTransactionValue(@Query() q: GetPageLimitStockDto, @Res() res: Response) {
+  async getNetTransactionValue(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getNetTransactionValue(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
