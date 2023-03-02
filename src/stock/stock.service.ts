@@ -23,14 +23,35 @@ export class StockService {
     }
 
     //Biến động thị trường
-    async getMarketVolatility(): Promise<MarketVolatilityResponse[]> {
+    async getMarketVolatility(): Promise<any> {
         try {
-            const result: MarketVolatilityInterface[] = await this.db.query(
-                `SELECT TOP(6) * FROM [PHANTICH].[dbo].[database_chisotoday]
-        WHERE date_time >= DATEADD(day, -2, GETDATE()) AND date_time < GETDATE()`,
-            );
+            const dates = this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
 
-            return new MarketVolatilityResponse().mapToList(result);
+            const query = (type: string, amount: number): string => `
+                SELECT ticker, close_price, yyyymmdd as date_time
+                FROM [PHANTICH].[dbo].[database_chisotoday]
+                WHERE date_time = @0
+                ORDER BY yyyymmdd DESC
+            `;
+
+            // const dataToday = await this.db.query(query('day', 0), [today]);
+            // const dataYesterDay = await this.db.query(query('day', -1), [yesterday]);
+            // const dataLastWeek = await this.db.query(query('week', -1), [today]);
+            // const dataLastMonth = await this.db.query(query('month', -1), [today]);
+
+            const data = await this.db.query(`SELECT DISTINCT TOP 30 yyyymmdd
+                FROM [PHANTICH].[dbo].[database_chisotoday] t1
+                WHERE (
+                    SELECT COUNT (DISTINCT yyyymmdd)
+                    FROM [PHANTICH].[dbo].[database_chisotoday] t2
+                    WHERE t2.yyyymmdd >= t1.yyyymmdd
+                ) IN (1, 2, 7, 30)
+                ORDER BY yyyymmdd DESC`)
+
+            return true
+//             return selectedDate.map(i => UtilCommonTemplate.toDate(i.yyyymmdd))
+
+            // return new MarketVolatilityResponse().mapToList();
         } catch (error) {
             throw new CatchException(error);
         }
@@ -162,9 +183,9 @@ export class StockService {
 
             const query = `
                 SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
-                    SUM(n.net_value_td) AS total_proprietary,
-                    SUM(n.net_value_canhan) AS total_retail,
-                    SUM(n.net_value_foreign) AS total_foreign
+                    SUM(n.net_value_td) AS net_proprietary,
+                    SUM(n.net_value_canhan) AS net_retail,
+                    SUM(n.net_value_foreign) AS net_foreign
                 FROM PHANTICH.dbo.database_chisotoday e
                 JOIN PHANTICH.dbo.BCN_netvalue n ON e.date_time = n.date_time
                 WHERE e.ticker = @2
@@ -195,5 +216,16 @@ export class StockService {
                 change: ((item.total_market_cap - matching.total_market_cap) / matching.total_market_cap) * 100,
             }
         })
+    }
+    private async getSessionDate(table: string) {
+        let query = `SELECT DISTINCT TOP 21 yyyymmdd 
+        FROM ${table} ORDER BY yyyymmdd DESC`
+        const data = await this.db.query(query);
+        return {
+            latestDate: data[0].yyyymmdd,
+            previousDate: data[1].yyyymmdd,
+            weekDate: data[6].yyyymmdd,
+            monthDate: data[20].yyyymmdd,
+        }
     }
 }
