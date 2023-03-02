@@ -11,37 +11,37 @@ export class MarketBreadthRespone {
   industry: string;
 
   @ApiProperty({
-    type: 'float',
-    description: '% Giá không đổi',
-    example: 1.23,
+    type: Number,
+    description: 'Số lượng mã cỗ phiếu Giá không đổi',
+    example: 10,
   })
   equal: number;
 
   @ApiProperty({
-    type: 'float',
-    description: '% Đạt giá trần',
-    example: 3.12,
+    type: Number,
+    description: 'Số lượng mã cỗ phiếu Đạt giá trần',
+    example: 10,
   })
   high: number;
 
   @ApiProperty({
-    type: 'float',
-    description: '% Chạm giá sàn',
-    example: 12.09,
+    type: Number,
+    description: 'Số lượng mã cỗ phiếu Chạm giá sàn',
+    example: 10,
   })
   low: number;
 
   @ApiProperty({
-    type: 'float',
-    description: '% Giá tăng',
-    example: 20.07,
+    type: Number,
+    description: 'Số lượng mã cỗ phiếu Giá tăng',
+    example: 10,
   })
   increase: number;
 
   @ApiProperty({
-    type: 'float',
-    description: '% Giá giảm',
-    example: 99.99,
+    type: Number,
+    description: 'Số lượng mã cỗ phiếu Giá giảm',
+    example: 10,
   })
   decrease: number;
 
