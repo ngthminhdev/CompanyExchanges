@@ -6,6 +6,5 @@ export interface TickerByExchangeInterface {
     ticker: string;
     exchange: string;
     value: number;
-    date: Date
-
+    value_change_percent: number;
 }
