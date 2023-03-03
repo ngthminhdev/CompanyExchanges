@@ -1,6 +1,5 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { BaseResponse } from '../utils/utils.response';
-import { MarketBreadthInterface } from '../interfaces/market-breadth.interface';
+import {ApiProperty, PartialType} from '@nestjs/swagger';
+import {BaseResponse} from '../utils/utils.response';
 import {UtilCommonTemplate} from "../utils/utils.common";
 
 export class NetTransactionValueResponse {

@@ -162,28 +162,23 @@ export class StockService {
             });
 
             //Get data of the 1st day and the 2nd day
-            const dataToday: MarketBreadthRawInterface[] = await this.db.query(query, [latestDate]);
-            const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [previousDate]);
+            const [dataToday, dataYesterday]: [MarketBreadthRawInterface[], MarketBreadthRawInterface[]] =
+                await Promise.all([this.db.query(query, [latestDate]), this.db.query(query, [previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result = dataToday.map((item) => {
                 const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
-
-                const change = item.close_price - yesterdayItem.ref_price;
-                const isIncrease = item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07;
-                const isDecrease = item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93;
-                const isHigh = item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price !== yesterdayItem.ref_price;
-                const isLow = item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price !== yesterdayItem.ref_price;
-
+                if (!yesterdayItem) return;
                 return {
                     industry: item.industry,
-                    equal: change === 0 ? BooleanEnum.True : BooleanEnum.False,
-                    increase: isIncrease && !isHigh ? BooleanEnum.True : BooleanEnum.False,
-                    decrease: isDecrease && !isLow ? BooleanEnum.True : BooleanEnum.False,
-                    high: isHigh ? BooleanEnum.True : BooleanEnum.False,
-                    low: isLow ? BooleanEnum.True : BooleanEnum.False,
+                    equal: this.isEqual(yesterdayItem, item),
+                    increase: this.isIncrease(yesterdayItem, item),
+                    decrease: this.isDecrease(yesterdayItem, item),
+                    high: this.isHigh(yesterdayItem, item),
+                    low: this.isLow(yesterdayItem, item),
                 };
             });
+
             const final = result.reduce((stats, record) => {
                 const existingStats = stats.find((s) => s.industry === record.industry);
                 const industryChange = industryChanges.find(i => i.industry == record.industry);
@@ -290,4 +285,25 @@ export class StockService {
             yearDate: (await this.db.query(query, [lastYear]))[0].yyyymmdd,
         }
     }
+
+    private isEqual = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface) => {
+        const change = item.close_price - yesterdayItem.ref_price;
+        return change === 0 ? BooleanEnum.True : BooleanEnum.False
+    };
+
+    private isIncrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface) => {
+        return !!(item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07);
+    };
+
+    private isDecrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface) => {
+        return !!(item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93);
+    };
+
+    private isHigh = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface) => {
+        return !!(item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price !== yesterdayItem.ref_price);
+    };
+
+    private isLow = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface) => {
+        return !!(item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price !== yesterdayItem.ref_price);
+    };
 }
