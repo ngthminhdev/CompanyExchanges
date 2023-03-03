@@ -37,7 +37,7 @@ export class StockService {
 
             const query: string = `
                 SELECT ticker, close_price FROM [PHANTICH].[dbo].[database_chisotoday]
-                WHERE date_time = @0 ORDER BY yyyymmdd DESC
+                WHERE yyyymmdd = @0 ORDER BY yyyymmdd DESC
             `;
 
             const dataToday: MarketVolatilityRawInterface[] = await this.db.query(query, [latestDate]);
@@ -60,7 +60,7 @@ export class StockService {
                     year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
                 }
             }))
-            await this.redis.set(RedisKeys.MarketVolatility, result, 30)
+            await this.redis.set(RedisKeys.MarketVolatility, result, 30000)
             return result;
         } catch (error) {
             throw new CatchException(error);
@@ -68,16 +68,16 @@ export class StockService {
     }
 
     //Thanh khoản
-    async getMarketLiquidity() {
+    async getMarketLiquidity(): Promise<MarketLiquidityResponse[]> {
         try {
             //Check caching data is existed
             const redisData: MarketLiquidityResponse[] = await this.redis.get(RedisKeys.MarketLiquidity);
             if (redisData) return redisData;
-
             //Get 2 latest date
             const {latestDate, previousDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
+            //Calculate exchange volume
             const exchange: ExchangeValueInterface[] = (await this.db.query(`
                 SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
                 FROM PHANTICH.dbo.database_mkt t
@@ -89,30 +89,26 @@ export class StockService {
             }, {});
 
             const query: string = `
-                SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange, t.yyyymmdd AS date
+                SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange,
+                ((t.total_value_mil - t2.total_value_mil) / NULLIF(t2.total_value_mil, 0)) * 100 AS value_change_percent
                 FROM PHANTICH.dbo.database_mkt t
+                JOIN PHANTICH.dbo.database_mkt t2 ON t.ticker = t2.ticker AND t2.yyyymmdd = @1
                 JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                WHERE yyyymmdd = @0
+                WHERE t.yyyymmdd = @0
             `;
 
-            const dataToday: TickerByExchangeInterface[] = await this.db.query(query, [latestDate]);
-            const dataYesterday: TickerByExchangeInterface[] = await this.db.query(query, [previousDate]);
-
-            const result = dataToday.map((item) => {
-                const matching: TickerByExchangeInterface
-                    = dataYesterday.find((i) => i.ticker === item.ticker);
-
+            const data: TickerByExchangeInterface[] = await this.db.query(query, [latestDate, previousDate]);
+            const mappedData = new MarketLiquidityResponse().mapToList(data.map((item) => {
                 return {
                     ticker: item.ticker,
                     value: item.value,
-                    value_change_percent: ((item.value - matching.value) / matching.value) * 100,
+                    value_change_percent: item.value_change_percent,
                     contribute: (item.value / exchange[item.exchange]) * 100
                 }
-            });
+            }));
 
-            const mappedData = new MarketLiquidityResponse().mapToList(result);
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketLiquidity, mappedData, 30);
+            await this.redis.set(RedisKeys.MarketLiquidity, mappedData, 30000);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
@@ -217,7 +213,7 @@ export class StockService {
             const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketBreadth, mappedData, 30);
+            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, 30000);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
@@ -250,6 +246,25 @@ export class StockService {
         } catch (e) {
             throw new CatchException(e)
         }
+    }
+
+    async test() {
+        const table = await this.db.query(`
+            CREATE TABLE [tempdb].[dbo].##tempTable (
+            id INT PRIMARY KEY,
+            name NVARCHAR(255)
+          )`);
+
+        await this.db.query(`
+            INSERT INTO [tempdb].[dbo].##tempTable (id, name)
+            VALUES (1, 'Minh')
+        `);
+
+        const result = await this.db.query(`
+            SELECT * FROM [tempdb].[dbo].##tempTable
+        `)
+        return result
+        return true
     }
 
     //Get the nearest day have transaction in session, week, month...
