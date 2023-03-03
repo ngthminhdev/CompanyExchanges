@@ -10,28 +10,28 @@ export class MarketVolatilityResponse {
   ticker: string;
 
   @ApiProperty({
-    type: String,
+    type: Number,
     description: 'Tỷ lệ thay đổi so với phiên trước',
     example: '-1',
   })
   day_change_percent: number;
 
   @ApiProperty({
-    type: String,
+    type: Number,
     description: 'Tỷ lệ thay đổi trung bình tuần ',
     example: '0.4',
   })
   week_change_percent: number;
 
   @ApiProperty({
-    type: String,
+    type: Number,
     description: 'Tỷ lệ thay đổi trung bình tháng',
     example: '2',
   })
   month_change_percent: number;
 
   @ApiProperty({
-    type: String,
+    type: Number,
     description: 'Tỷ lệ thay đổi trung bình năm',
     example: '-5',
   })

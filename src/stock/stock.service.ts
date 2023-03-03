@@ -11,6 +11,11 @@ import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {BooleanEnum} from "../enums/common.enum";
 import * as moment from "moment";
+import {SessionDatesInterface} from "../interfaces/session-dates.interface";
+import {MarketVolatilityRawInterface} from "../interfaces/market-volatility.interface";
+import {ExchangeValueInterface, TickerByExchangeInterface} from "../interfaces/exchange-value.interface";
+import {MarketLiquidityResponse} from "../responses/MarketLiquidity.response";
+import {UtilCommonTemplate} from "../utils/utils.common";
 
 @Injectable()
 export class StockService {
@@ -22,33 +27,30 @@ export class StockService {
     }
 
     //Biến động thị trường
-    async getMarketVolatility(): Promise<any> {
+    async getMarketVolatility(): Promise<MarketVolatilityResponse[]> {
         try {
-            const redisData = await this.redis.get(RedisKeys.MarketVolatility);
+            const redisData: MarketVolatilityResponse[] = await this.redis.get(RedisKeys.MarketVolatility);
             if (redisData) return redisData;
 
-            const {latestDate, previousDate, weekDate, monthDate, yearDate} =
+            const {latestDate, previousDate, weekDate, monthDate, yearDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
 
-            const query = `
+            const query: string = `
                 SELECT ticker, close_price FROM [PHANTICH].[dbo].[database_chisotoday]
                 WHERE date_time = @0 ORDER BY yyyymmdd DESC
             `;
 
-            const dataToday = await this.db.query(query, [latestDate]);
-            const dataYesterday = await this.db.query(query, [previousDate]);
-            const dataLastWeek = await this.db.query(query, [weekDate]);
-            const dataLastMonth = await this.db.query(query, [monthDate]);
-            const dataLastYear = await this.db.query(query, [yearDate]);
+            const dataToday: MarketVolatilityRawInterface[] = await this.db.query(query, [latestDate]);
+            const dataYesterday: MarketVolatilityRawInterface[] = await this.db.query(query, [previousDate]);
+            const dataLastWeek: MarketVolatilityRawInterface[] = await this.db.query(query, [weekDate]);
+            const dataLastMonth: MarketVolatilityRawInterface[] = await this.db.query(query, [monthDate]);
+            const dataLastYear: MarketVolatilityRawInterface[] = await this.db.query(query, [yearDate]);
 
-            console.log({dataToday})
-            console.log({dataLastYear})
-
-            const result = new MarketVolatilityResponse().mapToList(dataToday.map((item) => {
-                const previousData = dataYesterday.find(i => i.ticker === item.ticker);
-                const weekData = dataLastWeek.find(i => i.ticker === item.ticker);
-                const monthData = dataLastMonth.find(i => i.ticker === item.ticker);
-                const yearData = dataLastYear.find(i => i.ticker === item.ticker);
+            const result: MarketVolatilityResponse[] = new MarketVolatilityResponse().mapToList(dataToday.map((item) => {
+                const previousData = dataYesterday.find((i) => i.ticker === item.ticker);
+                const weekData = dataLastWeek.find((i) => i.ticker === item.ticker);
+                const monthData = dataLastMonth.find((i) => i.ticker === item.ticker);
+                const yearData = dataLastYear.find((i) => i.ticker === item.ticker);
 
                 return {
                     ticker: item.ticker,
@@ -68,16 +70,50 @@ export class StockService {
     //Thanh khoản
     async getMarketLiquidity() {
         try {
-            const result: any = await this.db.query(`
-        SELECT indus.[LV2] AS industry, SUM(price.[total_value_mil]) AS total_value
-        FROM [PHANTICH].[dbo].[ICBID] indus
-        JOIN [PHANTICH].[dbo].[database_mkt] price
-        ON indus.[TICKER] = price.[ticker]
-        WHERE price.[date_time] >= DATEADD(day, -2, GETDATE()) AND date_time < GETDATE()
-        GROUP BY indus.[LV2]
-      `);
+            //Check caching data is existed
+            const redisData: MarketLiquidityResponse[] = await this.redis.get(RedisKeys.MarketLiquidity);
+            if (redisData) return redisData;
 
-            return result;
+            //Get 2 latest date
+            const {latestDate, previousDate}: SessionDatesInterface =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
+
+            const exchange: ExchangeValueInterface[] = (await this.db.query(`
+                SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
+                FROM PHANTICH.dbo.database_mkt t
+                JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                WHERE yyyymmdd = @0
+                GROUP BY exchange
+            `, [latestDate])).reduce((prev, curr) => {
+                return {...prev, [curr.exchange]: curr.value}
+            }, {});
+
+            const query: string = `
+                SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange, t.yyyymmdd AS date
+                FROM PHANTICH.dbo.database_mkt t
+                JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                WHERE yyyymmdd = @0
+            `;
+
+            const dataToday: TickerByExchangeInterface[] = await this.db.query(query, [latestDate]);
+            const dataYesterday: TickerByExchangeInterface[] = await this.db.query(query, [previousDate]);
+
+            const result = dataToday.map((item) => {
+                const matching: TickerByExchangeInterface
+                    = dataYesterday.find((i) => i.ticker === item.ticker);
+
+                return {
+                    ticker: item.ticker,
+                    value: item.value,
+                    value_change_percent: ((item.value - matching.value) / matching.value) * 100,
+                    contribute: (item.value / exchange[item.exchange]) * 100
+                }
+            });
+
+            const mappedData = new MarketLiquidityResponse().mapToList(result);
+            //Caching data for the next request
+            await this.redis.set(RedisKeys.MarketLiquidity, mappedData, 30);
+            return mappedData
         } catch (error) {
             throw new CatchException(error);
         }
@@ -87,26 +123,24 @@ export class StockService {
     async getMarketBreadth(): Promise<MarketBreadthRespone[]> {
         try {
             //Check caching data is existed
-            const redisData: any = await this.redis.get(RedisKeys.MarketBreadth);
+            const redisData: MarketBreadthRespone[] = await this.redis.get(RedisKeys.MarketBreadth);
             if (redisData) return redisData;
 
             //Get 2 latest date
-            const {latestDate, previousDate, weekDate, monthDate} =
+            const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const query = `
+            const query: string = `
                 SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
                 ON company.TICKER = p.ticker WHERE p.date_time = @0
             `;
+
             const marketCapQuery: string = `
                 SELECT c.LV2 AS industry, p.yyyymmdd as date, SUM(p.mkt_cap) AS total_market_cap
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
-                WHERE p.yyyymmdd = @0 
-                OR p.yyyymmdd = @1
-                OR p.yyyymmdd = @2
-                OR p.yyyymmdd = @3
+                WHERE p.yyyymmdd IN (@0, @1, @2, @3)
                 GROUP BY c.LV2, p.yyyymmdd
                 ORDER BY p.yyyymmdd DESC
             `;
@@ -136,25 +170,24 @@ export class StockService {
             const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [previousDate]);
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
-            const result: any = [];
-            for await (const item of dataToday) {
-                const yesterdayItem = dataYesterday.find(i => i.ticker == item.ticker);
+            const result = dataToday.map((item) => {
+                const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
 
                 const change = item.close_price - yesterdayItem.ref_price;
                 const isIncrease = item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07;
                 const isDecrease = item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93;
-                const isHigh = item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price != yesterdayItem.ref_price;
-                const isLow = item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price != yesterdayItem.ref_price;
+                const isHigh = item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price !== yesterdayItem.ref_price;
+                const isLow = item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price !== yesterdayItem.ref_price;
 
-                result.push({
+                return {
                     industry: item.industry,
                     equal: change === 0 ? BooleanEnum.True : BooleanEnum.False,
                     increase: isIncrease && !isHigh ? BooleanEnum.True : BooleanEnum.False,
                     decrease: isDecrease && !isLow ? BooleanEnum.True : BooleanEnum.False,
                     high: isHigh ? BooleanEnum.True : BooleanEnum.False,
                     low: isLow ? BooleanEnum.True : BooleanEnum.False,
-                });
-            }
+                };
+            });
             const final = result.reduce((stats, record) => {
                 const existingStats = stats.find((s) => s.industry === record.industry);
                 const industryChange = industryChanges.find(i => i.industry == record.industry);
@@ -168,7 +201,6 @@ export class StockService {
                 } else {
                     stats.push({
                         industry: record.industry,
-                        market_cap: record.market_cap,
                         equal: record.equal,
                         increase: record.increase,
                         decrease: record.decrease,
@@ -182,7 +214,7 @@ export class StockService {
             }, []);
 
             //Map response
-            const mappedData = new MarketBreadthRespone().mapToList(final);
+            const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
             await this.redis.set(RedisKeys.MarketBreadth, mappedData, 30);
@@ -193,15 +225,15 @@ export class StockService {
     }
 
     //Giao dịch ròng
-    async getNetTransactionValue(q: GetExchangeQuery) {
+    async getNetTransactionValue(q: GetExchangeQuery): Promise<NetTransactionValueResponse[]> {
         try {
             const {exchange} = q;
-            const parameters = [
+            const parameters: string[] = [
                 moment().format('YYYY-MM-DD'),
                 moment().subtract(3, 'month').format('YYYY-MM-DD'),
                 exchange.toUpperCase()
             ];
-            const query = `
+            const query: string = `
                 SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
                     SUM(n.net_value_td) AS net_proprietary,
                     SUM(n.net_value_canhan) AS net_retail,
@@ -214,15 +246,14 @@ export class StockService {
                 GROUP BY e.date_time, e.close_price, e.ticker
                 ORDER BY date DESC
             `;
-            const result = new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters));
-            return result;
+            return new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters));
         } catch (e) {
             throw new CatchException(e)
         }
     }
 
     //Get the nearest day have transaction in session, week, month...
-    private async getSessionDate(table: string) {
+    private async getSessionDate(table: string): Promise<SessionDatesInterface> {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
         const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
         const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
@@ -232,13 +263,13 @@ export class StockService {
             WHERE yyyymmdd IS NOT NULL ORDER BY yyyymmdd DESC 
         `, [table]);
 
-        let query = `
-            SELECT TOP 1 yyyymmdd FROM ${table} 
+        const query: string = `
+            SELECT TOP 1 yyyymmdd FROM ${table}
             WHERE yyyymmdd IS NOT NULL
             ORDER BY ABS(DATEDIFF(day, yyyymmdd, @0))`
         return {
-            latestDate: latestDates[0].yyyymmdd,
-            previousDate: latestDates[1].yyyymmdd,
+            latestDate: UtilCommonTemplate.toDate(latestDates[0].yyyymmdd),
+            previousDate: UtilCommonTemplate.toDate(latestDates[1].yyyymmdd),
             weekDate: (await this.db.query(query, [lastWeek]))[0].yyyymmdd,
             monthDate: (await this.db.query(query, [lastMonth]))[0].yyyymmdd,
             yearDate: (await this.db.query(query, [lastYear]))[0].yyyymmdd,
