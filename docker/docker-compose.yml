@@ -1,7 +1,8 @@
 version: '3'
 services:
   nestjs-service:
-    image: ngthminhdev/stock-docker-hub:0.0.04
+    image: ngthminhdev/stock-docker-hub:${TAG}
+    restart: always
     deploy:
       replicas: 1
     ports: 
