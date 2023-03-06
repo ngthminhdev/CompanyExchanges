@@ -3,15 +3,19 @@ import {InjectDataSource} from '@nestjs/typeorm';
 import {Cache} from 'cache-manager';
 import {DataSource} from 'typeorm';
 import {CatchException} from '../exceptions/common.exception';
-import {MarketVolatilityInterface} from '../interfaces/market-volatility.interfaces';
 import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
-import {GetPageLimitStockDto} from "./dto/getPageLimitStock.dto";
+import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
 import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface";
 import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
-import {BooleanEnum} from "../enums/common.enum";
-import {UtilCommonTemplate} from "../utils/utils.common";
+import {BooleanEnum, TimeToLive} from "../enums/common.enum";
+import * as moment from "moment";
+import {SessionDatesInterface} from "../interfaces/session-dates.interface";
+import {ExchangeValueInterface, TickerByExchangeInterface} from "../interfaces/exchange-value.interface";
+import {MarketLiquidityResponse} from "../responses/MarketLiquidity.response";
+import {MarketVolatilityRawInterface} from "../interfaces/market-volatility.interface";
+import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
 
 @Injectable()
 export class StockService {
@@ -25,30 +29,113 @@ export class StockService {
     //Biến động thị trường
     async getMarketVolatility(): Promise<MarketVolatilityResponse[]> {
         try {
-            const result: MarketVolatilityInterface[] = await this.db.query(
-                `SELECT TOP(6) * FROM [PHANTICH].[dbo].[database_chisotoday]
-        WHERE date_time >= DATEADD(day, -2, GETDATE()) AND date_time < GETDATE()`,
-            );
+            const redisData: MarketVolatilityResponse[] = await this.redis.get(RedisKeys.MarketVolatility);
+            if (redisData) return redisData;
 
-            return new MarketVolatilityResponse().mapToList(result);
+            const sessionDates: SessionDatesInterface =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
+
+            const query: string = `
+                SELECT ticker, close_price FROM [PHANTICH].[dbo].[database_chisotoday]
+                WHERE date_time = @0 ORDER BY date_time DESC
+            `;
+
+            let dataToday: MarketVolatilityRawInterface[],
+                dataYesterday: MarketVolatilityRawInterface[],
+                dataLastWeek: MarketVolatilityRawInterface[],
+                dataLastMonth: MarketVolatilityRawInterface[],
+                dataLastYear: MarketVolatilityRawInterface[];
+
+            [dataToday, dataYesterday, dataLastWeek, dataLastMonth, dataLastYear] = await Promise.all(Object.values(sessionDates).map((date: Date) => {
+                return this.db.query(query, [date])
+            }));
+
+            const result: MarketVolatilityResponse[] = new MarketVolatilityResponse().mapToList(dataToday.map((item) => {
+                const previousData = dataYesterday.find((i) => i.ticker === item.ticker);
+                const weekData = dataLastWeek.find((i) => i.ticker === item.ticker);
+                const monthData = dataLastMonth.find((i) => i.ticker === item.ticker);
+                const yearData = dataLastYear.find((i) => i.ticker === item.ticker);
+
+                return {
+                    ticker: item.ticker,
+                    day_change_percent: ((item.close_price - previousData.close_price) / previousData.close_price) * 100,
+                    week_change_percent: ((item.close_price - weekData.close_price) / weekData.close_price) * 100,
+                    month_change_percent: ((item.close_price - monthData.close_price) / monthData.close_price) * 100,
+                    year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
+                }
+            }))
+            await this.redis.set(RedisKeys.MarketVolatility, result, TimeToLive.HaftMinute)
+            return result;
         } catch (error) {
             throw new CatchException(error);
         }
     }
 
     //Thanh khoản
-    async getMarketLiquidity() {
+    async getMarketLiquidity(q: MarketLiquidityQueryDto): Promise<MarketLiquidityResponse[]> {
         try {
-            const result: any = await this.db.query(`
-        SELECT indus.[LV2] AS industry, SUM(price.[total_value_mil]) AS total_value
-        FROM [PHANTICH].[dbo].[ICBID] indus
-        JOIN [PHANTICH].[dbo].[database_mkt] price
-        ON indus.[TICKER] = price.[ticker]
-        WHERE price.[date_time] >= DATEADD(day, -2, GETDATE()) AND date_time < GETDATE()
-        GROUP BY indus.[LV2]
-      `);
+            const { order } = q;
+            //Check caching data is existed
+            const redisData: MarketLiquidityResponse[] = await this.redis.get(`${RedisKeys.MarketLiquidity}:${order}`);
+            if (redisData) return redisData;
+            // Get 2 latest date
+            const {latestDate, previousDate}: SessionDatesInterface =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            return result;
+            //Calculate exchange volume
+            let exchange: ExchangeValueInterface[] = await this.redis.get(RedisKeys.ExchangeVolume);
+            if (!exchange) {
+                exchange = (await this.db.query(`
+                    SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
+                    FROM PHANTICH.dbo.database_mkt t
+                    JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                    WHERE date_time = @0
+                    GROUP BY exchange
+                `, [latestDate])).reduce((prev, curr) => {
+                    return {...prev, [curr.exchange]: curr.value}
+                }, {});
+                await this.redis.set(RedisKeys.ExchangeVolume, exchange, TimeToLive.HaftMinute);
+            }
+
+            const query: string = `
+                SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange,
+                ((t.total_value_mil - t2.total_value_mil) / NULLIF(t2.total_value_mil, 0)) * 100 AS value_change_percent
+                FROM PHANTICH.dbo.database_mkt t
+                JOIN PHANTICH.dbo.database_mkt t2 ON t.ticker = t2.ticker AND t2.date_time = @1
+                JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                WHERE t.date_time = @0
+            `;
+
+            const data: TickerByExchangeInterface[] = await this.db.query(query, [latestDate, previousDate]);
+            const mappedData = new MarketLiquidityResponse().mapToList(data.map((item) => {
+                return {
+                    ticker: item.ticker,
+                    value: item.value,
+                    value_change_percent: item.value_change_percent,
+                    contribute: (item.value / exchange[item.exchange]) * 100
+                }
+            }));
+            let sortedData: MarketLiquidityResponse[];
+            switch (+order) {
+                case 0:
+                    sortedData = [...mappedData].sort((a,b) => b.value_change_percent - a.value_change_percent);
+                    break;
+                case 1:
+                    sortedData = [...mappedData].sort((a,b) => a.value_change_percent - b.value_change_percent);
+                    break;
+                case 2:
+                    sortedData = [...mappedData].sort((a,b) => b.contribute - a.contribute);
+                    break;
+                case 3:
+                    sortedData = [...mappedData].sort((a,b) => a.contribute - b.contribute);
+                    break;
+                default:
+                    sortedData = mappedData;
+            }
+
+            //Caching data for the next request
+            await this.redis.set(`${RedisKeys.MarketLiquidity}:${order}`, sortedData, TimeToLive.HaftMinute);
+            return sortedData
         } catch (error) {
             throw new CatchException(error);
         }
@@ -58,66 +145,72 @@ export class StockService {
     async getMarketBreadth(): Promise<MarketBreadthRespone[]> {
         try {
             //Check caching data is existed
-            const redisData: any = await this.redis.get(RedisKeys.MarketBreadth);
+            const redisData: MarketBreadthRespone[] = await this.redis.get(RedisKeys.MarketBreadth);
             if (redisData) return redisData;
 
             //Get 2 latest date
-            const selectedDate = await this.db.query(
-                `SELECT DISTINCT TOP 2 yyyymmdd FROM PHANTICH.dbo.database_mkt ORDER BY yyyymmdd DESC
-            `);
+            const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
+                await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const query = `
+            const query: string = `
                 SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
                 ON company.TICKER = p.ticker WHERE p.date_time = @0
             `;
-            const marketCapQuery = (type: string, amount: number): string => `
-                SELECT c.LV2 AS industry, SUM(p.mkt_cap) AS total_market_cap
+
+            const marketCapQuery: string = `
+                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
-                ON p.ticker = c.TICKER WHERE p.date_time = DATEADD(${type}, ${amount}, @0) GROUP BY c.LV2
+                ON p.ticker = c.TICKER 
+                WHERE p.date_time IN (@0, @1, @2, @3)
+                GROUP BY c.LV2, p.date_time
+                ORDER BY p.date_time DESC
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
-            const marketCapToday: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[0].yyyymmdd)]);
-            const marketCapYesterday: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('day', 0),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
-            const marketLastWeek: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('week', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
-            const marketLastMonth: MarketBreadthRawInterface[]
-                = await this.db.query(marketCapQuery('month', -1),[UtilCommonTemplate.toDate(selectedDate[1].yyyymmdd)]);
+            const marketCap: MarketBreadthRawInterface[]
+                = await this.db.query(marketCapQuery, [latestDate, previousDate, weekDate, monthDate]);
 
-            //Calculate % change total_market_cap
-            const dayChange = this.getChangePercent(marketCapToday, marketCapYesterday);
-            const weekChange = this.getChangePercent(marketCapToday, marketLastWeek);
-            const monthChange = this.getChangePercent(marketCapToday, marketLastMonth);
+            //Group by industry
+            const groupByIndustry = marketCap.reduce((result, item) => {
+                (result[item.industry] || (result[item.industry] = [])).push(item);
+                return result;
+            }, {});
+
+            //Calculate change percent per day, week, month
+            const industryChanges = Object.entries(groupByIndustry).map(([industry, values]: any) => {
+                return {
+                    industry,
+                    day_change_percent: ((values[0].total_market_cap - values[1].total_market_cap) / values[1].total_market_cap) * 100,
+                    week_change_percent: ((values[0].total_market_cap - values[2].total_market_cap) / values[2].total_market_cap) * 100,
+                    month_change_percent: ((values[0].total_market_cap - values[3].total_market_cap) / values[3].total_market_cap) * 100,
+                };
+            });
 
             //Get data of the 1st day and the 2nd day
-            const dataToday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[0].yyyymmdd]);
-            const dataYesterday: MarketBreadthRawInterface[] = await this.db.query(query, [selectedDate[1].yyyymmdd]);
+            const [dataToday, dataYesterday]: [MarketBreadthRawInterface[], MarketBreadthRawInterface[]] =
+                await Promise.all([this.db.query(query, [latestDate]), this.db.query(query, [previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
-            const result: any = [];
-            for await (const item of dataToday) {
-                const yesterdayItem = dataYesterday.find(i => i.ticker == item.ticker);
-
-                const change = item.close_price - yesterdayItem.ref_price;
-                const isIncrease = item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07;
-                const isDecrease = item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93;
-                const isHigh = item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price != yesterdayItem.ref_price;
-                const isLow = item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price != yesterdayItem.ref_price;
-
-                result.push({
+            const result = dataToday.map((item) => {
+                const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
+                if (!yesterdayItem) return;
+                return {
                     industry: item.industry,
-                    equal: change === 0 ? BooleanEnum.True : BooleanEnum.False,
-                    increase: isIncrease && !isHigh ? BooleanEnum.True : BooleanEnum.False,
-                    decrease: isDecrease && !isLow ? BooleanEnum.True : BooleanEnum.False,
-                    high: isHigh ? BooleanEnum.True : BooleanEnum.False,
-                    low: isLow ? BooleanEnum.True : BooleanEnum.False,
-                });
-            }
+                    equal: this.isEqual(yesterdayItem, item),
+                    increase: this.isIncrease(yesterdayItem, item),
+                    decrease: this.isDecrease(yesterdayItem, item),
+                    high: this.isHigh(yesterdayItem, item),
+                    low: this.isLow(yesterdayItem, item),
+                };
+            });
+
+
             const final = result.reduce((stats, record) => {
-                const existingStats = stats.find((s) => s.industry === record.industry);
+                const existingStats = stats.find((s) => s?.industry === record?.industry);
+                const industryChange = industryChanges.find((i) => i?.industry == record?.industry);
+                if (!industryChange) return stats;
+
                 if (existingStats) {
                     existingStats.equal += record.equal;
                     existingStats.increase += record.increase;
@@ -127,73 +220,120 @@ export class StockService {
                 } else {
                     stats.push({
                         industry: record.industry,
-                        market_cap: record.market_cap,
                         equal: record.equal,
                         increase: record.increase,
                         decrease: record.decrease,
                         high: record.high,
                         low: record.low,
-                        day_change_percent: (dayChange.find(i => i.industry == record.industry)).change,
-                        week_change_percent: (weekChange.find(i => i.industry == record.industry)).change,
-                        month_change_percent: (monthChange.find(i => i.industry == record.industry)).change,
+                        ...industryChange
                     });
-                };
+                }
                 return stats;
             }, []);
 
             //Map response
-            const mappedData = new MarketBreadthRespone().mapToList(final);
+            const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketBreadth, mappedData, 10);
+            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.HaftMinute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
         }
     }
 
-    async getNetTransactionValue(q: GetPageLimitStockDto) {
+    //Giao dịch ròng
+    async getNetTransactionValue(q: GetExchangeQuery): Promise<NetTransactionValueResponse[]> {
         try {
-            const {page = 0, limit = 20, exchange} = q;
-            const parameters = [+page == 1 ? 0 : page * +limit, +limit, exchange.toUpperCase()];
-
-            const total_record: number = (await this.db.query(`SELECT COUNT(*) OVER () AS total_record 
-                FROM PHANTICH.dbo.BCN_netvalue GROUP BY date_time`))[0].total_record;
-
-            const query = `
+            const {exchange} = q;
+            const parameters: string[] = [
+                moment().format('YYYY-MM-DD'),
+                moment().subtract(3, 'month').format('YYYY-MM-DD'),
+                exchange.toUpperCase()
+            ];
+            const query: string = `
                 SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
-                    SUM(n.net_value_td) AS total_proprietary,
-                    SUM(n.net_value_canhan) AS total_retail,
-                    SUM(n.net_value_foreign) AS total_foreign
+                    SUM(n.net_value_td) AS net_proprietary,
+                    SUM(n.net_value_canhan) AS net_retail,
+                    SUM(n.net_value_foreign) AS net_foreign
                 FROM PHANTICH.dbo.database_chisotoday e
                 JOIN PHANTICH.dbo.BCN_netvalue n ON e.date_time = n.date_time
-                WHERE e.ticker = @2
+                WHERE e.ticker = @2 
+                AND e.date_time <= @0 
+                AND e.date_time >= @1
                 GROUP BY e.date_time, e.close_price, e.ticker
                 ORDER BY date DESC
-                OFFSET @0 ROWS
-                FETCH NEXT @1 ROWS ONLY
             `;
-            const result = new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters))
-
-
-            return {
-                per_page: +limit,
-                total_page: Math.round(total_record / limit),
-                total_records: total_record,
-                data: result,
-            };
+            return new NetTransactionValueResponse().mapToList(await this.db.query(query, parameters));
         } catch (e) {
             throw new CatchException(e)
         }
     }
 
-    private getChangePercent(arr1: any[], arr2: any[]) {
-        return arr1.map(item => {
-            const matching = arr2.find(i => i.industry == item.industry);
-            return {
-                industry: item.industry,
-                change: ((item.total_market_cap - matching.total_market_cap) / matching.total_market_cap) * 100,
-            }
-        })
+    async test() {
+        const table = await this.db.query(`
+            CREATE TABLE [tempdb].[dbo].##tempTable (
+            id INT PRIMARY KEY,
+            name NVARCHAR(255)
+          )`);
+
+        await this.db.query(`
+            INSERT INTO [tempdb].[dbo].##tempTable (id, name)
+            VALUES (1, 'Minh')
+        `);
+
+        const result = await this.db.query(`
+            SELECT * FROM [tempdb].[dbo].##tempTable
+        `)
+        return result
     }
+
+    //Get the nearest day have transaction in session, week, month...
+    private async getSessionDate(table: string): Promise<SessionDatesInterface> {
+        const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
+        const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
+        const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+
+        const dates = await this.db.query(`
+            SELECT DISTINCT TOP 2 date_time FROM ${table}
+            WHERE date_time IS NOT NULL ORDER BY date_time DESC 
+        `, [table]);
+
+        const query: string = `
+            SELECT TOP 1 date_time FROM ${table}
+            WHERE date_time IS NOT NULL
+            ORDER BY ABS(DATEDIFF(day, date_time, @0))`
+        return {
+            latestDate: dates[0].date_time,
+            previousDate: dates[1].date_time,
+            weekDate: (await this.db.query(query, [lastWeek]))[0].date_time,
+            monthDate: (await this.db.query(query, [lastMonth]))[0].date_time,
+            yearDate: (await this.db.query(query, [lastYear]))[0].date_time,
+        }
+    }
+
+    private isEqual = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+        const change = item.close_price - yesterdayItem.ref_price;
+        return change === 0 ? BooleanEnum.True : BooleanEnum.False
+    };
+
+    private isIncrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+        return item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isDecrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+        return item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isHigh = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+        return item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price !== yesterdayItem.ref_price
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isLow = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+        return item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price !== yesterdayItem.ref_price
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
 }
