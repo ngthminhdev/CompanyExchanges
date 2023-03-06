@@ -10,6 +10,13 @@ export class MarketLiquidityResponse {
   ticker: string;
 
   @ApiProperty({
+    type: String,
+    description: 'Ngành',
+    example: 'Ngân Hàng',
+  })
+  industry: string;
+
+  @ApiProperty({
     type: Number,
     description: 'Giá trị',
     example: '1',
@@ -33,6 +40,7 @@ export class MarketLiquidityResponse {
   constructor(data?: any) {
     console.log()
     this.ticker = data?.ticker || '';
+    this.industry = data?.industry || '';
     this.value = data?.value || 0;
     this.value_change_percent =
         (data?.value_change_percent !== Infinity && data?.value_change_percent)

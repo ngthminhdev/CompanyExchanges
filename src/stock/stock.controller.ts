@@ -46,9 +46,4 @@ export class StockController {
     const data = await this.stockService.getNetTransactionValue(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
-
-  @Get('test')
-  async test() {
-    return this.stockService.test()
-  }
 }
