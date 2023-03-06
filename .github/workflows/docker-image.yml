@@ -20,6 +20,10 @@ jobs:
     - name: Get package version
       run: echo "::set-output name=version::$(cat package.json | jq -r '.version')"
       id: get_version
+      
+    - name: compress file 
+      run: chmod +x ./compress.sh && ./compress.sh
+      shell: bash
         
 #     - name: UnitTest ${{matrix.node-version}}
 #       uses: actions/setup-node@v3
