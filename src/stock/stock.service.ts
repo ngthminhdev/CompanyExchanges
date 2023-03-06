@@ -98,7 +98,7 @@ export class StockService {
             }
 
             const query: string = `
-                SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange,
+                SELECT t.total_value_mil AS value, t.ticker, c.LV2 AS industry, c.EXCHANGE AS exchange,
                 ((t.total_value_mil - t2.total_value_mil) / NULLIF(t2.total_value_mil, 0)) * 100 AS value_change_percent
                 FROM PHANTICH.dbo.database_mkt t
                 JOIN PHANTICH.dbo.database_mkt t2 ON t.ticker = t2.ticker AND t2.date_time = @1
@@ -110,6 +110,7 @@ export class StockService {
             const mappedData = new MarketLiquidityResponse().mapToList(data.map((item) => {
                 return {
                     ticker: item.ticker,
+                    industry: item.industry,
                     value: item.value,
                     value_change_percent: item.value_change_percent,
                     contribute: (item.value / exchange[item.exchange]) * 100
@@ -268,24 +269,6 @@ export class StockService {
         } catch (e) {
             throw new CatchException(e)
         }
-    }
-
-    async test() {
-        const table = await this.db.query(`
-            CREATE TABLE [tempdb].[dbo].##tempTable (
-            id INT PRIMARY KEY,
-            name NVARCHAR(255)
-          )`);
-
-        await this.db.query(`
-            INSERT INTO [tempdb].[dbo].##tempTable (id, name)
-            VALUES (1, 'Minh')
-        `);
-
-        const result = await this.db.query(`
-            SELECT * FROM [tempdb].[dbo].##tempTable
-        `)
-        return result
     }
 
     //Get the nearest day have transaction in session, week, month...
