@@ -9,12 +9,13 @@ import {NetTransactionValueResponse} from "../responses/NetTransactionValue.resp
 import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface";
 import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
-import {BooleanEnum} from "../enums/common.enum";
+import {BooleanEnum, TimeToLive} from "../enums/common.enum";
 import * as moment from "moment";
 import {SessionDatesInterface} from "../interfaces/session-dates.interface";
 import {ExchangeValueInterface, TickerByExchangeInterface} from "../interfaces/exchange-value.interface";
 import {MarketLiquidityResponse} from "../responses/MarketLiquidity.response";
 import {MarketVolatilityRawInterface} from "../interfaces/market-volatility.interface";
+import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
 
 @Injectable()
 export class StockService {
@@ -63,7 +64,7 @@ export class StockService {
                     year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
                 }
             }))
-            await this.redis.set(RedisKeys.MarketVolatility, result, 30000)
+            await this.redis.set(RedisKeys.MarketVolatility, result, TimeToLive.HaftMinute)
             return result;
         } catch (error) {
             throw new CatchException(error);
@@ -71,25 +72,30 @@ export class StockService {
     }
 
     //Thanh khoản
-    async getMarketLiquidity(): Promise<MarketLiquidityResponse[]> {
+    async getMarketLiquidity(q: MarketLiquidityQueryDto): Promise<MarketLiquidityResponse[]> {
         try {
+            const { order } = q;
             //Check caching data is existed
-            const redisData: MarketLiquidityResponse[] = await this.redis.get(RedisKeys.MarketLiquidity);
+            const redisData: MarketLiquidityResponse[] = await this.redis.get(`${RedisKeys.MarketLiquidity}:${order}`);
             if (redisData) return redisData;
-            //Get 2 latest date
+            // Get 2 latest date
             const {latestDate, previousDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
             //Calculate exchange volume
-            const exchange: ExchangeValueInterface[] = (await this.db.query(`
-                SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
-                FROM PHANTICH.dbo.database_mkt t
-                JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                WHERE date_time = @0
-                GROUP BY exchange
-            `, [latestDate])).reduce((prev, curr) => {
-                return {...prev, [curr.exchange]: curr.value}
-            }, {});
+            let exchange: ExchangeValueInterface[] = await this.redis.get(RedisKeys.ExchangeVolume);
+            if (!exchange) {
+                exchange = (await this.db.query(`
+                    SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
+                    FROM PHANTICH.dbo.database_mkt t
+                    JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                    WHERE date_time = @0
+                    GROUP BY exchange
+                `, [latestDate])).reduce((prev, curr) => {
+                    return {...prev, [curr.exchange]: curr.value}
+                }, {});
+                await this.redis.set(RedisKeys.ExchangeVolume, exchange, TimeToLive.HaftMinute);
+            }
 
             const query: string = `
                 SELECT t.total_value_mil AS value, t.ticker, c.EXCHANGE AS exchange,
@@ -109,10 +115,27 @@ export class StockService {
                     contribute: (item.value / exchange[item.exchange]) * 100
                 }
             }));
+            let sortedData: MarketLiquidityResponse[];
+            switch (+order) {
+                case 0:
+                    sortedData = [...mappedData].sort((a,b) => b.value_change_percent - a.value_change_percent);
+                    break;
+                case 1:
+                    sortedData = [...mappedData].sort((a,b) => a.value_change_percent - b.value_change_percent);
+                    break;
+                case 2:
+                    sortedData = [...mappedData].sort((a,b) => b.contribute - a.contribute);
+                    break;
+                case 3:
+                    sortedData = [...mappedData].sort((a,b) => a.contribute - b.contribute);
+                    break;
+                default:
+                    sortedData = mappedData;
+            }
 
             //Caching data for the next request
-            await this.redis.set(RedisKeys.MarketLiquidity, mappedData, 30000);
-            return mappedData
+            await this.redis.set(`${RedisKeys.MarketLiquidity}:${order}`, sortedData, TimeToLive.HaftMinute);
+            return sortedData
         } catch (error) {
             throw new CatchException(error);
         }
@@ -212,7 +235,7 @@ export class StockService {
             const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, 30000);
+            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.HaftMinute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);

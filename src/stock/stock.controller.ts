@@ -8,6 +8,7 @@ import {StockService} from './stock.service';
 import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
 import {MarketLiquiditySwagger} from "../responses/MarketLiquidity.response";
+import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -25,8 +26,8 @@ export class StockController {
   @Get('market-liquidity')
   @ApiOperation({ summary: 'Thanh khoản thị trường' })
   @ApiOkResponse({type: MarketLiquiditySwagger})
-  async getMarketLiquidity(@Res() res: Response) {
-    const data = await this.stockService.getMarketLiquidity();
+  async getMarketLiquidity(@Query() q: MarketLiquidityQueryDto,  @Res() res: Response) {
+    const data = await this.stockService.getMarketLiquidity(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
