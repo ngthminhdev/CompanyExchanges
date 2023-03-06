@@ -39,7 +39,7 @@ export class ConfigServiceProvider {
     return {
       store: await redisStore({
         url: process.env.REDIS_URL,
-        ttl: TimeToLive.HaftMinute
+        ttl: TimeToLive.Minute
       }),
     };
   }
