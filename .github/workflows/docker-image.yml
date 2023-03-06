@@ -22,8 +22,8 @@ jobs:
       id: get_version
       
     - name: Compress code
-      run: |
-        ./compress.sh
+      run: chmod +x ./compress.sh && ./compress.sh
+      shell: bash
       working-directory: ${{ github.workspace }}
         
 #     - name: UnitTest ${{matrix.node-version}}
