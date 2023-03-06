@@ -22,7 +22,7 @@ export class CatchException extends ExceptionResponse {
   static getStackTrace(messgae?: string) {
     const obj = {} as any;
     Error.captureStackTrace(obj, this.getStackTrace);
-    const logger = new Logger('UserService', {
+    const logger = new Logger('ErrorService', {
       timestamp: true,
     });
 

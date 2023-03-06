@@ -1,15 +1,31 @@
-import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
-import { Socket } from 'socket.io';
+import {WsException} from '@nestjs/websockets';
+import {Logger} from "@nestjs/common";
 
-@Catch()
-export class SocketErrorFilter implements ExceptionFilter {
-    catch(exception: any, host: ArgumentsHost) {
-        const ctx = host.switchToWs();
-        const client: Socket = ctx.getClient();
+export class CatchSocketException extends WsException {
+    constructor(error: any) {
+        super(error);
+        CatchSocketException.getStackTrace(error);
+    }
 
-        client.emit('error', {
-            message: 'An error occurred while processing your request.',
-            status: 500,
+    static getStackTrace(message?: string) {
+        const obj = {} as any;
+        Error.captureStackTrace(obj, this.getStackTrace);
+        const logger = new Logger('SocketError', {
+            timestamp: true,
         });
+
+        const originFile = obj.stack.split('\n')[2].split('/');
+        const fileName = originFile[originFile.length - 1].split(':')[0];
+        const lineNumber = +originFile[originFile.length - 1].split(':')[1];
+        const path = obj.stack
+            .split('at ')[2]
+            .trim()
+            .split(' ')[1]
+            .replace('(', '')
+            .replace(')', '');
+
+        logger.error(
+            `Message: ${message} - File: ${fileName} - Line: ${lineNumber} - Path: ${path}`,
+        );
     }
 }
