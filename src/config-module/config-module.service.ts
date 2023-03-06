@@ -4,6 +4,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { redisStore } from 'cache-manager-redis-store';
 import { KafkaOptions, Transport } from '@nestjs/microservices';
 import { Partitioners } from 'kafkajs';
+import {TimeToLive} from "../enums/common.enum";
 
 @Injectable()
 export class ConfigServiceProvider {
@@ -38,6 +39,7 @@ export class ConfigServiceProvider {
     return {
       store: await redisStore({
         url: process.env.REDIS_URL,
+        ttl: TimeToLive.HaftMinute
       }),
     };
   }
