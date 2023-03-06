@@ -42,7 +42,7 @@ jobs:
       with:
         context: ./docker
         file: ./Dockerfile
-        builder: ${{ steps/buildx.outputs.name }}
+        builder: ${{ steps.buildx.outputs.name }}
         push: true
         tags: ${{secrets.DOCKER_USER}}/${{secrets.DOCKER_IMAGE_STOCK_DEMO}}
         
