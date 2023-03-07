@@ -19,7 +19,7 @@ export class CatchException extends ExceptionResponse {
     CatchException.getStackTrace(error.message);
   }
 
-  static getStackTrace(messgae?: string) {
+  static getStackTrace(message?: string) {
     const obj = {} as any;
     Error.captureStackTrace(obj, this.getStackTrace);
     const logger = new Logger('ErrorService', {
@@ -37,7 +37,7 @@ export class CatchException extends ExceptionResponse {
       .replace(')', '');
 
     logger.error(
-      `Message: ${messgae} - File: ${fileName} - Line: ${lineNumber} - Path: ${path}`,
+      `Message: ${message} - File: ${fileName} - Line: ${lineNumber} - Path: ${path}`,
     );
   }
 }
