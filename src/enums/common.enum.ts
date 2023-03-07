@@ -6,5 +6,6 @@ export enum  BooleanEnum {
 export enum TimeToLive {
     TenSeconds = 10,
     HaftMinute = 30,
-    Minute= 60
+    Minute= 60,
+    FiveMinutes = 300,
 }
