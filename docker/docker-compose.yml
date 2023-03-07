@@ -21,7 +21,10 @@ services:
       - CONFIG_ACCESS_TOKEN_SECRET=access_token_secret
       - CONFIG_REFRESH_TOKEN_SECRET=refresh_token_secret
       - CONFIG_EXPIRE_TIME=3600
-      - CONFIG_REDIS_URL=redis://:redis_demo_password@52.221.246.188:6379
+      - CONFIG_REDIS_HOST=52.221.246.188
+      - CONFIG_REDIS_PORT=6379
+      - CONFIG_REDIS_PASSWORD=redis_demo_password
+      - CONFIG_REDIS_DB=0
       - CONFIG_KAFKA_HOST=13.229.56.36
       - CONFIG_KAFKA_PORT=9092
       - CONFIG_KAFKA_GROUP_ID=kafka-beta-stock-group-id
