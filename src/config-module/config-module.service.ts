@@ -40,7 +40,10 @@ export class ConfigServiceProvider {
       store: await redisStore({
         // url: process.env.REDIS_URL,
         url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/${process.env.REDIS_DB}`,
-        ttl: TimeToLive.Minute
+        ttl: TimeToLive.Minute,
+        socket: {
+          connectTimeout: 60000
+        }
       }),
     };
   }
