@@ -54,6 +54,13 @@ jobs:
         push: true
         tags: ${{secrets.DOCKER_USERNAME}}/${{secrets.DOCKER_IMAGE}}:${{ steps.get_version.outputs.version }}
         
-    
+    - name: SSH Deploy
+      uses: appleboy/ssh-action@v0.1.2
+      with:
+        host: ${{secrets.SSH_HOST}}
+        username: ${{secrets.SSH_USERNAME}}
+        password: ${{secrets.SSH_PASSWORD}}
+        script: |
+          cd ~/SERVICE/docker && sudo chmod +x ../deploy.sh && ./deploy.sh
     
     
