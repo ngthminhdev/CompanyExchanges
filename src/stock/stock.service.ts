@@ -64,7 +64,7 @@ export class StockService {
                     year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
                 }
             }))
-            await this.redis.set(RedisKeys.MarketVolatility, result, TimeToLive.HaftMinute)
+            await this.redis.set(RedisKeys.MarketVolatility, result, TimeToLive.Minute)
             return result;
         } catch (error) {
             throw new CatchException(error);
@@ -94,7 +94,7 @@ export class StockService {
                 `, [latestDate])).reduce((prev, curr) => {
                     return {...prev, [curr.exchange]: curr.value}
                 }, {});
-                await this.redis.set(RedisKeys.ExchangeVolume, exchange, TimeToLive.HaftMinute);
+                await this.redis.set(RedisKeys.ExchangeVolume, exchange, TimeToLive.Minute);
             }
 
             const query: string = `
@@ -135,7 +135,7 @@ export class StockService {
             }
 
             //Caching data for the next request
-            await this.redis.set(`${RedisKeys.MarketLiquidity}:${order}`, sortedData, TimeToLive.HaftMinute);
+            await this.redis.set(`${RedisKeys.MarketLiquidity}:${order}`, sortedData, TimeToLive.Minute);
             return sortedData
         } catch (error) {
             throw new CatchException(error);
@@ -236,7 +236,7 @@ export class StockService {
             const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
 
             //Caching data for the next request
-            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.HaftMinute);
+            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.Minute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
