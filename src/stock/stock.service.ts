@@ -16,6 +16,7 @@ import {ExchangeValueInterface, TickerByExchangeInterface} from "../interfaces/e
 import {MarketLiquidityResponse} from "../responses/MarketLiquidity.response";
 import {MarketVolatilityRawInterface} from "../interfaces/market-volatility.interface";
 import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
+import {StockNewsResponse} from "../responses/StockNews.response";
 
 @Injectable()
 export class StockService {
@@ -270,6 +271,27 @@ export class StockService {
             throw new CatchException(e)
         }
     }
+
+    async getNews(): Promise<StockNewsResponse[]> {
+        try {
+            const redisData: StockNewsResponse[] = await this.redis.get(RedisKeys.StockNews);
+            if (redisData) return redisData;
+            const query = `
+                SELECT * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
+                WHERE TickerTitle = 'Vnindex'
+                AND Date >= DATEADD(day, -3, CAST(GETDATE() as date))
+                ORDER BY Date DESC
+            `;
+            const data = new StockNewsResponse().mapToList(await this.db.query(query));
+            await this.redis.set(RedisKeys.StockNews, data)
+            return data;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+
+
 
     //Get the nearest day have transaction in session, week, month...
     private async getSessionDate(table: string): Promise<SessionDatesInterface> {

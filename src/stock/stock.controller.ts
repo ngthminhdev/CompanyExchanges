@@ -9,6 +9,7 @@ import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
 import {MarketLiquiditySwagger} from "../responses/MarketLiquidity.response";
 import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
+import {StockNewsSwagger} from "../responses/StockNews.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -44,6 +45,14 @@ export class StockController {
   @ApiOkResponse({ type: NetTransactionValueResponse })
   async getNetTransactionValue(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getNetTransactionValue(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('get-news')
+  @ApiOperation({ summary: 'Tin tức thị trường chứng ' })
+  @ApiOkResponse({ type: StockNewsSwagger })
+  async getNews(@Res() res: Response) {
+    const data = await this.stockService.getNews();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

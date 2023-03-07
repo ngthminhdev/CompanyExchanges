@@ -7,7 +7,7 @@ import { Partitioners } from 'kafkajs';
 import {TimeToLive} from "../enums/common.enum";
 
 @Injectable()
-export class ConfigServiceProvider {
+export class  ConfigServiceProvider {
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'mssql',
