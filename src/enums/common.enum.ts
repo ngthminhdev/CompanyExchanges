@@ -1,4 +1,4 @@
-export enum     BooleanEnum {
+export enum  BooleanEnum {
     False,
     True
 }
