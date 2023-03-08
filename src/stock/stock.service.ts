@@ -19,6 +19,8 @@ import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
 import {StockNewsResponse} from "./responses/StockNews.response";
 import {DomesticIndexInterface} from "./interfaces/domestic-index.interface";
 import {DomesticIndexResponse} from "./responses/DomesticIndex.response";
+import {TopNetForeignInterface} from "./interfaces/top-net-foreign.interface";
+import {TopNetForeignResponse} from "./responses/TopNetForeign.response";
 
 @Injectable()
 export class StockService {
@@ -67,6 +69,7 @@ export class StockService {
                     year_change_percent: ((item.close_price - yearData.close_price) / yearData.close_price) * 100,
                 }
             }))
+            // Cache the mapped data in Redis for faster retrieval in the future, using the same key as used earlier
             await this.redis.set(RedisKeys.MarketVolatility, result, TimeToLive.Minute)
             return result;
         } catch (error) {
@@ -137,7 +140,7 @@ export class StockService {
                     sortedData = mappedData;
             }
 
-            //Caching data for the next request
+            // Cache the mapped data in Redis for faster retrieval in the future, using the same key as used earlier
             await this.redis.set(`${RedisKeys.MarketLiquidity}:${order}`, sortedData, TimeToLive.Minute);
             return sortedData
         } catch (error) {
@@ -292,13 +295,20 @@ export class StockService {
             throw new CatchException(e)
         }
     }
+
+    //Chỉ số trong nước
     async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
         try {
             const redisData: DomesticIndexResponse[] = await this.redis.get(RedisKeys.DomesticIndex);
             if (redisData) return redisData
+
+            // If data is not available in Redis, retrieve the latest and previous dates for the index data
+            // using a custom method getSessionDate() that queries a SQL database
             const {latestDate, previousDate} = await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
 
-            const query = `
+            // Construct a SQL query that selects the ticker symbol, date time, close price, change in price,
+            // and percent change for all ticker symbols with data for the latest date and the previous date
+            const query: string = `
                 SELECT t1.ticker, t1.date_time, t1.close_price,
                     (t1.close_price - t2.close_price) AS change_price,
                     (((t1.close_price - t2.close_price) / t2.close_price) * 100) AS percent_d
@@ -307,11 +317,51 @@ export class StockService {
                 ON t1.ticker = t2.ticker AND t2.date_time = @1
                 WHERE t1.date_time = @0
             `;
-
+            // Execute the SQL query using a database object and pass the latest and previous dates as parameters
             const dataToday: DomesticIndexInterface[] = await this.db.query(query, [latestDate, previousDate]);
+
+            // Map the retrieved data to a list of DomesticIndexResponse objects using the mapToList() method of the DomesticIndexResponse class
             const mappedData: DomesticIndexResponse[] = new DomesticIndexResponse().mapToList(dataToday);
 
+            // Cache the mapped data in Redis for faster retrieval in the future, using the same key as used earlier
             await this.redis.set(RedisKeys.DomesticIndex, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getTopNetForeign(): Promise<TopNetForeignResponse[]> {
+        try {
+            const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.TopNetForeign);
+            if (redisData) return redisData
+
+            const {latestDate} = await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
+
+            // Define a function query() that takes an argument order and returns a
+            // SQL query string that selects the top 10 tickers
+            // with the highest or lowest net value foreign for the latest date, depending on the order argument
+            const query = (order: string): string =>`
+                SELECT TOP 10 ticker, net_value_foreign
+                FROM [PHANTICH].[dbo].[database_foreign] t1
+                WHERE t1.date_time = @0
+                ORDER BY net_value_foreign ${order}
+            `;
+            // Execute two SQL queries using the database object to retrieve the top 10 tickers
+            // with the highest and lowest net value foreign
+            // for the latest date, and pass the latest date as a parameter
+            const [dataTop, dataBot]: [
+                TopNetForeignInterface[],
+                TopNetForeignInterface[],
+            ] = await Promise.all([
+                this.db.query(query('DESC'), [latestDate]),
+                this.db.query(query('ASC'), [latestDate]),
+            ]) ;
+
+            // Concatenate the results of the two queries into a single array, and reverse the order of the bottom 10 tickers
+            // so that they are listed in ascending order of net value foreign
+            const mappedData = new TopNetForeignResponse().mapToList([...dataTop, ...[...dataBot].reverse()]);
+            await this.redis.set(RedisKeys.TopNetForeign, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)

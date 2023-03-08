@@ -64,4 +64,12 @@ export class StockController {
     const data = await this.stockService.getDomesticIndex();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('top-net-foreign')
+  @ApiOperation({ summary: 'Top mua bán ròng ngoại khối' })
+  @ApiOkResponse({ type: DomesticIndexSwagger })
+  async getTopNetForeign(@Res() res: Response) {
+    const data = await this.stockService.getTopNetForeign();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

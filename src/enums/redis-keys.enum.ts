@@ -7,4 +7,5 @@ export enum RedisKeys {
   StockNews = 'stock-news',
   DomesticIndex = 'domestic-index',
   InternationalIndex = 'international-index',
+  TopNetForeign = 'top-net-foreign'
 }
