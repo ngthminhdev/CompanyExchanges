@@ -1,5 +1,5 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseModel } from '../../models/base.entity';
+import {Column, Entity, Index, PrimaryGeneratedColumn} from 'typeorm';
+import {BaseModel} from '../../models/base.entity';
 
 @Entity({
   database: 'user',
@@ -14,7 +14,6 @@ export class UserEntity extends BaseModel {
   @Index()
   @Column({
     type: 'varchar',
-    unique: true,
     default: '',
   })
   email: string;
