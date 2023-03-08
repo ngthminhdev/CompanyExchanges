@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { BaseResponse } from '../utils/utils.response';
+import { BaseResponse } from '../../utils/utils.response';
 import { MarketBreadthInterface } from '../interfaces/market-breadth.interface';
 
 export class MarketBreadthRespone {
@@ -80,10 +80,6 @@ export class MarketBreadthRespone {
 
   public mapToList(data?: MarketBreadthInterface[]) {
     return data.map((item) => new MarketBreadthRespone(item));
-  }
-
-  private percent(value: number, total: number): number {
-    return +(value / total) * 100;
   }
 }
 

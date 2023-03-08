@@ -1,6 +1,6 @@
 import {ApiProperty, PartialType} from "@nestjs/swagger";
-import {BaseResponse} from "../utils/utils.response";
-import {UtilCommonTemplate} from "../utils/utils.common";
+import {BaseResponse} from "../../utils/utils.response";
+import {UtilCommonTemplate} from "../../utils/utils.common";
 
 
 export class StockNewsResponse {
