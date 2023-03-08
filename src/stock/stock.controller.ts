@@ -1,15 +1,16 @@
 import {Controller, Get, HttpStatus, Query, Res} from '@nestjs/common';
 import {ApiOkResponse, ApiOperation, ApiTags} from '@nestjs/swagger';
 import {Response} from 'express';
-import {MarketBreadthSwagger} from '../responses/MarketBreadth.response';
-import {MarketVolatilitySwagger} from '../responses/MarketVolatiliy.response';
+import {MarketBreadthSwagger} from './responses/MarketBreadth.response';
+import {MarketVolatilitySwagger} from './responses/MarketVolatiliy.response';
 import {BaseResponse} from '../utils/utils.response';
 import {StockService} from './stock.service';
 import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
-import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
-import {MarketLiquiditySwagger} from "../responses/MarketLiquidity.response";
+import {NetTransactionValueResponse} from "./responses/NetTransactionValue.response";
+import {MarketLiquiditySwagger} from "./responses/MarketLiquidity.response";
 import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
-import {StockNewsSwagger} from "../responses/StockNews.response";
+import {StockNewsSwagger} from "./responses/StockNews.response";
+import {DomesticIndexSwagger} from "./responses/DomesticIndex.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -49,10 +50,18 @@ export class StockController {
   }
 
   @Get('get-news')
-  @ApiOperation({ summary: 'Tin tức thị trường chứng ' })
+  @ApiOperation({ summary: 'Tin tức thị trường chứng' })
   @ApiOkResponse({ type: StockNewsSwagger })
   async getNews(@Res() res: Response) {
     const data = await this.stockService.getNews();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('domestic-index')
+  @ApiOperation({ summary: 'Chỉ số trong nước' })
+  @ApiOkResponse({ type: DomesticIndexSwagger })
+  async getDomesticIndex(@Res() res: Response) {
+    const data = await this.stockService.getDomesticIndex();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

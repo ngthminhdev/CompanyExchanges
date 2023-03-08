@@ -4,5 +4,7 @@ export enum RedisKeys {
   NetTransactionValue = 'net-transaction-value',
   MarketLiquidity = 'market-liquidity',
   ExchangeVolume = 'exchange-volume',
-  StockNews = 'stock-news'
+  StockNews = 'stock-news',
+  DomesticIndex = 'domestic-index',
+  InternationalIndex = 'international-index',
 }
