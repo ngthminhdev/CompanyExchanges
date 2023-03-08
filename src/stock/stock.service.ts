@@ -3,20 +3,22 @@ import {InjectDataSource} from '@nestjs/typeorm';
 import {Cache} from 'cache-manager';
 import {DataSource} from 'typeorm';
 import {CatchException} from '../exceptions/common.exception';
-import {MarketVolatilityResponse} from '../responses/MarketVolatiliy.response';
+import {MarketVolatilityResponse} from './responses/MarketVolatiliy.response';
 import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
-import {NetTransactionValueResponse} from "../responses/NetTransactionValue.response";
-import {MarketBreadthRawInterface} from "../interfaces/market-breadth.interface";
-import {MarketBreadthRespone} from "../responses/MarketBreadth.response";
+import {NetTransactionValueResponse} from "./responses/NetTransactionValue.response";
+import {MarketBreadthRawInterface} from "./interfaces/market-breadth.interface";
+import {MarketBreadthRespone} from "./responses/MarketBreadth.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {BooleanEnum, TimeToLive} from "../enums/common.enum";
 import * as moment from "moment";
-import {SessionDatesInterface} from "../interfaces/session-dates.interface";
-import {ExchangeValueInterface, TickerByExchangeInterface} from "../interfaces/exchange-value.interface";
-import {MarketLiquidityResponse} from "../responses/MarketLiquidity.response";
-import {MarketVolatilityRawInterface} from "../interfaces/market-volatility.interface";
+import {SessionDatesInterface} from "./interfaces/session-dates.interface";
+import {ExchangeValueInterface, TickerByExchangeInterface} from "./interfaces/exchange-value.interface";
+import {MarketLiquidityResponse} from "./responses/MarketLiquidity.response";
+import {MarketVolatilityRawInterface} from "./interfaces/market-volatility.interface";
 import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
-import {StockNewsResponse} from "../responses/StockNews.response";
+import {StockNewsResponse} from "./responses/StockNews.response";
+import {DomesticIndexInterface} from "./interfaces/domestic-index.interface";
+import {DomesticIndexResponse} from "./responses/DomesticIndex.response";
 
 @Injectable()
 export class StockService {
@@ -272,6 +274,7 @@ export class StockService {
         }
     }
 
+    //Tin tức thị trường
     async getNews(): Promise<StockNewsResponse[]> {
         try {
             const redisData: StockNewsResponse[] = await this.redis.get(RedisKeys.StockNews);
@@ -289,8 +292,31 @@ export class StockService {
             throw new CatchException(e)
         }
     }
+    async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
+        try {
+            const redisData: DomesticIndexResponse[] = await this.redis.get(RedisKeys.DomesticIndex);
+            if (redisData) return redisData
+            const {latestDate, previousDate} = await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
 
+            const query = `
+                SELECT t1.ticker, t1.date_time, t1.close_price,
+                    (t1.close_price - t2.close_price) AS change_price,
+                    (((t1.close_price - t2.close_price) / t2.close_price) * 100) AS percent_d
+                FROM [PHANTICH].[dbo].[database_chisotoday] t1
+                JOIN [PHANTICH].[dbo].[database_chisotoday] t2
+                ON t1.ticker = t2.ticker AND t2.date_time = @1
+                WHERE t1.date_time = @0
+            `;
 
+            const dataToday: DomesticIndexInterface[] = await this.db.query(query, [latestDate, previousDate]);
+            const mappedData: DomesticIndexResponse[] = new DomesticIndexResponse().mapToList(dataToday);
+
+            await this.redis.set(RedisKeys.DomesticIndex, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
 
 
     //Get the nearest day have transaction in session, week, month...
