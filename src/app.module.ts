@@ -13,6 +13,7 @@ import { StockModule } from './stock/stock.module';
 import { UserModule } from './user/user.module';
 import { ClientProxyFactory } from '@nestjs/microservices';
 import { KafkaModule } from './kafka/kafka.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { KafkaModule } from './kafka/kafka.module';
     StockModule,
     AuthModule,
     UserModule,
+    SocketModule,
     // KafkaModule,
   ],
 })

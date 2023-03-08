@@ -5,18 +5,24 @@ import {
     OnGatewayInit,
     SubscribeMessage,
     WebSocketGateway,
-    WebSocketServer
+    WebSocketServer,
+    WsException
 } from '@nestjs/websockets';
 import {SocketService} from './socket.service';
 import {Server, Socket} from "socket.io";
-import {Logger} from "@nestjs/common";
+import {Logger, UseFilters} from "@nestjs/common";
+import {SocketErrorFilter} from "../filters/socket-error.filter";
+import {CatchSocketException} from "../exceptions/socket.exception";
 
-@WebSocketGateway({cors: {origin: '*'}, namespace: 'socket'})
+@WebSocketGateway({cors: {origin: '*'}, namespace: 'socket', transports: ['websocket']})
+@UseFilters(SocketErrorFilter)
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     logger = new Logger('SocketLogger')
     @WebSocketServer() server: Server;
 
-    constructor(private readonly socketService: SocketService) {
+    constructor(
+        private readonly socketService: SocketService,
+    ) {
     }
 
     afterInit(server: any) {
@@ -24,7 +30,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
     }
 
     handleConnection(client: Socket) {
-        this.logger.log(client.id + ' Connected!')
+        try {
+            const token: string = client.handshake.headers.authorization;
+            // if (!token) throw new WsException('Unauthenticated!');
+            console.log(token);
+            console.log(client.data)
+            client.data.token = token;
+            this.logger.log(client.id + ' Connected!')
+        } catch (e) {
+            client.disconnect()
+            throw new CatchSocketException(e)
+        }
+        // console.log(client)
     }
 
     handleDisconnect(client: any) {
@@ -33,11 +50,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
 
     @SubscribeMessage('socket')
-    create(@MessageBody() message: any) {
+    create(client: Socket, payload: any,) {
         try {
-            this.server.emit('hear', message)
+            const token: string = client.data.token;
+            console.log(token);
+
+
+            this.server.emit('socket', payload.text);
+            // throw new WsException('Co loi abcd')
         } catch (e) {
-            this.logger.error(e)
+            throw new CatchSocketException(e)
         }
     }
 }
