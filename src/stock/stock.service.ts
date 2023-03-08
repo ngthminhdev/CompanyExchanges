@@ -21,6 +21,8 @@ import {DomesticIndexInterface} from "./interfaces/domestic-index.interface";
 import {DomesticIndexResponse} from "./responses/DomesticIndex.response";
 import {TopNetForeignInterface} from "./interfaces/top-net-foreign.interface";
 import {TopNetForeignResponse} from "./responses/TopNetForeign.response";
+import {NetForeignInterface} from "./interfaces/net-foreign.interface";
+import {NetForeignResponse} from "./responses/NetForeign.response";
 
 @Injectable()
 export class StockService {
@@ -80,7 +82,7 @@ export class StockService {
     //Thanh khoản
     async getMarketLiquidity(q: MarketLiquidityQueryDto): Promise<MarketLiquidityResponse[]> {
         try {
-            const { order } = q;
+            const {order} = q;
             //Check caching data is existed
             const redisData: MarketLiquidityResponse[] = await this.redis.get(`${RedisKeys.MarketLiquidity}:${order}`);
             if (redisData) return redisData;
@@ -125,16 +127,16 @@ export class StockService {
             let sortedData: MarketLiquidityResponse[];
             switch (+order) {
                 case 0:
-                    sortedData = [...mappedData].sort((a,b) => b.value_change_percent - a.value_change_percent);
+                    sortedData = [...mappedData].sort((a, b) => b.value_change_percent - a.value_change_percent);
                     break;
                 case 1:
-                    sortedData = [...mappedData].sort((a,b) => a.value_change_percent - b.value_change_percent);
+                    sortedData = [...mappedData].sort((a, b) => a.value_change_percent - b.value_change_percent);
                     break;
                 case 2:
-                    sortedData = [...mappedData].sort((a,b) => b.contribute - a.contribute);
+                    sortedData = [...mappedData].sort((a, b) => b.contribute - a.contribute);
                     break;
                 case 3:
-                    sortedData = [...mappedData].sort((a,b) => a.contribute - b.contribute);
+                    sortedData = [...mappedData].sort((a, b) => a.contribute - b.contribute);
                     break;
                 default:
                     sortedData = mappedData;
@@ -336,14 +338,14 @@ export class StockService {
             const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.TopNetForeign);
             if (redisData) return redisData
 
-            const {latestDate} = await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
+            const {latestDate} = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
 
             // Define a function query() that takes an argument order and returns a
             // SQL query string that selects the top 10 tickers
             // with the highest or lowest net value foreign for the latest date, depending on the order argument
-            const query = (order: string): string =>`
+            const query = (order: string): string => `
                 SELECT TOP 10 ticker, net_value_foreign
-                FROM [PHANTICH].[dbo].[database_foreign] t1
+                FROM [PHANTICH].[dbo].[BCN_netvalue] t1
                 WHERE t1.date_time = @0
                 ORDER BY net_value_foreign ${order}
             `;
@@ -356,12 +358,36 @@ export class StockService {
             ] = await Promise.all([
                 this.db.query(query('DESC'), [latestDate]),
                 this.db.query(query('ASC'), [latestDate]),
-            ]) ;
+            ]);
 
             // Concatenate the results of the two queries into a single array, and reverse the order of the bottom 10 tickers
             // so that they are listed in ascending order of net value foreign
             const mappedData = new TopNetForeignResponse().mapToList([...dataTop, ...[...dataBot].reverse()]);
             await this.redis.set(RedisKeys.TopNetForeign, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getNetForeign(): Promise<TopNetForeignResponse[]> {
+        try {
+            const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.NetForeign);
+            if (redisData) return redisData;
+
+            const {latestDate} = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
+
+            const query: string = `
+                SELECT c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign
+                FROM [PHANTICH].[dbo].[BCN_netvalue] n
+                JOIN [PHANTICH].[dbo].[ICBID] c
+                ON c.TICKER = n.ticker
+                WHERE date_time = @0
+            `;
+
+            const data: NetForeignInterface[] = await this.db.query(query, [latestDate])
+            const mappedData = new NetForeignResponse().mapToList(data);
+            await this.redis.set(RedisKeys.NetForeign, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)

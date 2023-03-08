@@ -11,6 +11,8 @@ import {MarketLiquiditySwagger} from "./responses/MarketLiquidity.response";
 import {MarketLiquidityQueryDto} from "./dto/marketLiquidityQuery.dto";
 import {StockNewsSwagger} from "./responses/StockNews.response";
 import {DomesticIndexSwagger} from "./responses/DomesticIndex.response";
+import {TopNetForeignSwagger} from "./responses/TopNetForeign.response";
+import {NetForeignSwagger} from "./responses/NetForeign.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -67,9 +69,17 @@ export class StockController {
 
   @Get('top-net-foreign')
   @ApiOperation({ summary: 'Top mua bán ròng ngoại khối' })
-  @ApiOkResponse({ type: DomesticIndexSwagger })
+  @ApiOkResponse({ type: TopNetForeignSwagger })
   async getTopNetForeign(@Res() res: Response) {
     const data = await this.stockService.getTopNetForeign();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('net-foreign')
+  @ApiOperation({ summary: 'Tổng hợp mua bán ròng ngoại khối' })
+  @ApiOkResponse({ type: NetForeignSwagger })
+  async getNetForeign(@Res() res: Response) {
+    const data = await this.stockService.getNetForeign();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
