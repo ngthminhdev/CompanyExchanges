@@ -26,15 +26,20 @@ export class NetForeignResponse {
         type: Number,
         example: 65.5
     })
-    net_value_foreign: number;
+    total_value_buy?: number;
 
-
+    @ApiProperty({
+        type: Number,
+        example: 65.5
+    })
+    total_value_sell?: number;
 
     constructor(data?: NetForeignInterface) {
         this.EXCHANGE = data?.EXCHANGE || '';
         this.LV2 = data?.LV2 || '';
         this.ticker = data?.ticker || '';
-        this.net_value_foreign = data?.net_value_foreign || 0;
+        data?.total_value_buy && (this.total_value_buy = data?.total_value_buy);
+        data?.total_value_sell && (this.total_value_sell = data?.total_value_sell);
     }
 
     public mapToList(data?: NetForeignInterface[] | any[]) {

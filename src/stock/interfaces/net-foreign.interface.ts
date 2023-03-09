@@ -2,5 +2,6 @@ export interface NetForeignInterface {
     EXCHANGE: string;
     LV2: string;
     ticker: string;
-    net_value_foreign: number;
+    total_value_buy?: number;
+    total_value_sell?: number;
 }

@@ -38,7 +38,6 @@ export class MarketLiquidityResponse {
   contribute: number;
 
   constructor(data?: any) {
-    console.log()
     this.ticker = data?.ticker || '';
     this.industry = data?.industry || '';
     this.value = data?.value || 0;

@@ -8,5 +8,6 @@ export enum RedisKeys {
   DomesticIndex = 'domestic-index',
   InternationalIndex = 'international-index',
   TopNetForeign = 'top-net-foreign',
-  NetForeign = 'net-foreign'
+  NetForeign = 'net-foreign',
+  TopRoc5 = 'top-roc-5'
 }

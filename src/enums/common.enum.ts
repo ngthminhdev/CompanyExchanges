@@ -9,3 +9,8 @@ export enum TimeToLive {
     Minute= 60,
     FiveMinutes = 300,
 }
+
+export enum TransactionEnum {
+    Buy,
+    Sell
+}

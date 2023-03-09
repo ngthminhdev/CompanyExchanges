@@ -13,6 +13,8 @@ import {StockNewsSwagger} from "./responses/StockNews.response";
 import {DomesticIndexSwagger} from "./responses/DomesticIndex.response";
 import {TopNetForeignSwagger} from "./responses/TopNetForeign.response";
 import {NetForeignSwagger} from "./responses/NetForeign.response";
+import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
+import {TopRocSwagger} from "./responses/TopRoc.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -78,8 +80,16 @@ export class StockController {
   @Get('net-foreign')
   @ApiOperation({ summary: 'Tổng hợp mua bán ròng ngoại khối' })
   @ApiOkResponse({ type: NetForeignSwagger })
-  async getNetForeign(@Res() res: Response) {
-    const data = await this.stockService.getNetForeign();
+  async getNetForeign(@Query() q: NetForeignQueryDto, @Res() res: Response) {
+    const data = await this.stockService.getNetForeign(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('top-roc-5')
+  @ApiOperation({ summary: 'Top thay đổi ROC 5 phiên' })
+  @ApiOkResponse({ type: TopRocSwagger })
+  async getTopROC(@Query() q: GetExchangeQuery, @Res() res: Response) {
+    const data = await this.stockService.getTopROC(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
