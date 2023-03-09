@@ -6,7 +6,7 @@ export class GetExchangeQuery {
     @IsString({message: 'exchange not found!'})
     @ApiProperty({
         type: String,
-        example: 'vnindex'
+        example: 'HNX'
     })
     exchange: string
 }
