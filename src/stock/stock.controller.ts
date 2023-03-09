@@ -15,6 +15,7 @@ import {TopNetForeignSwagger} from "./responses/TopNetForeign.response";
 import {NetForeignSwagger} from "./responses/NetForeign.response";
 import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
 import {TopRocSwagger} from "./responses/TopRoc.response";
+import {TopNetForeignByExsSwagger} from "./responses/TopNetForeignByEx.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -46,7 +47,10 @@ export class StockController {
   }
 
   @Get('net-transaction-value')
-  @ApiOperation({ summary: 'Giá trị giao dịch ròng' })
+  @ApiOperation({
+      summary: 'Giá trị giao dịch ròng',
+      description: 'VN30, HNX30, UPINDEX, VNINDEX'
+  })
   @ApiOkResponse({ type: NetTransactionValueResponse })
   async getNetTransactionValue(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getNetTransactionValue(q);
@@ -78,18 +82,35 @@ export class StockController {
   }
 
   @Get('net-foreign')
-  @ApiOperation({ summary: 'Tổng hợp mua bán ròng ngoại khối' })
+  @ApiOperation({
+    summary: 'Tổng hợp mua bán ròng ngoại khối',
+    description: 'HSX, HNX, UPCOM'
+  })
   @ApiOkResponse({ type: NetForeignSwagger })
   async getNetForeign(@Query() q: NetForeignQueryDto, @Res() res: Response) {
     const data = await this.stockService.getNetForeign(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('top-roc-5')
-  @ApiOperation({ summary: 'Top thay đổi ROC 5 phiên' })
+  @Get('top-roc')
+  @ApiOperation({
+      summary: 'Top thay đổi ROC 5 phiên',
+      description: 'HOSE, VN30, HNX, HNX30, UPCOM'
+  })
   @ApiOkResponse({ type: TopRocSwagger })
   async getTopROC(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getTopROC(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('top-net-foreign-change')
+  @ApiOperation({
+    summary: 'Top thay đổi ROC 5 phiên',
+    description: 'HSX, HNX, UPCOM'
+  })
+  @ApiOkResponse({ type: TopNetForeignByExsSwagger })
+  async getTopNetForeignChangeByExchange(@Query() q: GetExchangeQuery, @Res() res: Response) {
+    const data = await this.stockService.getTopNetForeignChangeByExchange(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

@@ -25,6 +25,8 @@ import {NetForeignResponse} from "./responses/NetForeign.response";
 import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
 import {TopRocInterface} from "./interfaces/top-roc-interface";
 import {TopRocResponse} from "./responses/TopRoc.response";
+import {TopNetForeignByExInterface} from "./interfaces/top-net-foreign-by-ex.interface";
+import {TopNetForeignByExResponse} from "./responses/TopNetForeignByEx.response";
 
 @Injectable()
 export class StockService {
@@ -335,7 +337,7 @@ export class StockService {
         }
     }
 
-    //Top khối ngoại
+    //Top giá trị ròng khối ngoại
     async getTopNetForeign(): Promise<TopNetForeignResponse[]> {
         try {
             const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.TopNetForeign);
@@ -380,10 +382,10 @@ export class StockService {
             const redisData: NetForeignResponse[] = await this.redis.get(RedisKeys.NetForeign);
             if (redisData) return redisData;
 
-            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[database_foreign]');
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[WEBSITE_SERVER].[dbo].[foreign]');
             const query = (transaction: number): string => `
                 SELECT c.EXCHANGE, c.LV2, c.ticker, n.total_value_${transaction ? 'sell' : 'buy'}
-                FROM [PHANTICH].[dbo].[database_foreign] n
+                FROM [WEBSITE_SERVER].[dbo].[foreign] n
                 JOIN [PHANTICH].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker AND c.EXCHANGE = @1
                 WHERE date_time = @0
@@ -398,17 +400,17 @@ export class StockService {
         }
     }
 
-    //Top thay đổi giữa n phiên
+    //Top thay đổi giữa 5 phiên theo sàn
     async getTopROC(q: GetExchangeQuery): Promise<TopRocResponse[]> {
         try {
             const {exchange} = q;
-            const ex = exchange.toUpperCase();
+            const ex = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
 
             const redisData: TopRocResponse[] = await this.redis.get(`${RedisKeys.TopRoc5}:${ex}`);
             if (redisData) return redisData;
 
             const {latestDate, weekDate}: SessionDatesInterface
-                = await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex.toUpperCase()}]`, 'date');
+                = await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
 
             const query = (order: string): string => `
                 SELECT TOP 10 t1.ticker, ((t1.gia - t2.gia) / t2.gia) * 100 AS ROC_5
@@ -423,8 +425,8 @@ export class StockService {
                 TopRocInterface[],
                 TopRocInterface[],
             ] = await Promise.all([
-                this.db.query(query('DESC'),[latestDate, weekDate]),
-                this.db.query(query('ASC'),[latestDate, weekDate]),
+                this.db.query(query('DESC'), [latestDate, weekDate]),
+                this.db.query(query('ASC'), [latestDate, weekDate]),
             ]);
 
             const mappedData: TopRocResponse[] = new TopRocResponse().mapToList([...dataTop, ...[...dataBot].reverse()])
@@ -435,6 +437,48 @@ export class StockService {
         }
     }
 
+    //Top mua bán ròng khối ngoại thay đổi giữa 5 phiên theo sàn
+    async getTopNetForeignChangeByExchange(q: GetExchangeQuery): Promise<TopNetForeignByExResponse[]> {
+        try {
+            const {exchange} = q;
+            const redisData: TopNetForeignByExResponse[] =
+                await this.redis.get(`${RedisKeys.TopNetForeignByEx}:${exchange.toUpperCase()}`)
+            if (redisData) return redisData;
+
+            const {latestDate, weekDate}: SessionDatesInterface
+                = await this.getSessionDate(`[WEBSITE_SERVER].[dbo].[foreign]`);
+
+            const query = (order: string): string => `
+                SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
+                    SUM(t1.net_value_foreign) AS net_value
+                FROM [WEBSITE_SERVER].[dbo].[foreign] t1
+                JOIN [PHANTICH].[dbo].[ICBID] c
+                ON t1.ticker = c.TICKER
+                WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
+                AND t1.date_time >= @1
+                AND t1.date_time <= @0
+                GROUP BY t1.ticker, exchange
+                ORDER BY net_value ${order}
+            `;
+
+            const [dataTop, dataBot]: [
+                TopNetForeignByExInterface[],
+                TopNetForeignByExInterface[],
+            ] = await Promise.all([
+                this.db.query(query('DESC'), [latestDate, weekDate]),
+                this.db.query(query('ASC'), [latestDate, weekDate]),
+            ]);
+
+            const mappedData: TopNetForeignByExResponse[] =
+                new TopNetForeignByExResponse().mapToList([...dataTop, ...[...dataBot].reverse()]);
+
+            await this.redis.set(`${RedisKeys.TopNetForeignByEx}:${exchange.toUpperCase()}`, mappedData);
+            return mappedData
+
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
 
     //Get the nearest day have transaction in session, week, month...
     private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
