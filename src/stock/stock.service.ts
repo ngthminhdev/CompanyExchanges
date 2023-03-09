@@ -21,8 +21,10 @@ import {DomesticIndexInterface} from "./interfaces/domestic-index.interface";
 import {DomesticIndexResponse} from "./responses/DomesticIndex.response";
 import {TopNetForeignInterface} from "./interfaces/top-net-foreign.interface";
 import {TopNetForeignResponse} from "./responses/TopNetForeign.response";
-import {NetForeignInterface} from "./interfaces/net-foreign.interface";
 import {NetForeignResponse} from "./responses/NetForeign.response";
+import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
+import {TopRocInterface} from "./interfaces/top-roc-interface";
+import {TopRocResponse} from "./responses/TopRoc.response";
 
 @Injectable()
 export class StockService {
@@ -333,6 +335,7 @@ export class StockService {
         }
     }
 
+    //Top khối ngoại
     async getTopNetForeign(): Promise<TopNetForeignResponse[]> {
         try {
             const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.TopNetForeign);
@@ -370,22 +373,23 @@ export class StockService {
         }
     }
 
-    async getNetForeign(): Promise<TopNetForeignResponse[]> {
+    //Khối ngoại mua bán ròng
+    async getNetForeign(q: NetForeignQueryDto): Promise<NetForeignResponse[]> {
         try {
-            const redisData: TopNetForeignResponse[] = await this.redis.get(RedisKeys.NetForeign);
+            const {exchange, transaction} = q;
+            const redisData: NetForeignResponse[] = await this.redis.get(RedisKeys.NetForeign);
             if (redisData) return redisData;
 
-            const {latestDate} = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
-
-            const query: string = `
-                SELECT c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign
-                FROM [PHANTICH].[dbo].[BCN_netvalue] n
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[database_foreign]');
+            const query = (transaction: number): string => `
+                SELECT c.EXCHANGE, c.LV2, c.ticker, n.total_value_${transaction ? 'sell' : 'buy'}
+                FROM [PHANTICH].[dbo].[database_foreign] n
                 JOIN [PHANTICH].[dbo].[ICBID] c
-                ON c.TICKER = n.ticker
+                ON c.TICKER = n.ticker AND c.EXCHANGE = @1
                 WHERE date_time = @0
             `;
 
-            const data: NetForeignInterface[] = await this.db.query(query, [latestDate])
+            const data: any[] = await this.db.query(query(transaction), [latestDate, exchange]);
             const mappedData = new NetForeignResponse().mapToList(data);
             await this.redis.set(RedisKeys.NetForeign, mappedData);
             return mappedData;
@@ -394,28 +398,65 @@ export class StockService {
         }
     }
 
+    //Top thay đổi giữa n phiên
+    async getTopROC(q: GetExchangeQuery): Promise<TopRocResponse[]> {
+        try {
+            const {exchange} = q;
+            const ex = exchange.toUpperCase();
+
+            const redisData: TopRocResponse[] = await this.redis.get(`${RedisKeys.TopRoc5}:${ex}`);
+            if (redisData) return redisData;
+
+            const {latestDate, weekDate}: SessionDatesInterface
+                = await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex.toUpperCase()}]`, 'date');
+
+            const query = (order: string): string => `
+                SELECT TOP 10 t1.ticker, ((t1.gia - t2.gia) / t2.gia) * 100 AS ROC_5
+                FROM [COPHIEUANHHUONG].[dbo].[${ex}] t1
+                JOIN [COPHIEUANHHUONG].[dbo].[${ex}] t2
+                ON t1.ticker = t2.ticker AND t2.date = @1
+                WHERE t1.date = @0
+                ORDER BY ROC_5 ${order}
+            `;
+
+            const [dataTop, dataBot]: [
+                TopRocInterface[],
+                TopRocInterface[],
+            ] = await Promise.all([
+                this.db.query(query('DESC'),[latestDate, weekDate]),
+                this.db.query(query('ASC'),[latestDate, weekDate]),
+            ]);
+
+            const mappedData: TopRocResponse[] = new TopRocResponse().mapToList([...dataTop, ...[...dataBot].reverse()])
+            await this.redis.set(`${RedisKeys.TopRoc5}:${ex}`, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
 
     //Get the nearest day have transaction in session, week, month...
-    private async getSessionDate(table: string): Promise<SessionDatesInterface> {
+    private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
         const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
         const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
 
         const dates = await this.db.query(`
-            SELECT DISTINCT TOP 2 date_time FROM ${table}
-            WHERE date_time IS NOT NULL ORDER BY date_time DESC 
+            SELECT DISTINCT TOP 2 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `, [table]);
 
         const query: string = `
-            SELECT TOP 1 date_time FROM ${table}
-            WHERE date_time IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, date_time, @0))`
+            SELECT TOP 1 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL
+            ORDER BY ABS(DATEDIFF(day, ${column}, @0))`
         return {
-            latestDate: dates[0].date_time,
-            previousDate: dates[1].date_time,
-            weekDate: (await this.db.query(query, [lastWeek]))[0].date_time,
-            monthDate: (await this.db.query(query, [lastMonth]))[0].date_time,
-            yearDate: (await this.db.query(query, [lastYear]))[0].date_time,
+            latestDate: dates[0][column],
+            previousDate: dates[1][column],
+            weekDate: (await this.db.query(query, [lastWeek]))[0][column],
+            monthDate: (await this.db.query(query, [lastMonth]))[0][column],
+            yearDate: (await this.db.query(query, [lastYear]))[0][column],
         }
     }
 
