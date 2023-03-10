@@ -379,12 +379,12 @@ export class StockService {
     async getNetForeign(q: NetForeignQueryDto): Promise<NetForeignResponse[]> {
         try {
             const {exchange, transaction} = q;
-            const redisData: NetForeignResponse[] = await this.redis.get(RedisKeys.NetForeign);
+            const redisData: NetForeignResponse[] = await this.redis.get(`${RedisKeys.NetForeign}:${transaction}`);
             if (redisData) return redisData;
 
             const {latestDate}: SessionDatesInterface = await this.getSessionDate('[WEBSITE_SERVER].[dbo].[foreign]');
             const query = (transaction: number): string => `
-                SELECT c.EXCHANGE, c.LV2, c.ticker, n.total_value_${transaction ? 'sell' : 'buy'}
+                SELECT c.EXCHANGE, c.LV2, c.ticker, n.total_value_${+transaction ? 'sell' : 'buy'}
                 FROM [WEBSITE_SERVER].[dbo].[foreign] n
                 JOIN [PHANTICH].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker AND c.EXCHANGE = @1
@@ -393,7 +393,7 @@ export class StockService {
 
             const data: any[] = await this.db.query(query(transaction), [latestDate, exchange]);
             const mappedData = new NetForeignResponse().mapToList(data);
-            await this.redis.set(RedisKeys.NetForeign, mappedData);
+            await this.redis.set(`${RedisKeys.NetForeign}:${transaction}`, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)
