@@ -16,6 +16,7 @@ import {NetForeignSwagger} from "./responses/NetForeign.response";
 import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
 import {TopRocSwagger} from "./responses/TopRoc.response";
 import {TopNetForeignByExsSwagger} from "./responses/TopNetForeignByEx.response";
+import {InternationalIndexSwagger} from "./responses/InternationalIndex.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -111,6 +112,16 @@ export class StockController {
   @ApiOkResponse({ type: TopNetForeignByExsSwagger })
   async getTopNetForeignChangeByExchange(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getTopNetForeignChangeByExchange(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('international-index')
+  @ApiOperation({
+    summary: 'Chỉ số quốc tế',
+  })
+  @ApiOkResponse({ type: InternationalIndexSwagger })
+  async getMaterialPrice(@Res() res: Response) {
+    const data = await this.stockService.getMaterialPrice();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

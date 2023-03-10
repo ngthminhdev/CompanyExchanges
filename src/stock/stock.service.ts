@@ -27,6 +27,8 @@ import {TopRocInterface} from "./interfaces/top-roc-interface";
 import {TopRocResponse} from "./responses/TopRoc.response";
 import {TopNetForeignByExInterface} from "./interfaces/top-net-foreign-by-ex.interface";
 import {TopNetForeignByExResponse} from "./responses/TopNetForeignByEx.response";
+import {InternationalIndexInterface} from "./interfaces/international-index.interface";
+import {InternationalIndexResponse} from "./responses/InternationalIndex.response";
 
 @Injectable()
 export class StockService {
@@ -475,6 +477,28 @@ export class StockService {
             await this.redis.set(`${RedisKeys.TopNetForeignByEx}:${exchange.toUpperCase()}`, mappedData);
             return mappedData
 
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    //Chỉ số quốc tế
+    async getMaterialPrice(): Promise<InternationalIndexResponse[]> {
+        try {
+            const redisData: InternationalIndexResponse[] = await this.redis.get(RedisKeys.InternationalIndex)
+            if (redisData) return redisData;
+
+            const {latestDate}: SessionDatesInterface
+                = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
+
+            const data: InternationalIndexInterface[] = await this.db.query(`
+                SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
+                WHERE date_time = @0
+            `, [latestDate]);
+            
+            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList(data);
+            await this.redis.set(RedisKeys.InternationalIndex, mappedData);
+            return mappedData;
         } catch (e) {
             throw new CatchException(e)
         }
