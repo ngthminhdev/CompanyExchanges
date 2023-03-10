@@ -506,6 +506,7 @@ export class StockService {
         }
     }
 
+    //Sự kiện thị trường
     async getStockEvents() {
         try {
             const redisData = await this.redis.get(RedisKeys.StockEvents);
