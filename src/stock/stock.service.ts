@@ -29,6 +29,8 @@ import {TopNetForeignByExInterface} from "./interfaces/top-net-foreign-by-ex.int
 import {TopNetForeignByExResponse} from "./responses/TopNetForeignByEx.response";
 import {InternationalIndexInterface} from "./interfaces/international-index.interface";
 import {InternationalIndexResponse} from "./responses/InternationalIndex.response";
+import {StockEventsInterface} from "./interfaces/stock-events.interface";
+import {StockEventsResponse} from "./responses/StockEvents.response";
 
 @Injectable()
 export class StockService {
@@ -498,6 +500,24 @@ export class StockService {
             
             const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList(data);
             await this.redis.set(RedisKeys.InternationalIndex, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getStockEvents() {
+        try {
+            const redisData = await this.redis.get(RedisKeys.StockEvents);
+            if (redisData) return redisData;
+
+            const data: StockEventsInterface[] = await this.db.query(`
+                SELECT TOP 30 * FROM [PHANTICH].[dbo].[LichSuKien]
+                ORDER BY NgayDKCC DESC
+            `)
+
+            const mappedData: StockEventsResponse[] = new StockEventsResponse().mapToList(data);
+            await this.redis.set(RedisKeys.StockEvents, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)
