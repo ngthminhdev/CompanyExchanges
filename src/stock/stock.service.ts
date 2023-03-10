@@ -27,6 +27,10 @@ import {TopRocInterface} from "./interfaces/top-roc-interface";
 import {TopRocResponse} from "./responses/TopRoc.response";
 import {TopNetForeignByExInterface} from "./interfaces/top-net-foreign-by-ex.interface";
 import {TopNetForeignByExResponse} from "./responses/TopNetForeignByEx.response";
+import {InternationalIndexInterface} from "./interfaces/international-index.interface";
+import {InternationalIndexResponse} from "./responses/InternationalIndex.response";
+import {StockEventsInterface} from "./interfaces/stock-events.interface";
+import {StockEventsResponse} from "./responses/StockEvents.response";
 
 @Injectable()
 export class StockService {
@@ -475,6 +479,47 @@ export class StockService {
             await this.redis.set(`${RedisKeys.TopNetForeignByEx}:${exchange.toUpperCase()}`, mappedData);
             return mappedData
 
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    //Chỉ số quốc tế
+    async getMaterialPrice(): Promise<InternationalIndexResponse[]> {
+        try {
+            const redisData: InternationalIndexResponse[] = await this.redis.get(RedisKeys.InternationalIndex)
+            if (redisData) return redisData;
+
+            const {latestDate}: SessionDatesInterface
+                = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
+
+            const data: InternationalIndexInterface[] = await this.db.query(`
+                SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
+                WHERE date_time = @0
+            `, [latestDate]);
+            
+            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList(data);
+            await this.redis.set(RedisKeys.InternationalIndex, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    //Sự kiện thị trường
+    async getStockEvents() {
+        try {
+            const redisData = await this.redis.get(RedisKeys.StockEvents);
+            if (redisData) return redisData;
+
+            const data: StockEventsInterface[] = await this.db.query(`
+                SELECT TOP 30 * FROM [PHANTICH].[dbo].[LichSuKien]
+                ORDER BY NgayDKCC DESC
+            `)
+
+            const mappedData: StockEventsResponse[] = new StockEventsResponse().mapToList(data);
+            await this.redis.set(RedisKeys.StockEvents, mappedData);
+            return mappedData;
         } catch (e) {
             throw new CatchException(e)
         }

@@ -16,6 +16,8 @@ import {NetForeignSwagger} from "./responses/NetForeign.response";
 import {NetForeignQueryDto} from "./dto/netForeignQuery.dto";
 import {TopRocSwagger} from "./responses/TopRoc.response";
 import {TopNetForeignByExsSwagger} from "./responses/TopNetForeignByEx.response";
+import {InternationalIndexSwagger} from "./responses/InternationalIndex.response";
+import {StockEventsSwagger} from "./responses/StockEvents.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -65,6 +67,14 @@ export class StockController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
+  @Get('get-events')
+  @ApiOperation({ summary: 'Sự kiện thị trường chứng' })
+  @ApiOkResponse({ type: StockEventsSwagger })
+  async getStockEvents(@Res() res: Response) {
+    const data = await this.stockService.getStockEvents();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
   @Get('domestic-index')
   @ApiOperation({ summary: 'Chỉ số trong nước' })
   @ApiOkResponse({ type: DomesticIndexSwagger })
@@ -111,6 +121,16 @@ export class StockController {
   @ApiOkResponse({ type: TopNetForeignByExsSwagger })
   async getTopNetForeignChangeByExchange(@Query() q: GetExchangeQuery, @Res() res: Response) {
     const data = await this.stockService.getTopNetForeignChangeByExchange(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('international-index')
+  @ApiOperation({
+    summary: 'Chỉ số quốc tế',
+  })
+  @ApiOkResponse({ type: InternationalIndexSwagger })
+  async getMaterialPrice(@Res() res: Response) {
+    const data = await this.stockService.getMaterialPrice();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
