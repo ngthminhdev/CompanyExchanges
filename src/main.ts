@@ -20,7 +20,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
   });
-  app.enableCors({origin: '*'})
+  // app.enableCors({origin: '*'})
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLogger());
