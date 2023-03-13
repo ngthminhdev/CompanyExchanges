@@ -10,7 +10,7 @@ import { BaseModel } from '../../models/base.entity';
 import { UserEntity } from '../../user/entities/user.entity';
 
 @Entity({
-  database: 'user',
+  database: 'AUTH',
   name: 'auth',
 })
 export class AuthEntity extends BaseModel {

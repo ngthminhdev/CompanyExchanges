@@ -1,21 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, MaxLength, MinLength } from 'class-validator';
+import {ApiProperty} from '@nestjs/swagger';
+import {IsPhoneNumber, IsString} from 'class-validator';
 
 export class LoginDto {
+  @IsPhoneNumber('VN')
   @ApiProperty({
     type: String,
-    example: 'foo@gmail.com',
-    description: 'Email đã đăng ký',
+    example: '0343892050',
+    description: 'Số điện thoại phải đúng 10 số! theo số điện thoại Việt Nam!',
   })
-  @IsEmail()
-  email: string;
+  phone: string;
 
+  @IsString({message: 'password not found'})
   @ApiProperty({
     type: String,
     example: 'abc123',
-    description: 'Password tối thiểu 6 ký tự, tối đa 50 ký tự',
   })
-  @MinLength(6)
-  @MaxLength(50)
   password: string;
 }

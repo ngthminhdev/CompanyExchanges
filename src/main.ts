@@ -13,6 +13,7 @@ import { ExceptionResponse } from './exceptions/common.exception';
 import { UtilCommonTemplate } from './utils/utils.common';
 import { ValidationFilter } from './filters/validation.filter';
 import { HttpLogger } from './interceptors/http-logger';
+import * as cookieParser from 'cookie-parser';
 import { CONFIG_SERVICE } from './constants';
 
 async function bootstrap() {
@@ -21,6 +22,7 @@ async function bootstrap() {
     bodyParser: true,
   });
   app.enableCors({origin: '*'})
+  app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLogger());
 

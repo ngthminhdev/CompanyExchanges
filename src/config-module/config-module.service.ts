@@ -20,7 +20,7 @@ export class  ConfigServiceProvider {
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       // entities: [CityEntity, DistrictEntity, WardEntity, UserEntity, AuthEntity],
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       options: { encrypt: false },
       // logging: true,
     };
@@ -28,10 +28,6 @@ export class  ConfigServiceProvider {
 
   createJwtOptions(): JwtModuleOptions {
     return {
-      secretOrPrivateKey: process.env.ACCESS_TOKEN_SECRET,
-      signOptions: {
-        expiresIn: parseInt(process.env.EXPIRE_TIME),
-      },
     };
   }
 

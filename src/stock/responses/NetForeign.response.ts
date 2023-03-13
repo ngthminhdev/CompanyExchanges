@@ -39,7 +39,7 @@ export class NetForeignResponse {
         this.LV2 = data?.LV2 || '';
         this.ticker = data?.ticker || '';
         data?.total_value_buy != undefined && (this.total_value_buy = data?.total_value_buy);
-        data?.total_value_sell != undefined && (this.total_value_sell = data?.total_value_sell);
+        data?.total_value_sell != undefined && (this.total_value_sell = -data?.total_value_sell);
     }
 
     public mapToList(data?: NetForeignInterface[] | any[]) {
