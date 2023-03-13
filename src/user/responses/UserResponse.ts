@@ -1,5 +1,5 @@
 import { ApiResponseProperty, PartialType } from '@nestjs/swagger';
-import { BaseResponse } from '../utils/utils.response';
+import { BaseResponse } from '../../utils/utils.response';
 
 export class UserResponse {
   @ApiResponseProperty({
@@ -51,23 +51,29 @@ export class UserResponse {
   })
   is_receive_email: number;
 
-  @ApiResponseProperty({
-    type: Number,
-    example: '336',
-  })
-  city: number;
+  // @ApiResponseProperty({
+  //   type: Number,
+  //   example: '336',
+  // })
+  // city: number;
+  //
+  // @ApiResponseProperty({
+  //   type: Number,
+  //   example: '321',
+  // })
+  // district: number;
+  //
+  // @ApiResponseProperty({
+  //   type: Number,
+  //   example: '655',
+  // })
+  // ward: number;
 
   @ApiResponseProperty({
     type: Number,
-    example: '321',
+    example: 0,
   })
-  district: number;
-
-  @ApiResponseProperty({
-    type: Number,
-    example: '655',
-  })
-  ward: number;
+  role: number;
 
   @ApiResponseProperty({
     type: String,
@@ -90,9 +96,7 @@ export class UserResponse {
     this.date_of_birth = data?.date_of_birth ?? '';
     this.phone = data?.phone ?? 0;
     this.is_verified = data?.is_verified ?? 0;
-    this.city = data?.city ?? 0;
-    this.district = data?.district ?? 0;
-    this.ward = data?.ward ?? 0;
+    this.role = data?.role ?? 0;
     this.address = data?.address ?? '';
     this.access_token = data?.access_token ?? '';
   }

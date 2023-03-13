@@ -5,7 +5,7 @@ import { BaseResponse } from '../utils/utils.response';
 import {Request, Response} from 'express';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UserResponseSwagger } from '../responses/UserResponse';
+import { UserResponseSwagger } from '../user/responses/UserResponse';
 
 @ApiTags('Auth - API')
 @Controller('auth')
