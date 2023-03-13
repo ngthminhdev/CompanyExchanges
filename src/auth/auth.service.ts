@@ -42,7 +42,7 @@ export class AuthService {
                 where: {phone: data.phone},
             });
             if (user) {
-                throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Phone is already exists');
+                throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Số điện thoại đã được đăng ký');
             }
             const saltOrRounds = 10;
             const hash: string = await bcrypt.hash(data.password, saltOrRounds);
@@ -68,13 +68,13 @@ export class AuthService {
             const {phone, password} = loginDto;
             const userByPhone = await this.userRepo.findOne({where: {phone}});
             if (!userByPhone) {
-                throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'phone is not registered');
+                throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Số điện thoại chưa được đăng ký');
             };
 
             const isPasswordMatch = await bcrypt.compare(password, userByPhone.password);
 
             if (!isPasswordMatch) {
-                throw new ExceptionResponse(HttpStatus.BAD_REQUEST,'password is not match');
+                throw new ExceptionResponse(HttpStatus.BAD_REQUEST,'Số điện thoại / mật khẩu không chính xác');
             };
 
             delete userByPhone.password;
