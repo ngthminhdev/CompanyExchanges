@@ -452,12 +452,12 @@ export class StockService {
             if (redisData) return redisData;
 
             const {latestDate, weekDate}: SessionDatesInterface
-                = await this.getSessionDate(`[WEBSITE_SERVER].[dbo].[foreign]`);
+                = await this.getSessionDate(`[PHANTICH].[dbo].[BCN_netvalue]`);
 
             const query = (order: string): string => `
                 SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
                     SUM(t1.net_value_foreign) AS net_value
-                FROM [WEBSITE_SERVER].[dbo].[foreign] t1
+                FROM [PHANTICH].[dbo].[BCN_netvalue] t1
                 JOIN [PHANTICH].[dbo].[ICBID] c
                 ON t1.ticker = c.TICKER
                 WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
