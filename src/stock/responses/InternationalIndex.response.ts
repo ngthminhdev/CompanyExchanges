@@ -63,7 +63,7 @@ export class InternationalIndexResponse {
 
 export class InternationalIndexSwagger extends PartialType(BaseResponse) {
     @ApiProperty({
-        type: InternationalIndexSwagger,
+        type: InternationalIndexResponse,
         isArray: true,
     })
     data: InternationalIndexResponse[];

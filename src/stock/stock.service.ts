@@ -31,6 +31,7 @@ import {InternationalIndexInterface} from "./interfaces/international-index.inte
 import {InternationalIndexResponse} from "./responses/InternationalIndex.response";
 import {StockEventsInterface} from "./interfaces/stock-events.interface";
 import {StockEventsResponse} from "./responses/StockEvents.response";
+import {NetForeignInterface} from "./interfaces/net-foreign.interface";
 
 @Injectable()
 export class StockService {
@@ -386,16 +387,17 @@ export class StockService {
             const redisData: NetForeignResponse[] = await this.redis.get(`${RedisKeys.NetForeign}:${exchange}:${transaction}`);
             if (redisData) return redisData;
 
-            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[WEBSITE_SERVER].[dbo].[foreign]');
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
             const query = (transaction: number): string => `
-                SELECT c.EXCHANGE, c.LV2, c.ticker, n.total_value_${+transaction ? 'sell' : 'buy'}
-                FROM [WEBSITE_SERVER].[dbo].[foreign] n
+                SELECT TOP 20 c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign AS total_value_${+transaction ? 'sell' : 'buy'}
+                FROM [PHANTICH].[dbo].[BCN_netvalue] n
                 JOIN [PHANTICH].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker AND c.EXCHANGE = @1
                 WHERE date_time = @0
+                ORDER BY net_value_foreign ${+transaction ? 'ASC' : 'DESC'}
             `;
 
-            const data: any[] = await this.db.query(query(transaction), [latestDate, exchange]);
+            const data: NetForeignInterface[] = await this.db.query(query(transaction), [latestDate, exchange]);
             const mappedData = new NetForeignResponse().mapToList(data);
             await this.redis.set(`${RedisKeys.NetForeign}:${exchange}:${transaction}`, mappedData);
             return mappedData;
@@ -450,12 +452,12 @@ export class StockService {
             if (redisData) return redisData;
 
             const {latestDate, weekDate}: SessionDatesInterface
-                = await this.getSessionDate(`[WEBSITE_SERVER].[dbo].[foreign]`);
+                = await this.getSessionDate(`[PHANTICH].[dbo].[BCN_netvalue]`);
 
             const query = (order: string): string => `
                 SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
                     SUM(t1.net_value_foreign) AS net_value
-                FROM [WEBSITE_SERVER].[dbo].[foreign] t1
+                FROM [PHANTICH].[dbo].[BCN_netvalue] t1
                 JOIN [PHANTICH].[dbo].[ICBID] c
                 ON t1.ticker = c.TICKER
                 WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
