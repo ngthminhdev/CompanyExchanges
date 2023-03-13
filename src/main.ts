@@ -17,7 +17,6 @@ import * as cookieParser from 'cookie-parser';
 import { CONFIG_SERVICE } from './constants';
 
 async function bootstrap() {
-  const logger = new Logger('AppLogger');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
   });
@@ -43,7 +42,6 @@ async function bootstrap() {
     new ValidationPipe({
       transform: true,
       exceptionFactory(errors: ValidationError[]) {
-        logger.error(errors);
         return new ExceptionResponse(
           HttpStatus.BAD_REQUEST,
           UtilCommonTemplate.getMessageValidator(errors),
