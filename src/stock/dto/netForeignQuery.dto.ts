@@ -14,7 +14,8 @@ export class NetForeignQueryDto {
     @IsEnum(["0","1"], {message: 'transaction not found'})
     @ApiProperty({
         type: Number,
-        example: 0
+        example: 0,
+        description: '0 - buy, 1 - sell'
     })
     transaction: number
 }
