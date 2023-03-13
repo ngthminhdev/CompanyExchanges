@@ -98,23 +98,27 @@ export class AuthService {
         }
     }
 
-    async refreshToken(req: Request) {
+    async refreshToken(req: Request, res: Response) {
         try {
             const refreshToken: string = req.cookies['refreshToken'];
-
             if (!refreshToken) {
                 throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token not found')
             }
-
             const exist = await this.authRepo.findOne({where: {refresh_token: refreshToken}});
-
             if (!exist) {
                 throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
             }
+            const user: UserEntity | any = await this.jwtService.decode(refreshToken);
+            const newAccessToken: string = this.generateAccessToken(user);
+            const newRefreshToken: string = this.generateRefreshToken(user);
 
-            const payload: UserEntity | any = await this.jwtService.decode(refreshToken);
-
-            return {payload};
+            await this.authRepo.update(
+                {user: {user_id: user.user_id}},
+                {access_token: newAccessToken, refresh_token: newRefreshToken},
+            );
+            
+            res.cookie('refreshToken', refreshToken);
+            return {access_token: newAccessToken};
 
         } catch (e) {
             throw new CatchException(e);
