@@ -527,6 +527,25 @@ export class StockService {
         }
     }
 
+    async getMerchandisePrice(q) {
+        try {
+            const {type} = q;
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
+
+            const query: string = `
+                SELECT name, price, unit, change1D AS Day,
+                changeMTD AS MTD, changeYTD AS YTD
+                FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
+                WHERE lastUpdated = @0 and unit ${+type ? '=' : '!=' } ''
+            `;
+
+            const data = await this.db.query(query, [latestDate]);
+            return data;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
     //Get the nearest day have transaction in session, week, month...
     private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
@@ -536,18 +555,21 @@ export class StockService {
         const dates = await this.db.query(`
             SELECT DISTINCT TOP 2 ${column} FROM ${table}
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
-        `, [table]);
+        `);
+
 
         const query: string = `
             SELECT TOP 1 ${column} FROM ${table}
             WHERE ${column} IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, ${column}, @0))`
+            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
+            `;
+
         return {
-            latestDate: dates[0][column],
-            previousDate: dates[1][column],
-            weekDate: (await this.db.query(query, [lastWeek]))[0][column],
-            monthDate: (await this.db.query(query, [lastMonth]))[0][column],
-            yearDate: (await this.db.query(query, [lastYear]))[0][column],
+            latestDate: dates[0]?.[column] || new Date(),
+            previousDate: dates[1]?.[column] || new Date(),
+            weekDate: (await this.db.query(query, [lastWeek]))[0]?.[column] || new Date(),
+            monthDate: (await this.db.query(query, [lastMonth]))[0]?.[column] || new Date(),
+            yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
         }
     }
 
