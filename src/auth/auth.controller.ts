@@ -6,6 +6,7 @@ import {Request, Response} from 'express';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserResponseSwagger } from '../user/responses/UserResponse';
+import {RefreshTokenSwagger} from "./responses/RefreshToken.response";
 
 @ApiTags('Auth - API')
 @Controller('auth')
@@ -32,11 +33,10 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Làm mới access token'})
-  // @ApiBody({ type: LoginDto })
-  // @ApiResponse({ status: HttpStatus.OK, type: UserResponseSwagger })
+  @ApiResponse({ status: HttpStatus.OK, type: RefreshTokenSwagger })
   @Post('refresh-token')
   async refreshToken(@Req() req: Request, @Res() res: Response) {
-    const data = await this.authService.refreshToken(req);
+    const data = await this.authService.refreshToken(req, res);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data: data }));
   }
 }

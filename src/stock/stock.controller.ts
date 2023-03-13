@@ -133,4 +133,14 @@ export class StockController {
     const data = await this.stockService.getMaterialPrice();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('merchandise-price')
+  @ApiOperation({
+    summary: 'Giá hàng hóa',
+  })
+  // @ApiOkResponse({ type: InternationalIndexSwagger })
+  async getMerchandisePrice(@Query() q: any, @Res() res: Response) {
+    const data = await this.stockService.getMerchandisePrice(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
