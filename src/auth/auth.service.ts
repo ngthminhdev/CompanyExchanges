@@ -4,7 +4,7 @@ import {InjectRepository} from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import {Repository} from 'typeorm';
 import {CatchException, ExceptionResponse,} from '../exceptions/common.exception';
-import {UserResponse} from '../responses/UserResponse';
+import {UserResponse} from '../user/responses/UserResponse';
 import {UserEntity} from '../user/entities/user.entity';
 import {LoginDto} from './dto/login.dto';
 import {RegisterDto} from './dto/register.dto';
