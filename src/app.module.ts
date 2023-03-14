@@ -65,24 +65,4 @@ import {SocketModule} from './socket/socket.module';
     ],
 })
 
-// export class AppModule implements NestModule {
-//     configure(consumer: MiddlewareConsumer) {
-//         consumer
-//             .apply(cors({
-//                 // origin: process.env.WHITELIST_IPS.split(','), // add your IP whitelist here
-//                 origin: [
-//                     'http://192.168.15.181',
-//                     'http://192.168.15.211',
-//                     'http://192.168.9.250:3000',
-//                 ], // add your IP whitelist here
-//                 methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-//                 preflightContinue: false,
-//                 optionsSuccessStatus: 204,
-//                 credentials: true,
-//                 allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
-//             }))
-//             .forRoutes('*');
-//     }
-// }
-
 export class AppModule {}
