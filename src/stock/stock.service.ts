@@ -32,6 +32,9 @@ import {InternationalIndexResponse} from "./responses/InternationalIndex.respons
 import {StockEventsInterface} from "./interfaces/stock-events.interface";
 import {StockEventsResponse} from "./responses/StockEvents.response";
 import {NetForeignInterface} from "./interfaces/net-foreign.interface";
+import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
+import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interface";
+import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 
 @Injectable()
 export class StockService {
@@ -527,9 +530,14 @@ export class StockService {
         }
     }
 
-    async getMerchandisePrice(q) {
+    //Giá hàng hóa
+    async getMerchandisePrice(q: MerchandisePriceQueryDto): Promise<MerchandisePriceResponse[]> {
         try {
             const {type} = q;
+
+            const redisData: MerchandisePriceResponse[] = await this.redis.get(`${RedisKeys.MerchandisePrice}:${type}`);
+            if (redisData) return redisData;
+
             const {latestDate}: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
 
             const query: string = `
@@ -539,8 +547,10 @@ export class StockService {
                 WHERE lastUpdated = @0 and unit ${+type ? '=' : '!=' } ''
             `;
 
-            const data = await this.db.query(query, [latestDate]);
-            return data;
+            const data: MerchandisePriceInterface[] = await this.db.query(query, [latestDate]);
+            const mappedData: MerchandisePriceResponse[] = new MerchandisePriceResponse().mapToList(data);
+            await this.redis.set(`${RedisKeys.MerchandisePrice}:${type}`, mappedData);
+            return mappedData;
         } catch (e) {
             throw new CatchException(e)
         }
