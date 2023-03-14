@@ -1,3 +1,8 @@
 export interface MerchandisePriceInterface {
-    name
+    name: string;
+    price: number;
+    unit: string;
+    Day: string;
+    MTD: string;
+    YTD: string;
 }

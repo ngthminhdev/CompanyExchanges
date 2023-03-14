@@ -18,6 +18,8 @@ import {TopRocSwagger} from "./responses/TopRoc.response";
 import {TopNetForeignByExsSwagger} from "./responses/TopNetForeignByEx.response";
 import {InternationalIndexSwagger} from "./responses/InternationalIndex.response";
 import {StockEventsSwagger} from "./responses/StockEvents.response";
+import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
+import {MerchandisePriceSwagger} from "./responses/MerchandisePrice.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -138,8 +140,8 @@ export class StockController {
   @ApiOperation({
     summary: 'Giá hàng hóa',
   })
-  // @ApiOkResponse({ type: InternationalIndexSwagger })
-  async getMerchandisePrice(@Query() q: any, @Res() res: Response) {
+  @ApiOkResponse({ type: MerchandisePriceSwagger })
+  async getMerchandisePrice(@Query() q: MerchandisePriceQueryDto, @Res() res: Response) {
     const data = await this.stockService.getMerchandisePrice(q);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

@@ -47,7 +47,7 @@ export class InternationalIndexResponse {
     percent_ytd: number;
 
     constructor(data?: InternationalIndexInterface) {
-        this.ticker = data?.ticker || '';
+        this.ticker = data?.ticker ? data?.ticker.replace('^', '') : '';
         this.diemso = data?.diemso || 0;
         this.date_time = data?.date_time || "";
         this.percent_d = +data?.percent_d || 0;
