@@ -48,12 +48,12 @@ import {SocketModule} from './socket/socket.module';
         }),
 
         //kakfa
-        // KafkaConfigModule.registerAsync({
-        //   imports: [ConfigModuleModule],
-        //   useFactory: (config: ConfigServiceProvider) =>
-        //     ClientProxyFactory.create(config.createKafkaConfig()),
-        //   inject: [ConfigServiceProvider],
-        // }),
+        KafkaConfigModule.registerAsync({
+          imports: [ConfigModuleModule],
+          useFactory: (config: ConfigServiceProvider) =>
+            ClientProxyFactory.create(config.createKafkaConfig()),
+          inject: [ConfigServiceProvider],
+        }),
 
         //aplication modules
         ConfigModuleModule,
@@ -61,7 +61,7 @@ import {SocketModule} from './socket/socket.module';
         AuthModule,
         UserModule,
         // SocketModule,
-        // KafkaModule,
+        KafkaModule,
     ],
 })
 export class AppModule implements NestModule {

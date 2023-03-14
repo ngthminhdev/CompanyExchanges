@@ -56,7 +56,7 @@ export class  ConfigServiceProvider {
 
         consumer: {
           groupId: process.env.KAFKA_GROUP_ID,
-          // allowAutoTopicCreation: true,
+          allowAutoTopicCreation: true,
           readUncommitted: true,
           heartbeatInterval: 59 * 1000,
           sessionTimeout: 60 * 1000,
@@ -65,7 +65,7 @@ export class  ConfigServiceProvider {
           createPartitioner: Partitioners.LegacyPartitioner,
         },
         // producerOnlyMode: true,
-        subscribe: { fromBeginning: false },
+        subscribe: { fromBeginning: true },
         send: {
           acks: 0,
         },

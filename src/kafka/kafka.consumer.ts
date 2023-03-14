@@ -28,6 +28,7 @@ export class KafkaConsumer {
       console.log(process.env.NODE_ENV);
       const patterns =
         process.env.NODE_ENV !== 'production' ? [] : requestPatterns;
+      console.log(patterns)
       this.listenRequestPatterns(patterns);
       await this.client.connect();
     } catch (error) {
@@ -41,12 +42,13 @@ export class KafkaConsumer {
     });
   }
 
-  @MessagePattern(Topics.MyTopic)
+  @MessagePattern(Topics.TestTopic)
   async handleKafkaAction(
     @Payload() payload: any,
     @Ctx() context: KafkaContext,
   ) {
     try {
+      console.log(payload);
     } catch (error) {
       this.logger.error(error);
     }
