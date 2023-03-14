@@ -574,27 +574,27 @@ export class StockService {
     }
 
     private isEqual = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
-        const change = item.close_price - yesterdayItem.ref_price;
+        const change = item.close_price - yesterdayItem.close_price;
         return change === 0 ? BooleanEnum.True : BooleanEnum.False
     };
 
     private isIncrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
-        return item.close_price > yesterdayItem.ref_price && item.close_price < yesterdayItem.ref_price * 1.07
+        return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
     private isDecrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
-        return item.close_price < yesterdayItem.ref_price && item.close_price > yesterdayItem.ref_price * 0.93
+        return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
     private isHigh = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
-        return item.close_price >= yesterdayItem.ref_price * 1.07 && item.close_price !== yesterdayItem.ref_price
+        return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
     private isLow = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
-        return item.close_price <= yesterdayItem.ref_price * 0.93 && item.close_price !== yesterdayItem.ref_price
+        return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
             ? BooleanEnum.True : BooleanEnum.False;
     };
 }

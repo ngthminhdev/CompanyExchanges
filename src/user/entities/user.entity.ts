@@ -1,6 +1,5 @@
-import {Column, Entity, Index, JoinColumn, OneToOne, PrimaryGeneratedColumn} from 'typeorm';
+import {Column, Entity, Index, PrimaryGeneratedColumn} from 'typeorm';
 import {BaseModel} from '../../models/base.entity';
-import {AuthEntity} from "../../auth/entities/auth.entity";
 
 @Entity({
   database: 'AUTH',
@@ -11,13 +10,6 @@ export class UserEntity extends BaseModel {
     type: 'int',
   })
   user_id: number;
-
-  @OneToOne(() => AuthEntity)
-  @JoinColumn({
-    referencedColumnName: 'auth_id',
-    name: 'auth_id',
-  })
-  auth: AuthEntity;
 
   @Index()
   @Column({
