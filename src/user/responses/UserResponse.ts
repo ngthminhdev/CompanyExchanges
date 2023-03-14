@@ -1,5 +1,6 @@
 import { ApiResponseProperty, PartialType } from '@nestjs/swagger';
 import { BaseResponse } from '../../utils/utils.response';
+import {UtilCommonTemplate} from "../../utils/utils.common";
 
 export class UserResponse {
   @ApiResponseProperty({
@@ -93,7 +94,7 @@ export class UserResponse {
     this.email = data?.email ?? '';
     this.name = data?.name ?? '';
     this.avatar = data?.avatar ?? '';
-    this.date_of_birth = data?.date_of_birth ?? '';
+    this.date_of_birth = UtilCommonTemplate.toDateTime(data?.date_of_birth) ?? '';
     this.phone = data?.phone ?? 0;
     this.is_verified = data?.is_verified ?? 0;
     this.role = data?.role ?? 0;

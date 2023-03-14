@@ -32,7 +32,6 @@ import {InternationalIndexResponse} from "./responses/InternationalIndex.respons
 import {StockEventsInterface} from "./interfaces/stock-events.interface";
 import {StockEventsResponse} from "./responses/StockEvents.response";
 import {NetForeignInterface} from "./interfaces/net-foreign.interface";
-import {UtilCommonTemplate} from "../utils/utils.common";
 
 @Injectable()
 export class StockService {
