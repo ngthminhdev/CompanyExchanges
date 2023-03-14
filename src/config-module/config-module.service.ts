@@ -65,7 +65,7 @@ export class  ConfigServiceProvider {
           createPartitioner: Partitioners.LegacyPartitioner,
         },
         // producerOnlyMode: true,
-        subscribe: { fromBeginning: true },
+        subscribe: { fromBeginning: false },
         send: {
           acks: 0,
         },

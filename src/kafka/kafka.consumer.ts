@@ -9,6 +9,7 @@ import {
 import { KafkaService } from './kafka.service';
 import { KAFKA_MODULE } from '../constants';
 import { requestPatterns, Topics } from '../enums/kafka-topics.enum';
+import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -42,13 +43,13 @@ export class KafkaConsumer {
     });
   }
 
-  @MessagePattern(Topics.TestTopic)
-  async handleKafkaAction(
-    @Payload() payload: any,
+  @MessagePattern(Topics.DoRongThiTruong)
+  handleMarketBreadth(
+    @Payload() payload: MarketBreadthKafkaInterface,
     @Ctx() context: KafkaContext,
   ) {
     try {
-      console.log(payload);
+      this.kafkaService.handleMarketBreadth(payload)
     } catch (error) {
       this.logger.error(error);
     }

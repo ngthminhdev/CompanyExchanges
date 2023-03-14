@@ -13,6 +13,7 @@ import {Server, Socket} from "socket.io";
 import {Logger, UseFilters} from "@nestjs/common";
 import {SocketErrorFilter} from "../filters/socket-error.filter";
 import {CatchSocketException} from "../exceptions/socket.exception";
+import {SocketOn} from "../enums/socket-enum";
 
 @WebSocketGateway({cors: {origin: '*'}, namespace: 'socket', transports: ['websocket']})
 @UseFilters(SocketErrorFilter)
@@ -27,6 +28,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
     afterInit(server: any) {
         this.logger.log('Server Init!')
+        global._server = this.server;
     }
 
     handleConnection(client: Socket) {
@@ -49,15 +51,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
     }
 
 
-    @SubscribeMessage('socket')
+    @SubscribeMessage(SocketOn.DoRongThiTruong)
     create(client: Socket, payload: any,) {
         try {
-            const token: string = client.data.token;
-            console.log(token);
 
 
-            this.server.emit('socket', payload.text);
-            // throw new WsException('Co loi abcd')
         } catch (e) {
             throw new CatchSocketException(e)
         }
