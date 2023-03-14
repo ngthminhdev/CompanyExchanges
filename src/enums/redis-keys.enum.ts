@@ -12,4 +12,6 @@ export enum RedisKeys {
   TopNetForeignByEx = 'top-net-foreign-by-ex',
   NetForeign = 'net-foreign',
   TopRoc5 = 'top-roc-5',
+
+  User = 'user'
 }

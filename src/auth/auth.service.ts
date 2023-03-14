@@ -10,6 +10,7 @@ import {LoginDto} from './dto/login.dto';
 import {RegisterDto} from './dto/register.dto';
 import {AuthEntity} from './entities/auth.entity';
 import {Request, Response} from "express";
+import {TimeToLive} from "../enums/common.enum";
 
 @Injectable()
 export class AuthService {
@@ -128,14 +129,14 @@ export class AuthService {
     generateAccessToken(user: UserEntity): string {
         return this.jwtService.sign(this.userSign(user), {
             secret: process.env.ACCESS_TOKEN_SECRET,
-            expiresIn: '1h'
+            expiresIn: TimeToLive.OneDay
         });
     }
 
     generateRefreshToken(user: UserEntity): string {
         return this.jwtService.sign(this.userSign(user), {
             secret: process.env.REFRESH_TOKEN_SECRET,
-            expiresIn: '1y'
+            expiresIn: TimeToLive.OneYear
         });
     }
 }
