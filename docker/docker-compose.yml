@@ -2,13 +2,14 @@ version: '3'
 services:
   nestjs-service:
     image: ngthminhdev/stock-docker-hub:${TAG}
+    restart: always
     deploy:
       replicas: 1
     ports: 
       - '3001:3001'
     environment:
-      - CONFIG_SERVER_HOST=192.168.15.181
-      - CONFIG_SERVER_PORT=3000
+      - CONFIG_SERVER_HOST=192.168.9.250
+      - CONFIG_SERVER_PORT=3001
       - CONFIG_API_PREFIX=api/v1
       - CONFIG_STRATEGY=jwt
       - CONFIG_MSSQL_HOST=192.168.15.174
@@ -20,6 +21,11 @@ services:
       - CONFIG_ACCESS_TOKEN_SECRET=access_token_secret
       - CONFIG_REFRESH_TOKEN_SECRET=refresh_token_secret
       - CONFIG_EXPIRE_TIME=3600
-      - CONFIG_NODEMAILER_USER=minhcloudinary@gmail.com
-      - CONFIG_NODEMAILER_PASSWORD=wenqafmrinypywot
-      - CONFIG_REDIS_URL=redis://:redis_demo_password@52.221.246.188:6379
+      - CONFIG_REDIS_HOST=52.221.246.188
+      - CONFIG_REDIS_PORT=6379
+      - CONFIG_REDIS_PASSWORD=redis_demo_password
+      - CONFIG_REDIS_DB=0
+      - CONFIG_KAFKA_HOST=13.229.56.36
+      - CONFIG_KAFKA_PORT=9092
+      - CONFIG_KAFKA_GROUP_ID=kafka-beta-stock-group-id
+      - CONFIG_KAFKA_CLIENT_ID=beta-node-1

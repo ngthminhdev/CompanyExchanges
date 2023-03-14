@@ -13,15 +13,16 @@ import { ExceptionResponse } from './exceptions/common.exception';
 import { UtilCommonTemplate } from './utils/utils.common';
 import { ValidationFilter } from './filters/validation.filter';
 import { HttpLogger } from './interceptors/http-logger';
+import * as cookieParser from 'cookie-parser';
 import { CONFIG_SERVICE } from './constants';
 
 async function bootstrap() {
-  const logger = new Logger('AppLogger');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
   });
+  // app.enableCors({origin: '*'})
+  app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
-
   app.useGlobalInterceptors(new HttpLogger());
 
   const config = new DocumentBuilder()
@@ -41,7 +42,6 @@ async function bootstrap() {
     new ValidationPipe({
       transform: true,
       exceptionFactory(errors: ValidationError[]) {
-        logger.error(errors);
         return new ExceptionResponse(
           HttpStatus.BAD_REQUEST,
           UtilCommonTemplate.getMessageValidator(errors),
@@ -52,9 +52,8 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-
-  await app.startAllMicroservices().catch((e) => console.log(e));
+  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  // await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(

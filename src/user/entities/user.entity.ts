@@ -1,8 +1,9 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseModel } from '../../models/base.entity';
+import {Column, Entity, Index, JoinColumn, OneToOne, PrimaryGeneratedColumn} from 'typeorm';
+import {BaseModel} from '../../models/base.entity';
+import {AuthEntity} from "../../auth/entities/auth.entity";
 
 @Entity({
-  database: 'user',
+  database: 'AUTH',
   name: 'user',
 })
 export class UserEntity extends BaseModel {
@@ -11,29 +12,38 @@ export class UserEntity extends BaseModel {
   })
   user_id: number;
 
+  @OneToOne(() => AuthEntity)
+  @JoinColumn({
+    referencedColumnName: 'auth_id',
+    name: 'auth_id',
+  })
+  auth: AuthEntity;
+
   @Index()
   @Column({
-    type: 'varchar',
-    unique: true,
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   email: string;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   password: string;
 
   @Column({
-    type: 'varchar',
-    unique: true,
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   name: string;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   avatar: string;
@@ -46,7 +56,8 @@ export class UserEntity extends BaseModel {
 
   @Index()
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   phone: string;
@@ -55,7 +66,7 @@ export class UserEntity extends BaseModel {
    * Tài Khoản đã xác minh email hay chưa: 0 - chưa, 1 - rồi
    */
   @Column({
-    type: 'smallint',
+    type: 'tinyint',
     default: 0,
   })
   is_verified: number;
@@ -64,10 +75,16 @@ export class UserEntity extends BaseModel {
    * Tài khoản có đăng ký nhận email khuyến mãi... hay không: 0 - không, 1 - có
    */
   @Column({
-    type: 'smallint',
+    type: 'tinyint',
     default: 0,
   })
   is_receive_email: number;
+
+  @Column({
+    type: 'tinyint',
+    default: 0, //0 - user, 1 - admin
+  })
+  role: number;
 
   // @OneToOne(() => CityEntity)
   // @JoinColumn({
@@ -91,7 +108,8 @@ export class UserEntity extends BaseModel {
   // ward: WardEntity;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
+    length: '255',
     default: '',
   })
   address: string;

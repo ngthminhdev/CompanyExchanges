@@ -5,7 +5,7 @@ export class UtilCommonTemplate {
     if (!value) {
       return '';
     }
-    return moment(value).format('MM-DD-YYYY HH:mm:ss');
+    return moment(value).utcOffset(420).format('MM-DD-YYYY HH:mm:ss');
   }
 
   static toTimestamp(value: any) {
@@ -19,7 +19,7 @@ export class UtilCommonTemplate {
     if (!value) {
       return '';
     }
-    return moment(value, 'DD/MM/YYYY').toDate();
+    return moment(value).utcOffset(420).format('YYYY/MM/DD');
   }
 
   static getMessageValidator(errors: ValidationError[]) {

@@ -1,8 +1,8 @@
 {
   "name": "demo-stock",
-  "version": "0.0.1",
+  "version": "0.0.24",
   "description": "",
-  "author": "",
+  "author": "Minh Nguyen",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -25,15 +25,19 @@
     "@nestjs/config": "^2.3.1",
     "@nestjs/core": "^9.0.0",
     "@nestjs/jwt": "^10.0.2",
+    "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^9.3.9",
     "@nestjs/platform-express": "^9.0.0",
+    "@nestjs/platform-socket.io": "^9.3.9",
     "@nestjs/swagger": "^6.2.1",
     "@nestjs/typeorm": "^9.0.1",
+    "@nestjs/websockets": "^9.3.9",
     "bcrypt": "^5.1.0",
     "cache-manager": "^5.1.6",
     "cache-manager-redis-store": "^3.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "cookie-parser": "^1.4.6",
     "jsonwebtoken": "^9.0.0",
     "kafkajs": "^2.2.3",
     "lodash": "^4.17.21",
@@ -43,6 +47,7 @@
     "path": "^0.12.7",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
+    "socket.io": "^4.6.1",
     "typeorm": "^0.3.12"
   },
   "devDependencies": {

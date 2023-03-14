@@ -4,9 +4,10 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { redisStore } from 'cache-manager-redis-store';
 import { KafkaOptions, Transport } from '@nestjs/microservices';
 import { Partitioners } from 'kafkajs';
+import {TimeToLive} from "../enums/common.enum";
 
 @Injectable()
-export class ConfigServiceProvider {
+export class  ConfigServiceProvider {
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'mssql',
@@ -19,7 +20,7 @@ export class ConfigServiceProvider {
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       // entities: [CityEntity, DistrictEntity, WardEntity, UserEntity, AuthEntity],
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       options: { encrypt: false },
       // logging: true,
     };
@@ -27,19 +28,19 @@ export class ConfigServiceProvider {
 
   createJwtOptions(): JwtModuleOptions {
     return {
-      secretOrPrivateKey: process.env.ACCESS_TOKEN_SECRET,
-      signOptions: {
-        expiresIn: parseInt(process.env.EXPIRE_TIME),
-      },
     };
   }
 
   async createRedisOptions(): Promise<any> {
     return {
       store: await redisStore({
-        url: process.env.REDIS_URL,
+        // url: process.env.REDIS_URL,
+        url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/${process.env.REDIS_DB}`,
+        ttl: TimeToLive.FiveMinutes,
+        socket: {
+          connectTimeout: 60000
+        }
       }),
-      ttl: 1800,
     };
   }
 

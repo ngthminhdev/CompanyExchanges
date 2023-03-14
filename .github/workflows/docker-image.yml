@@ -1,0 +1,66 @@
+# .github/workflows/docker-image.yml
+name: Docker Stock Demo
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Build the Docker image
+      uses: actions/checkout@v3
+    
+    - name: Get package version
+      run: echo "::set-output name=version::$(cat package.json | jq -r '.version')"
+      id: get_version
+      
+    - name: Compress code
+      run: chmod +x ./compress.sh && ./compress.sh
+      shell: bash
+      working-directory: ${{ github.workspace }}
+        
+#     - name: UnitTest ${{matrix.node-version}}
+#       uses: actions/setup-node@v3
+#       with:
+#         node-version: 16
+#         cache: 'npm'
+#     - run: npm ci
+#     - run: npm run build
+#     - run: npm start
+    
+    - name: Login Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      id: buildx
+      
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      id: docker_build
+      with:
+        context: ./docker
+        file: ./docker/Dockerfile
+        push: true
+        tags: ${{secrets.DOCKER_USERNAME}}/${{secrets.DOCKER_IMAGE}}:${{ steps.get_version.outputs.version }}
+        
+#     - name: SSH Deploy
+#       uses: appleboy/ssh-action@v0.1.2
+#       with:
+#         host: ${{secrets.SSH_HOST}}
+#         username: ${{secrets.SSH_USERNAME}}
+#         password: ${{secrets.SSH_PASSWORD}}
+#         script: |
+#           cd ~/SERVICE/docker && sudo chmod +x ../deploy.sh && ./deploy.sh
+    
+    
