@@ -1,4 +1,4 @@
-export interface MarketBreadthInterface {
+export interface IndustryInterface {
   industry: string;
   equal: number;
   high: number;
@@ -10,7 +10,7 @@ export interface MarketBreadthInterface {
   month_change_percent: number;
 }
 
-export interface MarketBreadthRawInterface {
+export interface IndustryRawInterface {
   industry: string;
   ticker: string;
   mkt_cap: number;
