@@ -6,8 +6,8 @@ import {CatchException} from '../exceptions/common.exception';
 import {MarketVolatilityResponse} from './responses/MarketVolatiliy.response';
 import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "./responses/NetTransactionValue.response";
-import {MarketBreadthRawInterface} from "./interfaces/market-breadth.interface";
-import {MarketBreadthRespone} from "./responses/MarketBreadth.response";
+import {IndustryRawInterface} from "./interfaces/industry.interface";
+import {IndustryResponse} from "./responses/Industry.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {BooleanEnum, TimeToLive} from "../enums/common.enum";
 import * as moment from "moment";
@@ -35,6 +35,7 @@ import {NetForeignInterface} from "./interfaces/net-foreign.interface";
 import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interface";
 import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
+import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
 
 @Injectable()
 export class StockService {
@@ -162,11 +163,11 @@ export class StockService {
         }
     }
 
-    //Độ rộng ngành
-    async getMarketBreadth(): Promise<MarketBreadthRespone[]> {
+    //Phân ngành
+    async getIndustry(): Promise<IndustryResponse[]> {
         try {
             //Check caching data is existed
-            const redisData: MarketBreadthRespone[] = await this.redis.get(RedisKeys.MarketBreadth);
+            const redisData: IndustryResponse[] = await this.redis.get(RedisKeys.MarketBreadth);
             if (redisData) return redisData;
 
             //Get 2 latest date
@@ -189,7 +190,7 @@ export class StockService {
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
-            const marketCap: MarketBreadthRawInterface[]
+            const marketCap: IndustryRawInterface[]
                 = await this.db.query(marketCapQuery, [latestDate, previousDate, weekDate, monthDate]);
 
             //Group by industry
@@ -209,7 +210,7 @@ export class StockService {
             });
 
             //Get data of the 1st day and the 2nd day
-            const [dataToday, dataYesterday]: [MarketBreadthRawInterface[], MarketBreadthRawInterface[]] =
+            const [dataToday, dataYesterday]: [IndustryRawInterface[], IndustryRawInterface[]] =
                 await Promise.all([this.db.query(query, [latestDate]), this.db.query(query, [previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
@@ -253,7 +254,7 @@ export class StockService {
             }, []);
 
             //Map response
-            const mappedData: MarketBreadthRespone[] = new MarketBreadthRespone().mapToList(final);
+            const mappedData: IndustryResponse[] = new IndustryResponse().mapToList(final);
 
             //Caching data for the next request
             await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.Minute);
@@ -556,6 +557,17 @@ export class StockService {
         }
     }
 
+    // Độ rộng ngành
+    async getMarketBreadth() {
+        try {
+            return new MarketBreadthResponse().mapToList(await this.db.query(`
+                SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
+            `));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
     //Get the nearest day have transaction in session, week, month...
     private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
@@ -583,27 +595,27 @@ export class StockService {
         }
     }
 
-    private isEqual = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+    private isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
         const change = item.close_price - yesterdayItem.close_price;
         return change === 0 ? BooleanEnum.True : BooleanEnum.False
     };
 
-    private isIncrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+    private isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
         return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
-    private isDecrease = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+    private isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
         return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
-    private isHigh = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+    private isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
         return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
             ? BooleanEnum.True : BooleanEnum.False;
     };
 
-    private isLow = (yesterdayItem: MarketBreadthRawInterface, item: MarketBreadthRawInterface): BooleanEnum => {
+    private isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
         return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
             ? BooleanEnum.True : BooleanEnum.False;
     };

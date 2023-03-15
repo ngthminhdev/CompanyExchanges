@@ -1,7 +1,7 @@
 import {Controller, Get, HttpStatus, Query, Res} from '@nestjs/common';
 import {ApiOkResponse, ApiOperation, ApiTags} from '@nestjs/swagger';
 import {Response} from 'express';
-import {MarketBreadthSwagger} from './responses/MarketBreadth.response';
+import {IndustrySwagger} from './responses/Industry.response';
 import {MarketVolatilitySwagger} from './responses/MarketVolatiliy.response';
 import {BaseResponse} from '../utils/utils.response';
 import {StockService} from './stock.service';
@@ -20,6 +20,7 @@ import {InternationalIndexSwagger} from "./responses/InternationalIndex.response
 import {StockEventsSwagger} from "./responses/StockEvents.response";
 import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceSwagger} from "./responses/MerchandisePrice.response";
+import {MarketBreadthSwagger} from "./responses/MarketBreadth.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -39,6 +40,14 @@ export class StockController {
   @ApiOkResponse({type: MarketLiquiditySwagger})
   async getMarketLiquidity(@Query() q: MarketLiquidityQueryDto,  @Res() res: Response) {
     const data = await this.stockService.getMarketLiquidity(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('industry')
+  @ApiOperation({ summary: 'Độ rộng ngành' })
+  @ApiOkResponse({ type: IndustrySwagger })
+  async getIndustry(@Res() res: Response) {
+    const data = await this.stockService.getIndustry();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
