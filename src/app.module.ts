@@ -48,20 +48,20 @@ import {SocketModule} from './socket/socket.module';
         }),
 
         //kakfa
-        // KafkaConfigModule.registerAsync({
-        //   imports: [ConfigModuleModule],
-        //   useFactory: (config: ConfigServiceProvider) =>
-        //     ClientProxyFactory.create(config.createKafkaConfig()),
-        //   inject: [ConfigServiceProvider],
-        // }),
+        KafkaConfigModule.registerAsync({
+          imports: [ConfigModuleModule],
+          useFactory: (config: ConfigServiceProvider) =>
+            ClientProxyFactory.create(config.createKafkaConfig()),
+          inject: [ConfigServiceProvider],
+        }),
 
         //aplication modules
         ConfigModuleModule,
         StockModule,
         AuthModule,
         UserModule,
-        // SocketModule,
-        // KafkaModule,
+        SocketModule,
+        KafkaModule,
     ],
 })
 

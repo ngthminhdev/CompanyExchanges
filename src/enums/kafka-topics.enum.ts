@@ -1,5 +1,11 @@
 export enum Topics {
-  MyTopic = 'my-topic',
+  DoRongThiTruong = 'kafka-do-rong-thi-truong-topic',
+  ThanhKhoanPhienHienTai = 'kafka-thanh-khoan-phien-hien-tai-topic',
+  ThanhKhoanPhienTruoc = 'kafka-thanh-khoan-phien-truoc-topic',
 }
 
-export const requestPatterns: string[] = [Topics.MyTopic];
+export const requestPatterns: string[] = [
+    Topics.DoRongThiTruong,
+    Topics.ThanhKhoanPhienHienTai,
+    Topics.ThanhKhoanPhienTruoc
+];

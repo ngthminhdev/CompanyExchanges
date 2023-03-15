@@ -9,6 +9,8 @@ import {
 import { KafkaService } from './kafka.service';
 import { KAFKA_MODULE } from '../constants';
 import { requestPatterns, Topics } from '../enums/kafka-topics.enum';
+import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
+import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -28,6 +30,7 @@ export class KafkaConsumer {
       console.log(process.env.NODE_ENV);
       const patterns =
         process.env.NODE_ENV !== 'production' ? [] : requestPatterns;
+      console.log(patterns)
       this.listenRequestPatterns(patterns);
       await this.client.connect();
     } catch (error) {
@@ -41,12 +44,37 @@ export class KafkaConsumer {
     });
   }
 
-  @MessagePattern(Topics.MyTopic)
-  async handleKafkaAction(
-    @Payload() payload: any,
+  @MessagePattern(Topics.DoRongThiTruong)
+  handleMarketBreadth(
+    @Payload() payload: MarketBreadthKafkaInterface,
     @Ctx() context: KafkaContext,
   ) {
     try {
+      this.kafkaService.handleMarketBreadth(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ThanhKhoanPhienHienTai)
+  handleMarketLiquidityNow(
+      @Payload() payload: MarketLiquidityKafkaInterface,
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleMarketLiquidityNow(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ThanhKhoanPhienTruoc)
+  handleLastMarketLiquidity(
+      @Payload() payload: MarketLiquidityKafkaInterface,
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleLastMarketLiquidity(payload)
     } catch (error) {
       this.logger.error(error);
     }
