@@ -88,7 +88,12 @@ export class AuthService {
                 {access_token: accessToken, refresh_token: refreshToken},
             );
 
-            res.cookie('refreshToken', refreshToken);
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: false,
+                path: '/',
+                secure: false,
+                sameSite: 'none'
+            });
 
             return new UserResponse({
                 ...userByPhone,
