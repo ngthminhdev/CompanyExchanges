@@ -21,6 +21,14 @@ async function bootstrap() {
     bodyParser: true,
   });
   // app.enableCors({origin: '*'})
+  app.enableCors({
+    origin: process.env.WHITELIST_IPS.split(','), // add your IP whitelist here
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    credentials: true,
+    allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
+})
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLogger());

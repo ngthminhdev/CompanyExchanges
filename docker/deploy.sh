@@ -1,1 +1,1 @@
-docker stack deploy --compose-file docker-compose.yml --with-registry-auth 
+docker stack deploy --compose-file docker-compose.yml --with-registry-auth stock_api_service
