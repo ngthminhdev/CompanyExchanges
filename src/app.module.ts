@@ -60,7 +60,7 @@ import {SocketModule} from './socket/socket.module';
         StockModule,
         AuthModule,
         UserModule,
-        // SocketModule,
+        SocketModule,
         KafkaModule,
     ],
 })

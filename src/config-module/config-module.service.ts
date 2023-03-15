@@ -59,7 +59,7 @@ export class  ConfigServiceProvider {
           allowAutoTopicCreation: true,
           readUncommitted: true,
           heartbeatInterval: 59 * 1000,
-          sessionTimeout: 60 * 1000,
+          sessionTimeout: 300 * 1000,
         },
         producer: {
           createPartitioner: Partitioners.LegacyPartitioner,

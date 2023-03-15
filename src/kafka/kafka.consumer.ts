@@ -10,6 +10,7 @@ import { KafkaService } from './kafka.service';
 import { KAFKA_MODULE } from '../constants';
 import { requestPatterns, Topics } from '../enums/kafka-topics.enum';
 import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
+import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -50,6 +51,30 @@ export class KafkaConsumer {
   ) {
     try {
       this.kafkaService.handleMarketBreadth(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ThanhKhoanPhienHienTai)
+  handleMarketLiquidityNow(
+      @Payload() payload: MarketLiquidityKafkaInterface,
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleMarketLiquidityNow(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ThanhKhoanPhienTruoc)
+  handleLastMarketLiquidity(
+      @Payload() payload: MarketLiquidityKafkaInterface,
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleLastMarketLiquidity(payload)
     } catch (error) {
       this.logger.error(error);
     }
