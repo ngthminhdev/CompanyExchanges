@@ -1,20 +1,15 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import {
-  HttpStatus,
-  Logger,
-  ValidationError,
-  ValidationPipe,
-} from '@nestjs/common';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ExceptionResponse } from './exceptions/common.exception';
-import { UtilCommonTemplate } from './utils/utils.common';
-import { ValidationFilter } from './filters/validation.filter';
-import { HttpLogger } from './interceptors/http-logger';
+import {NestFactory} from '@nestjs/core';
+import {AppModule} from './app.module';
+import {HttpStatus, ValidationError, ValidationPipe,} from '@nestjs/common';
+import {NestExpressApplication} from '@nestjs/platform-express';
+import {join} from 'path';
+import {DocumentBuilder, SwaggerModule} from '@nestjs/swagger';
+import {ExceptionResponse} from './exceptions/common.exception';
+import {UtilCommonTemplate} from './utils/utils.common';
+import {ValidationFilter} from './filters/validation.filter';
+import {HttpLogger} from './interceptors/http-logger';
 import * as cookieParser from 'cookie-parser';
-import { CONFIG_SERVICE } from './constants';
+import {CONFIG_SERVICE} from './constants';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -60,12 +55,12 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  // await app.startAllMicroservices().catch((e) => console.log(e));
+  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(
-      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.31`,
+      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.32`,
     );
   });
 }

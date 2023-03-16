@@ -1,5 +1,4 @@
-import {CacheModule, MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
-import * as cors from 'cors'
+import {CacheModule, Module} from '@nestjs/common';
 import {ConfigModule} from '@nestjs/config';
 import {KafkaModule as KafkaConfigModule} from 'nestjs-config-kafka';
 import {JwtModule} from '@nestjs/jwt';
@@ -13,8 +12,8 @@ import {WardEntity} from './models/ward.entity';
 import {StockModule} from './stock/stock.module';
 import {UserModule} from './user/user.module';
 import {ClientProxyFactory} from '@nestjs/microservices';
-import {KafkaModule} from './kafka/kafka.module';
 import {SocketModule} from './socket/socket.module';
+import {KafkaModule} from "./kafka/kafka.module";
 
 @Module({
     imports: [
@@ -61,7 +60,7 @@ import {SocketModule} from './socket/socket.module';
         AuthModule,
         UserModule,
         SocketModule,
-        // KafkaModule,
+        KafkaModule,
     ],
 })
 

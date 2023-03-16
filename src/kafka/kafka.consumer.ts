@@ -1,14 +1,8 @@
-import { Controller, Inject, Logger } from '@nestjs/common';
-import {
-  ClientKafka,
-  Ctx,
-  KafkaContext,
-  MessagePattern,
-  Payload,
-} from '@nestjs/microservices';
-import { KafkaService } from './kafka.service';
-import { KAFKA_MODULE } from '../constants';
-import { requestPatterns, Topics } from '../enums/kafka-topics.enum';
+import {Controller, Inject, Logger} from '@nestjs/common';
+import {ClientKafka, Ctx, KafkaContext, MessagePattern, Payload,} from '@nestjs/microservices';
+import {KafkaService} from './kafka.service';
+import {KAFKA_MODULE} from '../constants';
+import {requestPatterns, Topics} from '../enums/kafka-topics.enum';
 import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
 import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
 
