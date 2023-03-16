@@ -1,5 +1,5 @@
 import {Controller, Get, HttpStatus, Res} from '@nestjs/common';
-import {ApiOkResponse, ApiOperation, ApiTags} from '@nestjs/swagger';
+import {ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags} from '@nestjs/swagger';
 import {Response} from "express";
 import {BaseResponse} from "../utils/utils.response";
 import {UserService} from "./user.service";
@@ -20,6 +20,7 @@ export class UserController {
         summary: 'Thông tin người dùng by token',
     })
     @ApiOkResponse({ type: UserResponseSwagger })
+    @ApiBearerAuth()
     async getInfo(@GetUserIdFromToken() user_id: number, @Res() res: Response) {
         try {
             const data = await this.userService.getInfo(user_id);
