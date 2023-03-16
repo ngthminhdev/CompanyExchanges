@@ -38,7 +38,7 @@ export class MarketBreadthResponse {
         this.index = data?.index || "";
         this.noChange = data?.noChange || 0;
         this.decline = data?.decline || 0;
-        this.decline = data?.decline || 0;
+        this.advance = data?.advance || 0;
         this.time = data?.time || "";
     }
 
