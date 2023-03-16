@@ -21,6 +21,7 @@ import {StockEventsSwagger} from "./responses/StockEvents.response";
 import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceSwagger} from "./responses/MerchandisePrice.response";
 import {MarketBreadthSwagger} from "./responses/MarketBreadth.response";
+import {MarketLiquidityChartSwagger} from "./responses/MarketLiquidityChart.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -44,7 +45,7 @@ export class StockController {
   }
 
   @Get('industry')
-  @ApiOperation({ summary: 'Độ rộng ngành' })
+  @ApiOperation({ summary: 'Phân ngành' })
   @ApiOkResponse({ type: IndustrySwagger })
   async getIndustry(@Res() res: Response) {
     const data = await this.stockService.getIndustry();
@@ -152,6 +153,26 @@ export class StockController {
   @ApiOkResponse({ type: MerchandisePriceSwagger })
   async getMerchandisePrice(@Query() q: MerchandisePriceQueryDto, @Res() res: Response) {
     const data = await this.stockService.getMerchandisePrice(q);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('liquidity-yesterday')
+  @ApiOperation({
+    summary: 'chart thanh khoản phiên trước',
+  })
+  @ApiOkResponse({ type: MarketLiquidityChartSwagger })
+  async getMarketLiquidityYesterday(@Res() res: Response) {
+    const data = await this.stockService.getMarketLiquidityYesterday();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('liquidity-today')
+  @ApiOperation({
+    summary: 'chart thanh khoản hôm qua',
+  })
+  @ApiOkResponse({ type: MarketLiquidityChartSwagger })
+  async getMarketLiquidityToday(@Res() res: Response) {
+    const data = await this.stockService.getMarketLiquidityToday();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

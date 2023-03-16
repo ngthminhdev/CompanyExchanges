@@ -36,6 +36,7 @@ import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interface";
 import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
+import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
 
 @Injectable()
 export class StockService {
@@ -562,6 +563,28 @@ export class StockService {
         try {
             return new MarketBreadthResponse().mapToList(await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
+            `));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    // Thanh khoản phiên trước
+    async getMarketLiquidityYesterday() {
+        try {
+            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
+                SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
+            `));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    //Thanh khoản phiên hiện tại
+    async getMarketLiquidityToday() {
+        try {
+            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
+                SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
             `));
         } catch (e) {
             throw new CatchException(e)
