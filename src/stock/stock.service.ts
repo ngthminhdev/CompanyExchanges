@@ -574,6 +574,7 @@ export class StockService {
         try {
             return new MarketBreadthResponse().mapToList(await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
+                ORDER BY time ASC
             `));
         } catch (e) {
             throw new CatchException(e)
@@ -585,6 +586,7 @@ export class StockService {
         try {
             return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
+                ORDER BY time ASC
             `));
         } catch (e) {
             throw new CatchException(e)
@@ -596,6 +598,7 @@ export class StockService {
         try {
             return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
+                ORDER BY time ASC
             `));
         } catch (e) {
             throw new CatchException(e)
