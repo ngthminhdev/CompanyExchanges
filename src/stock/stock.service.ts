@@ -37,6 +37,7 @@ import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interfac
 import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
 import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
+import {InternationalSubResponse} from "./responses/InternationalSub.response";
 
 @Injectable()
 export class StockService {
@@ -495,18 +496,30 @@ export class StockService {
     async getMaterialPrice(): Promise<InternationalIndexResponse[]> {
         try {
             const redisData: InternationalIndexResponse[] = await this.redis.get(RedisKeys.InternationalIndex)
-            if (redisData) return redisData;
+            // if (redisData) return redisData;
 
             const {latestDate}: SessionDatesInterface
                 = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
+            const date2: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
+
+
+            const query: string = `
+                SELECT name AS ticker,lastUpdated AS date_time, price AS diemso, unit, 
+                change1D AS percent_d,
+                change5D AS percent_w,
+                change1M AS percent_m, changeYTD AS percent_ytd
+                FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
+                WHERE lastUpdated >= @0 and (name like '%WTI%' OR name like 'USD/VND' OR name like 'Vàng')
+            `;
+            const data2 = new InternationalSubResponse().mapToList(await this.db.query(query, [date2.latestDate]));
 
             const data: InternationalIndexInterface[] = await this.db.query(`
                 SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
                 WHERE date_time = @0
             `, [latestDate]);
-            
-            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList(data);
-            await this.redis.set(RedisKeys.InternationalIndex, mappedData);
+
+            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList([...data, ...data2]);
+            // await this.redis.set(RedisKeys.InternationalIndex, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)
