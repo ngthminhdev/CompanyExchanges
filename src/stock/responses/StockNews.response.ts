@@ -5,7 +5,7 @@ import {UtilCommonTemplate} from "../../utils/utils.common";
 
 export class StockNewsResponse {
     @ApiProperty({
-        type: String,
+        type: Array,
         isArray: true,
         example: ['ACB', 'VCB'],
         description: 'Những mã cổ phiếu trong tin tức'
@@ -44,7 +44,7 @@ export class StockNewsResponse {
     Date: Date | any;
 
     constructor(data?: StockNewsResponse | any) {
-        this.TickerInNews = data?.TickerInNews ? data?.TickerInNews.split(', ') : '[]';
+        this.TickerInNews = data?.TickerInNews ? data?.TickerInNews.split(', ') : [];
         this.Title = data?.Title || '';
         this.SubTitle = data?.SubTitle || '';
         this.Href = data?.Href || '';

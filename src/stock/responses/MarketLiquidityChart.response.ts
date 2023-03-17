@@ -17,7 +17,8 @@ export class MarketLiquidityChartResponse {
   value: number;
 
   constructor(data?: MarketLiquidityInterface) {
-    this.time = data?.time ? moment(data?.time).utcOffset(420).valueOf() :  moment().utcOffset(420).valueOf();
+    // this.time = data?.time ? moment(data?.time).utcOffset(420).valueOf() :  moment().utcOffset(420).valueOf();
+    this.time = data?.time ? data?.time : 0;
     this.value = data?.value || 0;
   }
 

@@ -89,10 +89,8 @@ export class AuthService {
             );
 
             res.cookie('refreshToken', refreshToken, {
-                httpOnly: false,
                 path: '/',
-                secure: false,
-                sameSite: 'none'
+                domain: '192.168.9.250'
             });
 
             return new UserResponse({
@@ -114,7 +112,7 @@ export class AuthService {
             if (!exist) {
                 throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
             }
-            const user: UserEntity | any = await this.jwtService.decode(refreshToken);
+            const user: UserEntity | any = this.jwtService.decode(refreshToken);
             const newAccessToken: string = this.generateAccessToken(user);
             const newRefreshToken: string = this.generateRefreshToken(user);
 
