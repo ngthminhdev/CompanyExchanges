@@ -496,7 +496,7 @@ export class StockService {
     async getMaterialPrice(): Promise<InternationalIndexResponse[]> {
         try {
             const redisData: InternationalIndexResponse[] = await this.redis.get(RedisKeys.InternationalIndex)
-            // if (redisData) return redisData;
+            if (redisData) return redisData;
 
             const {latestDate}: SessionDatesInterface
                 = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
@@ -519,7 +519,7 @@ export class StockService {
             `, [latestDate]);
 
             const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList([...data, ...data2]);
-            // await this.redis.set(RedisKeys.InternationalIndex, mappedData);
+            await this.redis.set(RedisKeys.InternationalIndex, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)
