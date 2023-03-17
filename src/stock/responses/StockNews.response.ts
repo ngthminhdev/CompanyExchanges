@@ -20,6 +20,12 @@ export class StockNewsResponse {
 
     @ApiProperty({
         type: String,
+        example: 'Tiêu đề phụ...'
+    })
+    SubTitle: string;
+
+    @ApiProperty({
+        type: String,
         example: 'https://cafef.vn/cam-bay-tren-san-forex-20230307085507814.chn'
     })
     Href: string;
@@ -40,6 +46,7 @@ export class StockNewsResponse {
     constructor(data?: StockNewsResponse | any) {
         this.TickerInNews = data?.TickerInNews ? data?.TickerInNews.split(', ') : '[]';
         this.Title = data?.Title || '';
+        this.SubTitle = data?.SubTitle || '';
         this.Href = data?.Href || '';
         this.Img = data?.Img || '';
         this.Date = UtilCommonTemplate.toDateTime(data?.Date || new Date())
