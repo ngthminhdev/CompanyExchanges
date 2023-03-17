@@ -302,7 +302,7 @@ export class StockService {
             const query = `
                 SELECT * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
                 WHERE TickerTitle = 'Vnindex'
-                AND Date >= DATEADD(day, -3, CAST(GETDATE() as date))
+                AND Date >= DATEADD(day, -5, CAST(GETDATE() as date))
                 ORDER BY Date DESC
             `;
             const data = new StockNewsResponse().mapToList(await this.db.query(query));
@@ -533,7 +533,7 @@ export class StockService {
             if (redisData) return redisData;
 
             const data: StockEventsInterface[] = await this.db.query(`
-                SELECT TOP 30 * FROM [PHANTICH].[dbo].[LichSuKien]
+                SELECT TOP 50 * FROM [PHANTICH].[dbo].[LichSuKien]
                 ORDER BY NgayDKCC DESC
             `)
 
