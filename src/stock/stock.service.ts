@@ -37,6 +37,7 @@ import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interfac
 import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
 import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
+import {InternationalSubResponse} from "./responses/InternationalSub.response";
 
 @Injectable()
 export class StockService {
@@ -301,7 +302,7 @@ export class StockService {
             const query = `
                 SELECT * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
                 WHERE TickerTitle = 'Vnindex'
-                AND Date >= DATEADD(day, -3, CAST(GETDATE() as date))
+                AND Date >= DATEADD(day, -5, CAST(GETDATE() as date))
                 ORDER BY Date DESC
             `;
             const data = new StockNewsResponse().mapToList(await this.db.query(query));
@@ -499,13 +500,25 @@ export class StockService {
 
             const {latestDate}: SessionDatesInterface
                 = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
+            const date2: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
+
+
+            const query: string = `
+                SELECT name AS ticker,lastUpdated AS date_time, price AS diemso, unit, 
+                change1D AS percent_d,
+                change5D AS percent_w,
+                change1M AS percent_m, changeYTD AS percent_ytd
+                FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
+                WHERE lastUpdated >= @0 and (name like '%WTI%' OR name like 'USD/VND' OR name like 'Vàng')
+            `;
+            const data2 = new InternationalSubResponse().mapToList(await this.db.query(query, [date2.latestDate]));
 
             const data: InternationalIndexInterface[] = await this.db.query(`
                 SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
                 WHERE date_time = @0
             `, [latestDate]);
-            
-            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList(data);
+
+            const mappedData: InternationalIndexResponse[] = new InternationalIndexResponse().mapToList([...data, ...data2]);
             await this.redis.set(RedisKeys.InternationalIndex, mappedData);
             return mappedData;
         } catch (e) {
@@ -520,7 +533,7 @@ export class StockService {
             if (redisData) return redisData;
 
             const data: StockEventsInterface[] = await this.db.query(`
-                SELECT TOP 30 * FROM [PHANTICH].[dbo].[LichSuKien]
+                SELECT TOP 50 * FROM [PHANTICH].[dbo].[LichSuKien]
                 ORDER BY NgayDKCC DESC
             `)
 
