@@ -300,9 +300,7 @@ export class StockService {
             const redisData: StockNewsResponse[] = await this.redis.get(RedisKeys.StockNews);
             if (redisData) return redisData;
             const query = `
-                SELECT * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
-                WHERE TickerTitle = 'Vnindex'
-                AND Date >= DATEADD(day, -5, CAST(GETDATE() as date))
+                SELECT TOP 80 * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
                 ORDER BY Date DESC
             `;
             const data = new StockNewsResponse().mapToList(await this.db.query(query));

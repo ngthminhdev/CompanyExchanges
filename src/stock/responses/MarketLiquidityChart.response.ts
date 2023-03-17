@@ -5,9 +5,9 @@ import {MarketLiquidityInterface} from "../interfaces/market-liquidity.interface
 export class MarketLiquidityChartResponse {
   @ApiProperty({
     type: Date,
-    example: '2023-03-16 09:15:05.000',
+    example: '1826358126738',
   })
-  time: Date | number;
+  time: any;
 
   @ApiProperty({
     type: Number,
@@ -16,7 +16,7 @@ export class MarketLiquidityChartResponse {
   value: number;
 
   constructor(data?: MarketLiquidityInterface) {
-    this.time = data?.time || new Date();
+    this.time = data?.time ? Date.parse(data?.time) :  Date.now();
     this.value = data?.value || 0;
   }
 
