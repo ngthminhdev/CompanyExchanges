@@ -56,7 +56,7 @@ export class  ConfigServiceProvider {
 
         consumer: {
           groupId: process.env.KAFKA_GROUP_ID,
-          allowAutoTopicCreation: true,
+          allowAutoTopicCreation: false,
           readUncommitted: true,
           heartbeatInterval: 59 * 1000,
           sessionTimeout: 300 * 1000,
