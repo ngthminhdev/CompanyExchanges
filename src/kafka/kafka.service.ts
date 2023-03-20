@@ -4,6 +4,8 @@ import {SocketEmit} from "../enums/socket-enum";
 import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
 import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
 import {CatchSocketException} from "../exceptions/socket.exception";
+import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
+import {IndustryKafkaResponse} from "./responses/IndustryKafka.response";
 
 @Injectable()
 export class KafkaService {
@@ -27,7 +29,7 @@ export class KafkaService {
         this.send(SocketEmit.ThanhKhoanPhienHienTai, payload)
     }
 
-    handleLastMarketLiquidity(payload: MarketLiquidityKafkaInterface): void {
-        this.send(SocketEmit.ThanhKhoanPhienTruoc, payload)
+    handleIndustry(payload: IndustryKafkaInterface[]) {
+        this.send(SocketEmit.PhanNganh, new IndustryKafkaResponse().mapToList(payload))
     }
 }
