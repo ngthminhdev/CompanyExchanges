@@ -81,18 +81,7 @@ export class KafkaConsumer {
       @Ctx() context: KafkaContext,
   ) {
     try {
-      this.kafkaService.handleDomesticIndex(payload)
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.BienDongThiTruong)
-  handleMarketVolatility(
-      @Payload() payload: any,
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
+      this.kafkaService.handleDomesticIndex(payload);
       this.kafkaService.handleMarketVolatility(payload)
     } catch (error) {
       this.logger.error(error);

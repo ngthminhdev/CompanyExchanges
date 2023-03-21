@@ -59,7 +59,7 @@ export class StockService {
 
             const query: string = `
                 SELECT ticker, close_price FROM [PHANTICH].[dbo].[database_chisotoday]
-                WHERE date_time = @0 ORDER BY date_time DESC
+                WHERE date_time = @0 ORDER BY ticker DESC
             `;
 
             let dataToday: MarketVolatilityRawInterface[],

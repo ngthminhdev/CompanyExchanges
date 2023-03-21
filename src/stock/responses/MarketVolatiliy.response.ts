@@ -38,7 +38,19 @@ export class MarketVolatilityResponse {
   year_change_percent: number;
 
   constructor(data?: any) {
-    this.ticker = data?.ticker ?? '';
+    switch (data?.ticker) {
+      case 'VNXALL':
+        this.ticker = 'VNALLSHARE';
+        break;
+      case 'HNXINDEX':
+        this.ticker = 'HNX';
+        break;
+      case 'UPINDEX':
+        this.ticker = 'UPCOM';
+        break;
+      default:
+        this.ticker = data?.ticker || "";
+    }
     this.day_change_percent = data?.day_change_percent ?? 0;
     this.week_change_percent = data?.week_change_percent ?? 0;
     this.month_change_percent = data?.month_change_percent ?? 0;
