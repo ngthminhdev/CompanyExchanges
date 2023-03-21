@@ -35,7 +35,19 @@ export class DomesticIndexResponse {
     lastUpdated: Date | string;
 
     constructor(data?: DomesticIndexInterface) {
-        this.ticker = data?.ticker || '';
+        switch (data?.ticker) {
+            case 'VNXALL':
+                this.ticker = 'VNALLSHARE';
+            break;
+            case 'HNXINDEX':
+                this.ticker = 'HNX';
+                break;
+            case 'UPINDEX':
+                this.ticker = 'UPCOM';
+                break;
+            default:
+                this.ticker = "";
+        }
         this.price = data?.close_price || 0;
         this.change_price = data?.change_price|| 0;
         this.percent_d = +data?.percent_d || 0;
