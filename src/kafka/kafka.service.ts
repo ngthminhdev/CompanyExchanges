@@ -8,6 +8,7 @@ import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {IndustryKafkaResponse} from "./responses/IndustryKafka.response";
 import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
 import {DomesticIndexKafkaResponse} from "./responses/DomesticIndexKafka.response";
+import {MarketVolatilityKafkaResponse} from "./responses/MarketVolatilityKafka.response";
 
 @Injectable()
 export class KafkaService {
@@ -42,6 +43,7 @@ export class KafkaService {
     }
 
     handleMarketVolatility(payload: any) {
-        this.send(SocketEmit.BienDongThiTruong, payload)
+        this.send(SocketEmit.BienDongThiTruong, [...new MarketVolatilityKafkaResponse()
+            .mapToList(payload)].sort((a,b) => a.ticker > b.ticker ? -1 : 1))
     }
 }
