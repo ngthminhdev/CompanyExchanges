@@ -6,6 +6,8 @@ import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa
 import {CatchSocketException} from "../exceptions/socket.exception";
 import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {IndustryKafkaResponse} from "./responses/IndustryKafka.response";
+import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
+import {DomesticIndexKafkaResponse} from "./responses/DomesticIndexKafka.response";
 
 @Injectable()
 export class KafkaService {
@@ -31,5 +33,15 @@ export class KafkaService {
 
     handleIndustry(payload: IndustryKafkaInterface[]) {
         this.send(SocketEmit.PhanNganh, new IndustryKafkaResponse().mapToList(payload))
+    }
+
+    handleDomesticIndex(payload: DomesticIndexKafkaInterface[]) {
+        // console.log(payload)
+        this.send(SocketEmit.ChiSoTrongNuoc, new DomesticIndexKafkaResponse().mapToList(payload))
+    }
+
+    handleMarketVolatility(payload: any) {
+        // console.log(payload)
+        this.send(SocketEmit.BienDongThiTruong, payload)
     }
 }
