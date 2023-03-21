@@ -32,16 +32,16 @@ export class KafkaService {
     }
 
     handleIndustry(payload: IndustryKafkaInterface[]) {
-        this.send(SocketEmit.PhanNganh, new IndustryKafkaResponse().mapToList(payload))
+        this.send(SocketEmit.PhanNganh, [...new IndustryKafkaResponse()
+            .mapToList(payload)].sort((a,b) => a.industry > b.industry ? 1 : -1))
     }
 
     handleDomesticIndex(payload: DomesticIndexKafkaInterface[]) {
-        // console.log(payload)
-        this.send(SocketEmit.ChiSoTrongNuoc, new DomesticIndexKafkaResponse().mapToList(payload))
+        this.send(SocketEmit.ChiSoTrongNuoc, [...new DomesticIndexKafkaResponse()
+            .mapToList(payload)].sort((a,b) => a.ticker > b.ticker ? -1 : 1))
     }
 
     handleMarketVolatility(payload: any) {
-        // console.log(payload)
         this.send(SocketEmit.BienDongThiTruong, payload)
     }
 }
