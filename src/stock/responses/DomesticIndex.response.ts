@@ -46,7 +46,7 @@ export class DomesticIndexResponse {
                 this.ticker = 'UPCOM';
                 break;
             default:
-                this.ticker = "";
+                this.ticker = data?.ticker || "";
         }
         this.price = data?.close_price || 0;
         this.change_price = data?.change_price|| 0;
