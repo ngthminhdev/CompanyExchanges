@@ -1,5 +1,5 @@
 import {ApiProperty} from '@nestjs/swagger';
-import {DomesticIndexKafkaInterface} from "../../kafka/interfaces/domestic-index-kafka.interface";
+import {DomesticIndexKafkaInterface} from "../interfaces/domestic-index-kafka.interface";
 
 export class MarketVolatilityKafkaResponse {
     @ApiProperty({
