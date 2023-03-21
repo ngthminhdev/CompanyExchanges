@@ -180,6 +180,7 @@ export class StockService {
                 SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
                 ON company.TICKER = p.ticker WHERE p.date_time = @0
+                AND company.LV2 != '#N/A' AND company.LV2 NOT LIKE 'C__________________'
             `;
 
             const marketCapQuery: string = `
@@ -187,6 +188,7 @@ export class StockService {
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
                 WHERE p.date_time IN (@0, @1, @2, @3)
+                AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
                 GROUP BY c.LV2, p.date_time
                 ORDER BY p.date_time DESC
             `;
@@ -256,7 +258,8 @@ export class StockService {
             }, []);
 
             //Map response
-            const mappedData: IndustryResponse[] = new IndustryResponse().mapToList(final);
+            const mappedData: IndustryResponse[] = [...new IndustryResponse().mapToList(final)]
+                .sort((a,b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
             await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.Minute);
@@ -330,7 +333,7 @@ export class StockService {
                 FROM [PHANTICH].[dbo].[database_chisotoday] t1
                 JOIN [PHANTICH].[dbo].[database_chisotoday] t2
                 ON t1.ticker = t2.ticker AND t2.date_time = @1
-                WHERE t1.date_time = @0
+                WHERE t1.date_time = @0 ORDER BY t1.ticker DESC
             `;
             // Execute the SQL query using a database object and pass the latest and previous dates as parameters
             const dataToday: DomesticIndexInterface[] = await this.db.query(query, [latestDate, previousDate]);

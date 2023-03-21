@@ -15,7 +15,7 @@ export class DomesticIndexResponse {
         type: Number,
         example: 1502.9
     })
-    close_price: number;
+    price: number;
 
     @ApiProperty({
         type: Number,
@@ -31,16 +31,27 @@ export class DomesticIndexResponse {
 
     @ApiProperty({
         type: Date,
-        example: 1502.9
     })
-    yyyymmdd: Date | string;
+    lastUpdated: Date | string;
 
     constructor(data?: DomesticIndexInterface) {
-        this.ticker = data?.ticker || '';
-        this.close_price = data?.close_price || 0;
+        switch (data?.ticker) {
+            case 'VNXALL':
+                this.ticker = 'VNALLSHARE';
+            break;
+            case 'HNXINDEX':
+                this.ticker = 'HNX';
+                break;
+            case 'UPINDEX':
+                this.ticker = 'UPCOM';
+                break;
+            default:
+                this.ticker = "";
+        }
+        this.price = data?.close_price || 0;
         this.change_price = data?.change_price|| 0;
         this.percent_d = +data?.percent_d || 0;
-        this.yyyymmdd = UtilCommonTemplate.toDate(data?.date_time) || 0;
+        this.lastUpdated = UtilCommonTemplate.toDateTime(data?.date_time) || "";
     }
 
     public mapToList(data?: DomesticIndexInterface[] | any[]) {
