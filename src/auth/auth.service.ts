@@ -90,7 +90,8 @@ export class AuthService {
 
             res.cookie('refreshToken', refreshToken, {
                 path: '/',
-                domain: '192.168.9.250'
+                secure: true,
+                sameSite: "none"
             });
 
             return new UserResponse({
