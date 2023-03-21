@@ -9,7 +9,7 @@ export enum Topics {
 export const requestPatterns: string[] = [
     // Topics.DoRongThiTruong,
     // Topics.ThanhKhoanPhienHienTai,
-    // Topics.PhanNganh
-    Topics.ChiSoTrongNuoc,
-    Topics.BienDongThiTruong
+    // Topics.PhanNganh,
+    // Topics.ChiSoTrongNuoc,
+    // Topics.BienDongThiTruong
 ];
