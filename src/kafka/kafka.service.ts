@@ -46,4 +46,8 @@ export class KafkaService {
         this.send(SocketEmit.BienDongThiTruong, [...new MarketVolatilityKafkaResponse()
             .mapToList(payload)].sort((a,b) => a.ticker > b.ticker ? -1 : 1))
     }
+
+    handleTickerChange(payload: any) {
+        this.send(SocketEmit.TickerChange, payload)
+    }
 }

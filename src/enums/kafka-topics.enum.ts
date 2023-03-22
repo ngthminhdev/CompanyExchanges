@@ -3,7 +3,8 @@ export enum Topics {
   ThanhKhoanPhienHienTai = 'kafka-thanh-khoan-phien-hien-tai-topic',
   PhanNganh = 'kafka-phan-nganh-topic',
   ChiSoTrongNuoc = 'kakfa-chi-so-trong-nuoc-topic',
-  BienDongThiTruong = 'kafka-bien-dong-thi-truong-topic'
+  BienDongThiTruong = 'kafka-bien-dong-thi-truong-topic',
+  TickerChange = 'kafka-ticker-change-topic'
 }
 
 export const requestPatterns: string[] = [
