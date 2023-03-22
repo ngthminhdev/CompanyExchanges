@@ -14,12 +14,12 @@ export class TopRocResponse {
         type: Number,
         example: 65.5
     })
-    ROC_5: number;
+    "%5D": number;
 
 
     constructor(data?: TopRocInterface) {
         this.ticker = data?.ticker || '';
-        this.ROC_5 = data?.ROC_5 || 0;
+        this["%5D"] = data?.ROC_5 || 0;
     }
 
     public mapToList(data?: TopRocInterface[] | any[]) {
