@@ -87,4 +87,16 @@ export class KafkaConsumer {
       this.logger.error(error);
     }
   }
+
+  @MessagePattern(Topics.TickerChange)
+  handle(
+      @Payload() payload: any,
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+        this.kafkaService.handleTickerChange(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
 }
