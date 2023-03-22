@@ -13,5 +13,8 @@ export enum RedisKeys {
   NetForeign = 'net-foreign',
   TopRoc5 = 'top-roc-5',
   MerchandisePrice = 'merchandise-price',
-  User = 'user'
+  User = 'user',
+  HNXTicker = 'hnx-ticker',
+  HSXTicker = 'hsx-ticker',
+  UPCOMTicker = 'upcom-ticker',
 }

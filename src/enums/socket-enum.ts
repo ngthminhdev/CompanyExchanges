@@ -8,5 +8,8 @@ export enum SocketEmit {
     PhanNganh = 'listen-phan-nganh',
     ChiSoTrongNuoc = 'listen-chi-so-trong-nuoc',
     BienDongThiTruong = 'listen-bien-dong-thi-truong',
-    TickerChange = 'listen-ticker-change'
+    TickerChange = 'listen-ticker-change',
+    TopRocHNX = 'listen-top-roc-hnx',
+    TopRocHSX = 'listen-top-roc-hsx',
+    TopRocUPCOM = 'listen-top-roc-upcom',
 }
