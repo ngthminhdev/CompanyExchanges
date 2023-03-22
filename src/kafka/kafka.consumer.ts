@@ -7,6 +7,7 @@ import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.int
 import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
 import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
+import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -89,12 +90,16 @@ export class KafkaConsumer {
   }
 
   @MessagePattern(Topics.TickerChange)
-  handle(
-      @Payload() payload: any,
+  async HandleTickerChange(
+      @Payload() payload: TickerChangeInterface[],
       @Ctx() context: KafkaContext,
   ) {
     try {
-        this.kafkaService.handleTickerChange(payload)
+      await Promise.all([
+        this.kafkaService.handleTopRocHNX(payload),
+        this.kafkaService.handleTopRocHSX(payload),
+        this.kafkaService.handleTopRocUPCOM(payload),
+      ])
     } catch (error) {
       this.logger.error(error);
     }

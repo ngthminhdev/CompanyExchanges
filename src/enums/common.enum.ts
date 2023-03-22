@@ -11,6 +11,7 @@ export enum TimeToLive {
     OneHour = 360,
     OneDay = 86400,
     OneYear = 31556926,
+    Forever = -1
 }
 
 export enum TransactionEnum {
