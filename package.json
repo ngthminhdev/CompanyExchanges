@@ -1,6 +1,6 @@
 {
   "name": "stock-exchanges-backend",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "description": "",
   "author": "Minh Nguyen",
   "private": true,
@@ -21,6 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-sns": "^3.297.0",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.3.1",
     "@nestjs/core": "^9.0.0",
