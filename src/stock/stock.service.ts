@@ -417,7 +417,8 @@ export class StockService {
     async getTopROC(q: GetExchangeQuery): Promise<TopRocResponse[]> {
         try {
             const {exchange} = q;
-            const ex = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+            let ex = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+            ex = exchange.toUpperCase() === 'HSX' ? 'HOSE' : exchange.toUpperCase();
 
             const redisData: TopRocResponse[] = await this.redis.get(`${RedisKeys.TopRoc5}:${ex}`);
             if (redisData) return redisData;

@@ -1,5 +1,5 @@
 export interface TickerChangeInterface {
-    code: string,
+    ticker: string,
     name: string,
     price: number,
     lastUpdated: Date | string,

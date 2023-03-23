@@ -62,15 +62,15 @@ export class KafkaService {
 
     async handleTopRocHNX(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'code'>[] = await this.redis.get(RedisKeys.HNXTicker);
+            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.HNXTicker);
             if (!data) {
                 data = await this.db.query(`
-                    select distinct ticker as code from [COPHIEUANHHUONG].[dbo].[HNX] ORDER BY ticker;
+                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[HNX] ORDER BY ticker;
                 `);
                 await this.redis.set(RedisKeys.HNXTicker, data, TimeToLive.Forever);
             }
             const tickerInExchanges = (data.map((record) => {
-                return payload.find((item) => item.code == record.code);
+                return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
 
             this.send(SocketEmit.TopRocHNX, tickerInExchanges);
@@ -81,15 +81,15 @@ export class KafkaService {
 
     async handleTopRocUPCOM(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'code'>[] = await this.redis.get(RedisKeys.UPCOMTicker);
+            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.UPCOMTicker);
             if (!data) {
                 data = await this.db.query(`
-                    select distinct ticker as code from [COPHIEUANHHUONG].[dbo].[UPCoM] ORDER BY ticker;
+                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[UPCoM] ORDER BY ticker;
                 `);
                 await this.redis.set(RedisKeys.UPCOMTicker, data, TimeToLive.Forever);
             }
             const tickerInExchanges = (data.map((record) => {
-                return payload.find((item) => item.code == record.code);
+                return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
 
             this.send(SocketEmit.TopRocUPCOM, tickerInExchanges);
@@ -100,15 +100,15 @@ export class KafkaService {
 
     async handleTopRocHSX(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'code'>[] = await this.redis.get(RedisKeys.HSXTicker);
+            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.HSXTicker);
             if (!data) {
                 data = await this.db.query(`
-                    select distinct ticker as code from [COPHIEUANHHUONG].[dbo].[HOSE] ORDER BY ticker;
+                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[HOSE] ORDER BY ticker;
                 `);
                 await this.redis.set(RedisKeys.HSXTicker, data, TimeToLive.Forever);
             }
             const tickerInExchanges = (data.map((record) => {
-                return payload.find((item) => item.code == record.code);
+                return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
 
             this.send(SocketEmit.TopRocHSX, tickerInExchanges);
