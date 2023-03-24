@@ -90,7 +90,7 @@ export class AuthService {
 
             res.cookie('refreshToken', refreshToken, {
                 path: '/',
-                secure: true,
+                secure: false,
                 sameSite: "none"
             });
 
