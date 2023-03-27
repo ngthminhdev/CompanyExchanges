@@ -22,6 +22,8 @@ import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceSwagger} from "./responses/MerchandisePrice.response";
 import {MarketBreadthSwagger} from "./responses/MarketBreadth.response";
 import {MarketLiquidityChartSwagger} from "./responses/MarketLiquidityChart.response";
+import {RsiQueryDto} from "./dto/rsiQuery.dto";
+import {RsiSwagger} from "./responses/Rsi.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -173,6 +175,16 @@ export class StockController {
   @ApiOkResponse({ type: MarketLiquidityChartSwagger })
   async getMarketLiquidityToday(@Res() res: Response) {
     const data = await this.stockService.getMarketLiquidityToday();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('get-rsi')
+  @ApiOperation({
+    summary: 'Chỉ số RSI',
+  })
+  @ApiOkResponse({ type: RsiSwagger })
+  async getRSI(@Query() q: RsiQueryDto, @Res() res: Response) {
+    const data = await this.stockService.getRSI(q.session);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

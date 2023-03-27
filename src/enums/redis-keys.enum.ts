@@ -1,5 +1,5 @@
 export enum RedisKeys {
-  MarketBreadth = 'market-breadth',
+  Industry = 'industry',
   MarketVolatility = 'market-volatility',
   NetTransactionValue = 'net-transaction-value',
   MarketLiquidity = 'market-liquidity',
@@ -17,4 +17,5 @@ export enum RedisKeys {
   HNXTicker = 'hnx-ticker',
   HSXTicker = 'hsx-ticker',
   UPCOMTicker = 'upcom-ticker',
+  Rsi = 'rsi'
 }

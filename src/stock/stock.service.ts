@@ -38,6 +38,8 @@ import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
 import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
 import {InternationalSubResponse} from "./responses/InternationalSub.response";
+import {RsiInterface, TransactionGroup} from "./interfaces/rsi.interface";
+import {RsiResponse} from "./responses/Rsi.response";
 
 @Injectable()
 export class StockService {
@@ -169,7 +171,7 @@ export class StockService {
     async getIndustry(): Promise<IndustryResponse[]> {
         try {
             //Check caching data is existed
-            const redisData: IndustryResponse[] = await this.redis.get(RedisKeys.MarketBreadth);
+            const redisData: IndustryResponse[] = await this.redis.get(RedisKeys.Industry);
             if (redisData) return redisData;
 
             //Get 2 latest date
@@ -262,7 +264,7 @@ export class StockService {
                 .sort((a,b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
-            await this.redis.store.set(RedisKeys.MarketBreadth, mappedData, TimeToLive.Minute);
+            await this.redis.store.set(RedisKeys.Industry, mappedData, TimeToLive.Minute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
@@ -604,6 +606,66 @@ export class StockService {
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
                 ORDER BY time ASC
             `));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getRSI(session: number = 20): Promise<Record<string, RsiResponse>> {
+        try {
+            const redisData: Awaited<Record<string, RsiResponse>> = await this.redis.get(`${RedisKeys.Rsi}:${session}`);
+            if (redisData) return redisData;
+
+            const query = (count: number): string => `
+                select sum(total_value_mil) AS transaction_value, 
+                LV2 AS industry, date_time from [PHANTICH].[dbo].[database_mkt] t1
+                join [PHANTICH].[dbo].[ICBID] t2 on t1.ticker = t2.TICKER
+                where date_time
+                in (select distinct top ${count} date_time from 
+                    [PHANTICH].[dbo].[database_mkt] order by date_time desc)
+                group by LV2, date_time
+                order by LV2, date_time;
+            `;
+
+            const data: RsiInterface[] = await this.db.query(query(session));
+
+            // This function calculates the relative strength index (RSI) of cash gains and losses by industry.
+            // It takes in an array of transaction data and returns an object with the RSI for each industry.
+
+            const cashByIndustry: {[key: string]: TransactionGroup} = {};
+            let previousTransaction = data[0];
+            for (let i = 1; i < data.length; i++) {
+                const currentTransaction = data[i];
+                if (currentTransaction.industry === previousTransaction.industry) {
+                    const diff = currentTransaction.transaction_value - previousTransaction.transaction_value;
+                    if (!cashByIndustry[currentTransaction.industry]) {
+                        cashByIndustry[currentTransaction.industry] = {
+                            cashGain: 0,
+                            cashLost: 0,
+                        };
+                    }
+                    if (diff > 0) {
+                        cashByIndustry[currentTransaction.industry].cashGain++;
+                    } else if (diff < 0) {
+                        cashByIndustry[currentTransaction.industry].cashLost++;
+                    }
+                }
+                previousTransaction = currentTransaction;
+            }
+
+            const mappedData: Record<any, RsiResponse> = {};
+            for (const item in cashByIndustry) {
+                const { cashGain, cashLost } = cashByIndustry[item];
+                const rsCash: number = cashGain / cashLost;
+                mappedData[item] = {
+                    cashGain,
+                    cashLost,
+                    rsCash,
+                    rsiCash: 100 - 100/(1 + rsCash)
+                }
+            }
+            await this.redis.set(`${RedisKeys.Rsi}:${session}`, mappedData);
+            return mappedData;
         } catch (e) {
             throw new CatchException(e)
         }
