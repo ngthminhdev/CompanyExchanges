@@ -282,8 +282,8 @@ export class StockService {
             ];
             const query: string = `
                 SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
-                    SUM(n.net_value_td) AS net_proprietary,
-                    SUM(n.net_value_canhan) AS net_retail,
+                    SUM(n.net_value_td) AS net_retail,
+                    SUM(n.net_value_canhan) AS net_proprietary,
                     SUM(n.net_value_foreign) AS net_foreign
                 FROM PHANTICH.dbo.database_chisotoday e
                 JOIN PHANTICH.dbo.BCN_netvalue n ON e.date_time = n.date_time
