@@ -5,14 +5,14 @@ export class LoginDto {
   @IsPhoneNumber('VN')
   @ApiProperty({
     type: String,
-    example: '0343892050',
+    example: '0987654321',
   })
   phone: string;
 
   @IsString({message: 'password not found'})
   @ApiProperty({
     type: String,
-    example: 'abc123',
+    example: '123beta456',
   })
   password: string;
 }

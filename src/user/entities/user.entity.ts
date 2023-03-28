@@ -1,5 +1,6 @@
-import {Column, Entity, Index, PrimaryGeneratedColumn} from 'typeorm';
+import {Column, Entity, Index, OneToMany, PrimaryGeneratedColumn} from 'typeorm';
 import {BaseModel} from '../../models/base.entity';
+import {DeviceEntity} from "../../auth/entities/device.entity";
 
 @Entity({
   database: 'AUTH',
@@ -78,31 +79,13 @@ export class UserEntity extends BaseModel {
   })
   role: number;
 
-  // @OneToOne(() => CityEntity)
-  // @JoinColumn({
-  //     referencedColumnName: 'city_id',
-  //     name: 'city_id',
-  // })
-  // city: CityEntity;
-
-  // @OneToOne(() => DistrictEntity)
-  // @JoinColumn({
-  //     name: 'district_id',
-  //     referencedColumnName: 'district_id',
-  // })
-  // district: DistrictEntity;
-
-  // @OneToOne(() => WardEntity)
-  // @JoinColumn({
-  //     name: 'ward_id',
-  //     referencedColumnName: 'ward_id',
-  // })
-  // ward: WardEntity;
-
   @Column({
     type: 'nvarchar',
     length: '255',
     default: '',
   })
   address: string;
+
+  @OneToMany(() => DeviceEntity, (device) => device.device_id)
+  devices: DeviceEntity[];
 }

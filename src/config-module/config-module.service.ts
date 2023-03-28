@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { redisStore } from 'cache-manager-redis-store';
-import { KafkaOptions, Transport } from '@nestjs/microservices';
-import { Partitioners } from 'kafkajs';
+import {Injectable} from '@nestjs/common';
+import {JwtModuleOptions} from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
+import {TypeOrmModuleOptions} from '@nestjs/typeorm';
+import {redisStore} from 'cache-manager-redis-store';
+import {KafkaOptions, Transport} from '@nestjs/microservices';
+import {Partitioners} from 'kafkajs';
 import {TimeToLive} from "../enums/common.enum";
 
 @Injectable()
@@ -18,7 +18,7 @@ export class  ConfigServiceProvider {
       schema: 'dbo',
       // database: process.env.MSSQL_DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      // entities: [CityEntity, DistrictEntity, WardEntity, UserEntity, AuthEntity],
+      // entities: [UserEntity, DeviceEntity],
       autoLoadEntities: true,
       synchronize: false,
       options: { encrypt: false },
