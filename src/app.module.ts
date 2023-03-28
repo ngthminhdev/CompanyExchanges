@@ -1,4 +1,4 @@
-import {CacheModule, Module} from '@nestjs/common';
+import {CacheModule, MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
 import {ConfigModule} from '@nestjs/config';
 import {KafkaModule as KafkaConfigModule} from 'nestjs-config-kafka';
 import {JwtModule} from '@nestjs/jwt';
@@ -6,14 +6,12 @@ import {TypeOrmModule} from '@nestjs/typeorm';
 import {AuthModule} from './auth/auth.module';
 import {ConfigModuleModule} from './config-module/config-module.module';
 import {ConfigServiceProvider} from './config-module/config-module.service';
-import {CityEntity} from './models/city.entity';
-import {DistrictEntity} from './models/district.entity';
-import {WardEntity} from './models/ward.entity';
 import {StockModule} from './stock/stock.module';
 import {UserModule} from './user/user.module';
 import {ClientProxyFactory} from '@nestjs/microservices';
 import {SocketModule} from './socket/socket.module';
 import {KafkaModule} from "./kafka/kafka.module";
+import {MacMiddleware} from "./middlewares/mac.middleware";
 
 @Module({
     imports: [
@@ -27,7 +25,7 @@ import {KafkaModule} from "./kafka/kafka.module";
                 config.createTypeOrmOptions(),
             inject: [ConfigServiceProvider],
         }),
-        TypeOrmModule.forFeature([CityEntity, DistrictEntity, WardEntity]),
+        // TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
 
         //jwt
         JwtModule.registerAsync({
@@ -64,4 +62,10 @@ import {KafkaModule} from "./kafka/kafka.module";
     ],
 })
 
-export class AppModule {}
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(MacMiddleware)
+            .forRoutes('*')
+    }
+}

@@ -1,11 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
+import {Request} from 'express';
 
-type MSign = {
+export type MRequest = Request & {
+  mac: string;
+  deviceId: string;
   headers: {
     sign: string;
   };
 };
-
-export type MRequest = Request & MSign & Headers;
-export type MResponse = Response;
-export type MNextFunction = NextFunction;

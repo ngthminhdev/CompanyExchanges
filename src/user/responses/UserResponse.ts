@@ -52,24 +52,6 @@ export class UserResponse {
   })
   is_receive_email: number;
 
-  // @ApiResponseProperty({
-  //   type: Number,
-  //   example: '336',
-  // })
-  // city: number;
-  //
-  // @ApiResponseProperty({
-  //   type: Number,
-  //   example: '321',
-  // })
-  // district: number;
-  //
-  // @ApiResponseProperty({
-  //   type: Number,
-  //   example: '655',
-  // })
-  // ward: number;
-
   @ApiResponseProperty({
     type: Number,
     example: 0,
@@ -89,6 +71,11 @@ export class UserResponse {
   })
   access_token: string;
 
+  @ApiResponseProperty({
+    type: Date
+  })
+  expired_at: Date
+
   constructor(data?: UserResponse | any) {
     this.user_id = data?.user_id ?? 0;
     this.email = data?.email ?? '';
@@ -100,6 +87,7 @@ export class UserResponse {
     this.role = data?.role ?? 0;
     this.address = data?.address ?? '';
     this.access_token = data?.access_token ?? '';
+    this.expired_at = data?.expired_at ?? '';
   }
 
   public mapToList(data?: UserResponse[] | any[]): UserResponse[] {

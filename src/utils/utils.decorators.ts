@@ -1,38 +1,9 @@
-import {createParamDecorator, ExecutionContext, HttpStatus} from '@nestjs/common';
-import {registerDecorator, ValidationArguments, ValidationOptions} from 'class-validator';
+import {createParamDecorator, ExecutionContext, HttpStatus, SetMetadata} from '@nestjs/common';
 
 import {JwtService} from '@nestjs/jwt';
 import {ExceptionResponse} from "../exceptions/common.exception";
-import {log} from "util";
-
-export function IsGetByUserId(validationOptions?: ValidationOptions) {
-    return (object: unknown, propertyName: string) => {
-        registerDecorator({
-            name: 'isGet',
-            target: object.constructor,
-            propertyName,
-            options: validationOptions,
-            validator: {
-                validate: (value: any): boolean => {
-                    console.log(value);
-                    if (value === null || value === undefined || value === '') {
-                        return true;
-                    } else if (typeof value === 'number') {
-                        return Number.isInteger(value);
-                    } else if (typeof value === 'string') {
-                        return Number.isInteger(Number(value));
-                    }
-                },
-                defaultMessage: (validationArguments?: ValidationArguments): string => {
-                    console.log(validationArguments);
-                    throw new ExceptionResponse(HttpStatus.NOT_FOUND, `Cannot GET /api/v1/media/${validationArguments.value}`, {
-                        error: 'Not Found',
-                    });
-                },
-            },
-        });
-    };
-}
+import {DEVICE_METADATA} from "../constants";
+import {MRequest} from "../types/middleware"
 
 export const GetUserIdFromToken = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
@@ -41,22 +12,12 @@ export const GetUserIdFromToken = createParamDecorator(async (data: unknown, ctx
     if (!bearer) {
         throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'token not found');
     }
-
     const token = bearer.split(' ')[1];
-    // const isTrust = jwt.verify(token, {
-    //     secret: process.env.ACCESS_TOKEN_SECRET
-    // }).catchcon((e) => console.log(e))
-    // if (!isTrust) {
-    //     throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'token is not valid')
-    // }
-
     const payload: any = jwt.decode(token);
-
-    if (!payload || !payload.user_id) {
+    if (!payload || !payload.userId) {
         throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'token not found');
     }
-
-    return payload.user_id;
+    return payload.userId;
 });
 
 export const GetToken = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
@@ -68,3 +29,10 @@ export const GetToken = createParamDecorator(async (data: unknown, ctx: Executio
     }
     return bearer.split(' ')[1];
 });
+
+export const GetDeviceId = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
+   const req: MRequest = ctx.switchToHttp().getRequest();
+   return req?.deviceId || 0;
+});
+
+export const LoginMetadata = () => SetMetadata(DEVICE_METADATA, true);
