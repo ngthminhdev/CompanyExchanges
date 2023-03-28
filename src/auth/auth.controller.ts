@@ -36,7 +36,7 @@ export class AuthController {
 
     @ApiOperation({summary: 'Đăng nhập'})
     @ApiBody({type: LoginDto})
-    @ApiResponse({status: HttpStatus.OK, type: BaseResponse})
+    @ApiResponse({status: HttpStatus.OK, type: UserResponseSwagger})
     @Post('login')
     async login(@Req() req: MRequest, @Body() loginDto: LoginDto, @Headers() headers: Headers, @Res() res: Response) {
         try {
@@ -48,7 +48,7 @@ export class AuthController {
     };
 
     @ApiOperation({summary: 'Đăng xuất'})
-    @ApiResponse({status: HttpStatus.OK, type: UserResponseSwagger})
+    @ApiResponse({status: HttpStatus.OK, type: BaseResponse})
     @ApiBearerAuth()
     @UseGuards(DeviceGuard)
     @Post('logout')
