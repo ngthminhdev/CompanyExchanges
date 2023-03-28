@@ -143,7 +143,7 @@ export class AuthService {
         return {accessToken, refreshToken, expiredAt};
     }
 
-    async logout(userId: number, deviceId: number, res: Response): Promise<boolean> {
+    async logout(userId: number, deviceId: string, res: Response): Promise<boolean> {
         const currentSession = await this.deviceRepo
             .createQueryBuilder('device')
             .leftJoinAndSelect('device.user', 'user')
@@ -162,7 +162,7 @@ export class AuthService {
             httpOnly: true,
         })
 
-        await this.deviceRepo.delete(deviceId);
+        await this.deviceRepo.delete({device_id: deviceId});
         return true;
     }
 

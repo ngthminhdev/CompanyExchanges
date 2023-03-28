@@ -52,7 +52,7 @@ export class AuthController {
     @ApiBearerAuth()
     @UseGuards(DeviceGuard)
     @Post('logout')
-    async logout(@GetUserIdFromToken() userId: number, @GetDeviceId() deviceId: number, @Res() res: Response) {
+    async logout(@GetUserIdFromToken() userId: number, @GetDeviceId() deviceId: string, @Res() res: Response) {
         try {
             const data = await this.authService.logout(userId, deviceId, res);
             return res.status(HttpStatus.OK).send(new BaseResponse({data: data}));
