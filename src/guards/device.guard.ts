@@ -1,5 +1,4 @@
 import {CanActivate, ExecutionContext, HttpStatus, Injectable} from "@nestjs/common";
-import {Reflector} from "@nestjs/core";
 import {MRequest} from "../types/middleware";
 import {ExceptionResponse} from "../exceptions/common.exception";
 import {JwtService} from "@nestjs/jwt";
@@ -8,7 +7,6 @@ import {AuthService} from "../auth/auth.service";
 @Injectable()
 export class DeviceGuard implements CanActivate {
     constructor(
-        private reflector: Reflector,
         private readonly jwtService: JwtService,
         private readonly authService: AuthService,
     ) {
@@ -26,7 +24,7 @@ export class DeviceGuard implements CanActivate {
         const deviceId = req.deviceId;
 
         if (checkDeviceId !== deviceId) {
-            throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'device is not valid 1!');
+            throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'device is not valid');
         }
 
         try {
@@ -41,7 +39,7 @@ export class DeviceGuard implements CanActivate {
         const req: MRequest = context.switchToHttp().getRequest();
         const checkDevice = await this.validateRequest(req);
         if (!checkDevice) {
-            throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'device is not valid 2!');
+            throw new ExceptionResponse(HttpStatus.UNAUTHORIZED, 'device is not valid');
         }
         return true;
     }
