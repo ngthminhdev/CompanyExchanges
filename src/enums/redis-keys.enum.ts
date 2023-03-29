@@ -17,5 +17,6 @@ export enum RedisKeys {
   HNXTicker = 'hnx-ticker',
   HSXTicker = 'hsx-ticker',
   UPCOMTicker = 'upcom-ticker',
-  Rsi = 'rsi'
+  Rsi = 'rsi',
+  MarketEvaluation = 'market-evaluation'
 }

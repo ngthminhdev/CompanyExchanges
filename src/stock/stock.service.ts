@@ -38,6 +38,7 @@ import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
 import {InternationalSubResponse} from "./responses/InternationalSub.response";
 import {RsiInterface, TransactionGroup} from "./interfaces/rsi.interface";
 import {RsiResponse} from "./responses/Rsi.response";
+import {MarketEvaluationResponse} from "./responses/MarketEvaluation.response";
 
 @Injectable()
 export class StockService {
@@ -47,6 +48,58 @@ export class StockService {
         @InjectDataSource() private readonly db: DataSource,
     ) {
     }
+
+    //Get the nearest day have transaction in session, week, month...
+    private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
+        const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
+        const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
+        const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+
+        const dates = await this.db.query(`
+            SELECT DISTINCT TOP 2 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
+        `);
+
+
+        const query: string = `
+            SELECT TOP 1 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL
+            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
+            `;
+
+        return {
+            latestDate: dates[0]?.[column] || new Date(),
+            previousDate: dates[1]?.[column] || new Date(),
+            weekDate: (await this.db.query(query, [lastWeek]))[0]?.[column] || new Date(),
+            monthDate: (await this.db.query(query, [lastMonth]))[0]?.[column] || new Date(),
+            yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
+        }
+    }
+
+    private isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+        const change = item.close_price - yesterdayItem.close_price;
+        return change === 0 ? BooleanEnum.True : BooleanEnum.False
+    };
+
+    private isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+        return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+        return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+        return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
+
+    private isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+        return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
+            ? BooleanEnum.True : BooleanEnum.False;
+    };
 
     //Biến động thị trường
     async getMarketVolatility(): Promise<MarketVolatilityResponse[]> {
@@ -259,7 +312,7 @@ export class StockService {
 
             //Map response
             const mappedData: IndustryResponse[] = [...new IndustryResponse().mapToList(final)]
-                .sort((a,b) => a.industry > b.industry ? 1 : -1);
+                .sort((a, b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
             await this.redis.store.set(RedisKeys.Industry, mappedData, TimeToLive.Minute);
@@ -502,7 +555,7 @@ export class StockService {
 
             const {latestDate}: SessionDatesInterface
                 = await this.getSessionDate('[PHANTICH].[dbo].[data_chisoquocte]');
-            const date2: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
+            const date2: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`, 'lastUpdated')
 
 
             const query: string = `
@@ -555,7 +608,7 @@ export class StockService {
             const redisData: MerchandisePriceResponse[] = await this.redis.get(`${RedisKeys.MerchandisePrice}:${type}`);
             if (redisData) return redisData;
 
-            const {latestDate}: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,'lastUpdated')
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate(`[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`, 'lastUpdated')
 
             const query: string = `
                 SELECT name, price, unit, change1D AS Day,
@@ -594,7 +647,7 @@ export class StockService {
             // This function calculates the relative strength index (RSI) of cash gains and losses by industry.
             // It takes in an array of transaction data and returns an object with the RSI for each industry.
 
-            const cashByIndustry: {[key: string]: TransactionGroup} = {};
+            const cashByIndustry: { [key: string]: TransactionGroup } = {};
             let previousTransaction = data[0];
             for (let i = 1; i < data.length; i++) {
                 const currentTransaction = data[i];
@@ -617,13 +670,13 @@ export class StockService {
 
             const mappedData: Record<any, RsiResponse> = {};
             for (const item in cashByIndustry) {
-                const { cashGain, cashLost } = cashByIndustry[item];
+                const {cashGain, cashLost} = cashByIndustry[item];
                 const rsCash: number = cashGain / cashLost;
                 mappedData[item] = {
                     cashGain,
                     cashLost,
                     rsCash,
-                    rsiCash: 100 - 100/(1 + rsCash)
+                    rsiCash: 100 - 100 / (1 + rsCash)
                 }
             }
             await this.redis.set(`${RedisKeys.Rsi}:${session}`, mappedData);
@@ -633,55 +686,29 @@ export class StockService {
         }
     }
 
-    //Get the nearest day have transaction in session, week, month...
-    private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
-        const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
-        const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
-        const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+    async marketEvaluation(): Promise<MarketEvaluationResponse[]> {
+        try {
+            const redisData: MarketEvaluationResponse[] = await this.redis.get(RedisKeys.MarketEvaluation);
+            if (redisData) return redisData;
 
-        const dates = await this.db.query(`
-            SELECT DISTINCT TOP 2 ${column} FROM ${table}
-            WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
-        `);
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[biendong-chiso-mainweb]', '[Date Time]')
 
+            // const query: string = `
+            //     select * from [PHANTICH].[dbo].[biendong-chiso-mainweb]
+            //     where [Date Time] = @0
+            //     order by [Date Time] desc
+            // `;
+            // const data = await this.db.query(query, [latestDate]);
 
-        const query: string = `
-            SELECT TOP 1 ${column} FROM ${table}
-            WHERE ${column} IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
-            `;
-
-        return {
-            latestDate: dates[0]?.[column] || new Date(),
-            previousDate: dates[1]?.[column] || new Date(),
-            weekDate: (await this.db.query(query, [lastWeek]))[0]?.[column] || new Date(),
-            monthDate: (await this.db.query(query, [lastMonth]))[0]?.[column] || new Date(),
-            yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
+            const mappedData = new MarketEvaluationResponse().mapToList(await this.db.query(`
+                 select top 6 *, [Date Time] as date from [PHANTICH].[dbo].[biendong-chiso-mainweb]
+                 order by [Date Time] desc
+            `));
+            await this.redis.set(RedisKeys.MarketEvaluation, mappedData);
+            return mappedData;
+        } catch (e) {
+            throw new CatchException(e)
         }
     }
 
-    private isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        const change = item.close_price - yesterdayItem.close_price;
-        return change === 0 ? BooleanEnum.True : BooleanEnum.False
-    };
-
-    private isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
 }
