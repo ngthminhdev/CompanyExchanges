@@ -175,12 +175,16 @@ export class AuthService {
     }
 
     async refreshToken(req: MRequest, res: Response): Promise<RefreshTokenResponse> {
+        // Lấy refresh token từ cookies của request
         const refreshToken: string = req.cookies['refreshToken'];
         if (!refreshToken) {
+            // Nếu không tìm thấy refresh token trong cookies thì trả về lỗi BAD_REQUEST
             throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token not found')
         }
+        // Lấy deviceId từ request
         const deviceId: string = req.deviceId;
 
+        // Tìm kiếm device hiện tại trong database theo refreshToken và deviceId
         const currentDevice: DeviceEntity = await this.deviceRepo
             .createQueryBuilder('device')
             .select('device', 'user.user_id')
@@ -190,26 +194,35 @@ export class AuthService {
             .getOne();
 
         if (!currentDevice) {
+            // Nếu không tìm thấy device trong database thì trả về lỗi BAD_REQUEST
             throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
         }
 
+        // Lấy thời gian hết hạn của refreshToken
         const refreshExpired: number = (this.jwtService.decode(refreshToken))?.['exp'] * 1000;
         if (refreshExpired < new Date().valueOf()) {
+            // Nếu refreshToken đã hết hạn thì trả về lỗi BAD_REQUEST
             throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
         }
 
         if (!this.jwtService.verify(refreshToken, {secret: process.env.REFRESH_TOKEN_SECRET})) {
+            // Nếu refreshToken không hợp lệ thì trả về lỗi BAD_REQUEST
             throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
         }
 
+        // Tạo secretKey mới để sử dụng cho accessToken
         const secretKey = UtilCommonTemplate.uuid();
+        // Tạo accessToken mới
         const newAccessToken: string = this.generateAccessToken(currentDevice.user.user_id, currentDevice.user.role, deviceId, secretKey);
+        // Tạo refreshToken mới
         const newRefreshToken: string = this.generateRefreshToken(currentDevice.user.user_id, deviceId);
 
+        // Lưu refreshToken mới vào cookies của response
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
             path: '/',
         });
+        // Cập nhật thông tin của device trong database
         const expiredAt: Date = new Date(Date.now() + TimeToLive.OneDayMiliSeconds);
         await this.deviceRepo.update({device_id: deviceId},
             {
@@ -217,11 +230,13 @@ export class AuthService {
                 refresh_token: newRefreshToken,
                 expired_at: expiredAt,
             })
+        // Trả về đối tượng RefreshTokenResponse cho client
         return new RefreshTokenResponse({
             access_token: newAccessToken,
             expire_at: expiredAt,
         });
     }
+
 
     async getHistorySession(userId: number) {
         const data: DeviceEntity[] = await this.deviceRepo
