@@ -13,7 +13,7 @@ import {Response} from "express";
 import {TimeToLive} from "../enums/common.enum";
 import {MRequest} from "../types/middleware";
 import {randomUUID} from "crypto";
-import {DeviceLoginInterface} from "../device-login.interface";
+import {DeviceLoginInterface} from "./interfaces/device-login.interface";
 import {UtilCommonTemplate} from "../utils/utils.common";
 import {DeviceSessionResponse} from "./responses/DeviceSession.response";
 import {RefreshTokenResponse} from "./responses/RefreshToken.response";
