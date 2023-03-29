@@ -15,6 +15,7 @@ import {Cache} from "cache-manager";
 import {InjectDataSource} from "@nestjs/typeorm";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
+import {VnIndexInterface} from "./interfaces/vnindex.interface";
 
 @Injectable()
 export class KafkaService {
@@ -115,5 +116,9 @@ export class KafkaService {
         } catch (e) {
             throw new CatchSocketException(e)
         }
+    }
+
+    handleVNIndex(payload: VnIndexInterface[]) {
+        this.send(SocketEmit.ChiSoVnIndex, payload)
     }
 }

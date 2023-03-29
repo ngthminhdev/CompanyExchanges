@@ -15,6 +15,13 @@ export class UtilCommonTemplate {
     return moment(value).format('DD/MM/YYYY');
   }
 
+  static toDateNumber(value?: any): number {
+    if (!value) {
+      return 0;
+    }
+    return moment(value).utcOffset(420).valueOf();
+  }
+
   static toDate(value: any): any {
     if (!value) {
       return '';
