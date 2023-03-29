@@ -1,5 +1,5 @@
 import {Body, Controller, Get, Headers, HttpStatus, Post, Query, Req, Res, UseGuards} from '@nestjs/common';
-import {ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
+import {ApiBearerAuth, ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {AuthService} from './auth.service';
 import {BaseResponse} from '../utils/utils.response';
 import {Response} from 'express';
@@ -64,6 +64,7 @@ export class AuthController {
     @ApiOperation({summary: 'Làm mới access token'})
     @ApiResponse({status: HttpStatus.OK, type: RefreshTokenSwagger})
     @ApiBearerAuth()
+    @ApiCookieAuth()
     @UseGuards(DeviceGuard)
     @Post('refresh-token')
     async refreshToken(@Req() req: MRequest, @Res() res: Response) {

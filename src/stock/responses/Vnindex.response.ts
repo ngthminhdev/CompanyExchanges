@@ -11,67 +11,67 @@ export class VnIndexResponse {
     comGroupCode: string;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     indexValue: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     tradingDate: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     indexChange: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     percentIndexChange: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     referenceIndex: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     openIndex: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     closeIndex: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     highestIndex: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     lowestIndex: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     matchVolume: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     matchValue: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     totalMatchVolume: number;
 
     @ApiResponseProperty({
-        type: String
+        type: Number
     })
     totalMatchValue: number;
 
