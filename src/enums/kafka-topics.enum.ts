@@ -4,7 +4,8 @@ export enum Topics {
   PhanNganh = 'kafka-phan-nganh-topic',
   ChiSoTrongNuoc = 'kakfa-chi-so-trong-nuoc-topic',
   BienDongThiTruong = 'kafka-bien-dong-thi-truong-topic',
-  TickerChange = 'kafka-ticker-change-topic'
+  TickerChange = 'kafka-ticker-change-topic',
+  ChiSoVNIndex = 'kafka-chi-so-vnindex-topic'
 }
 
 export const requestPatterns: string[] = [

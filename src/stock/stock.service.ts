@@ -35,8 +35,6 @@ import {NetForeignInterface} from "./interfaces/net-foreign.interface";
 import {MerchandisePriceQueryDto} from "./dto/merchandisePriceQuery.dto";
 import {MerchandisePriceInterface} from "./interfaces/merchandise-price.interface";
 import {MerchandisePriceResponse} from "./responses/MerchandisePrice.response";
-import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
-import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
 import {InternationalSubResponse} from "./responses/InternationalSub.response";
 import {RsiInterface, TransactionGroup} from "./interfaces/rsi.interface";
 import {RsiResponse} from "./responses/Rsi.response";
@@ -570,42 +568,6 @@ export class StockService {
             const mappedData: MerchandisePriceResponse[] = new MerchandisePriceResponse().mapToList(data);
             await this.redis.set(`${RedisKeys.MerchandisePrice}:${type}`, mappedData);
             return mappedData;
-        } catch (e) {
-            throw new CatchException(e)
-        }
-    }
-
-    // Độ rộng ngành
-    async getMarketBreadth() {
-        try {
-            return new MarketBreadthResponse().mapToList(await this.db.query(`
-                SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
-                ORDER BY time ASC
-            `));
-        } catch (e) {
-            throw new CatchException(e)
-        }
-    }
-
-    // Thanh khoản phiên trước
-    async getMarketLiquidityYesterday() {
-        try {
-            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
-                SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
-                ORDER BY time ASC
-            `));
-        } catch (e) {
-            throw new CatchException(e)
-        }
-    }
-
-    //Thanh khoản phiên hiện tại
-    async getMarketLiquidityToday() {
-        try {
-            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
-                SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
-                ORDER BY time ASC
-            `));
         } catch (e) {
             throw new CatchException(e)
         }

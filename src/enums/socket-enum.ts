@@ -12,4 +12,5 @@ export enum SocketEmit {
     TopRocHNX = 'listen-top-roc-hnx',
     TopRocHSX = 'listen-top-roc-hsx',
     TopRocUPCOM = 'listen-top-roc-upcom',
+    ChiSoVnIndex = 'listen-chi-so-vnindex'
 }

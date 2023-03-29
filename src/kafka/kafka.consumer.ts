@@ -8,6 +8,7 @@ import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa
 import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
 import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
+import {VnIndexInterface} from "./interfaces/vnindex.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -84,6 +85,18 @@ export class KafkaConsumer {
     try {
       this.kafkaService.handleDomesticIndex(payload);
       this.kafkaService.handleMarketVolatility(payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ChiSoVNIndex)
+  handleVNIndex(
+      @Payload() payload: VnIndexInterface[],
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleVNIndex(payload);
     } catch (error) {
       this.logger.error(error);
     }
