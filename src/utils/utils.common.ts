@@ -40,10 +40,10 @@ export class UtilCommonTemplate {
     });
   }
 
-  static generateDeviceId(str1: string, str2: string) {
+  static generateDeviceId(mac: string, userAgent: string) {
     // Chuyển đổi chuỗi thành mảng byte
-    const arr1 = str1.split(':').map(x => parseInt(x, 16));
-    const arr2 = new TextEncoder().encode(str2);
+    const arr1 = mac.split(':').map(x => parseInt(x, 16));
+    const arr2 = new TextEncoder().encode(userAgent);
 
     // Tạo một ArrayBuffer có kích thước đủ để chứa cả hai mảng byte
     const buffer = new ArrayBuffer(arr1.length + arr2.length);

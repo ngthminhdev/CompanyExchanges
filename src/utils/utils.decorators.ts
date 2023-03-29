@@ -5,7 +5,7 @@ import {ExceptionResponse} from "../exceptions/common.exception";
 import {DEVICE_METADATA} from "../constants";
 import {MRequest} from "../types/middleware"
 
-export const GetUserIdFromToken = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
+export const GetUserIdFromToken = createParamDecorator<number>(async (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     const jwt = new JwtService();
     const bearer = request.headers.authorization;
@@ -20,7 +20,7 @@ export const GetUserIdFromToken = createParamDecorator(async (data: unknown, ctx
     return payload.userId;
 });
 
-export const GetToken = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
+export const GetToken = createParamDecorator<string>(async (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     const bearer = request?.headers?.authorization;
 
@@ -30,9 +30,9 @@ export const GetToken = createParamDecorator(async (data: unknown, ctx: Executio
     return bearer.split(' ')[1];
 });
 
-export const GetDeviceId = createParamDecorator(async (data: unknown, ctx: ExecutionContext) => {
+export const GetDeviceId = createParamDecorator<string>(async (data: unknown, ctx: ExecutionContext) => {
    const req: MRequest = ctx.switchToHttp().getRequest();
-   return req?.deviceId || 0;
+   return req?.deviceId || "";
 });
 
 export const LoginMetadata = () => SetMetadata(DEVICE_METADATA, true);
