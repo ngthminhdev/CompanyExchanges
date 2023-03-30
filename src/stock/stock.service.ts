@@ -50,7 +50,7 @@ export class StockService {
     }
 
     //Get the nearest day have transaction in session, week, month...
-    private async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
+    public async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
         const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
         const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
@@ -686,6 +686,7 @@ export class StockService {
         }
     }
 
+    //Đánh giá thị trường
     async marketEvaluation(): Promise<MarketEvaluationResponse[]> {
         try {
             const redisData: MarketEvaluationResponse[] = await this.redis.get(RedisKeys.MarketEvaluation);
@@ -711,4 +712,12 @@ export class StockService {
         }
     }
 
+    // Đóng góp thanh khoản
+    async getLiquidityContribute(q) {
+        try {
+
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
 }
