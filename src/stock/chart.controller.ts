@@ -1,4 +1,4 @@
-import {Controller, Get, HttpStatus, Res} from "@nestjs/common";
+import {Controller, Get, HttpStatus, Query, Res} from "@nestjs/common";
 import {ApiOkResponse, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {MarketLiquidityChartSwagger} from "./responses/MarketLiquidityChart.response";
 import {Response} from "express";
@@ -6,6 +6,7 @@ import {BaseResponse} from "../utils/utils.response";
 import {MarketBreadthSwagger} from "./responses/MarketBreadth.response";
 import {ChartService} from "./chart.service";
 import {VnIndexSwagger} from "./responses/Vnindex.response";
+import {TimestampQueryDto} from "./dto/timestampQuery.dto";
 
 
 @Controller('chart')
@@ -47,8 +48,8 @@ export class ChartController {
     @Get('vnindex')
     @ApiOperation({summary: 'chart line chỉ số vnindex'})
     @ApiOkResponse({type: VnIndexSwagger})
-    async getVnIndex(@Res() res: Response) {
-        const data = await this.chartService.getVnIndex();
+    async getVnIndex(@Query() q: TimestampQueryDto,@Res() res: Response) {
+        const data = await this.chartService.getVnIndex(parseInt(q.type));
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 }
