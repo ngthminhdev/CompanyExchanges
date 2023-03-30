@@ -17,6 +17,13 @@ export enum TimeToLive {
     Forever = -1
 }
 
+export enum TransactionTimeTypeEnum {
+    Latest,
+    OneWeek,
+    OneMonth,
+    YearToDate
+}
+
 export enum TransactionEnum {
     Buy,
     Sell
