@@ -54,12 +54,13 @@ export class ChartService {
     }
 
     // Chỉ số Vn index
-    async getVnIndex() {
+    async getVnIndex(type: number) {
         try {
-            return new VnIndexResponse().mapToList(await this.db.query(`
+            const data = await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
                 ORDER BY tradingDate ASC
-            `));
+            `)
+            return new VnIndexResponse().mapToList(data, type);
         } catch (e) {
             throw new CatchException(e)
         }

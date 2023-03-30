@@ -1,4 +1,5 @@
 export interface VnIndexInterface {
+    type?: number;
     comGroupCode: string;
     indexValue: number;
     tradingDate: number;

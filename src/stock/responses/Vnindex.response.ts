@@ -5,6 +5,12 @@ import {VnIndexInterface} from "../../kafka/interfaces/vnindex.interface";
 
 
 export class VnIndexResponse {
+    @ApiProperty({
+        type: Number,
+        description: '0 - phiên hiện tại (realtime), 1 - 5 phiên, 2 - 1 tháng, 3 - YtD'
+    })
+    type: number;
+
     @ApiResponseProperty({
         type: String,
     })
@@ -76,6 +82,7 @@ export class VnIndexResponse {
     totalMatchValue: number;
 
     constructor(data?: VnIndexInterface) {
+        this.type = data?.type || 0;
         this.comGroupCode = data?.comGroupCode || "";
         this.indexValue = data?.indexValue || 0;
         this.tradingDate = UtilCommonTemplate.toDateNumber(data?.tradingDate || new Date());
@@ -92,8 +99,8 @@ export class VnIndexResponse {
         this.totalMatchValue = data?.totalMatchValue || 0;
     }
 
-    public mapToList(data?: VnIndexInterface[] | any[]) {
-        return data.map(i => new VnIndexResponse(i))
+    public mapToList(data?: VnIndexInterface[], type: number = 0) {
+        return data.map(i => new VnIndexResponse({...i, type: type}))
     }
 }
 
