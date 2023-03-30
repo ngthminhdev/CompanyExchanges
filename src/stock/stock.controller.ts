@@ -169,4 +169,14 @@ export class StockController {
         const data = await this.stockService.marketEvaluation();
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
+
+    @Get('liquidity-contribute')
+    @ApiOperation({
+        summary: 'Đóng góp thanh khoản',
+    })
+    @ApiOkResponse({type: BaseResponse})
+    async getLiquidityContribute(@Query() q: any, @Res() res: Response) {
+        const data = await this.stockService.getLiquidityContribute(q);
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
 }
