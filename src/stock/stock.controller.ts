@@ -47,10 +47,10 @@ export class StockController {
     }
 
     @Get('industry')
-    @ApiOperation({summary: 'Phân ngành'})
+    @ApiOperation({summary: 'Phân ngành', description: 'HSX, HNX, UPCOM'})
     @ApiOkResponse({type: IndustrySwagger})
-    async getIndustry(@Res() res: Response) {
-        const data = await this.stockService.getIndustry();
+    async getIndustry(@Query() q: GetExchangeQuery, @Res() res: Response) {
+        const data = await this.stockService.getIndustry(q.exchange.toUpperCase());
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 
