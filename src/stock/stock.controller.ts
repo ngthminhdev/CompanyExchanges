@@ -47,7 +47,7 @@ export class StockController {
     }
 
     @Get('industry')
-    @ApiOperation({summary: 'Phân ngành', description: 'HSX, HNX, UPCOM'})
+    @ApiOperation({summary: 'Phân ngành', description: 'HSX, HNX, UPCOM, ALL'})
     @ApiOkResponse({type: IndustrySwagger})
     async getIndustry(@Query() q: GetExchangeQuery, @Res() res: Response) {
         const data = await this.stockService.getIndustry(q.exchange.toUpperCase());

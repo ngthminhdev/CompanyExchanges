@@ -222,19 +222,19 @@ export class StockService {
     async getIndustry(exchange: string): Promise<IndustryResponse[]> {
         try {
             //Check caching data is existed
-            const redisData: IndustryResponse[] = await this.redis.get(`{RedisKeys.Industry}:${exchange}`);
+            const redisData: IndustryResponse[] = await this.redis.get(`${RedisKeys.Industry}:${exchange}`);
             if (redisData) return redisData;
 
             //Get 2 latest date
             const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const byExchange = !exchange  ? "" : ' AND c.EXCHANGE = @0 ';
+            const byExchange = exchange == "ALL"  ? " " : ' AND c.EXCHANGE = @1 ';
 
             const query: string = `
                 SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
-                ON c.TICKER = p.ticker WHERE p.date_time = @1` + byExchange +
+                ON c.TICKER = p.ticker WHERE p.date_time = @0` + byExchange +
                 `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
             `;
 
@@ -243,7 +243,7 @@ export class StockService {
                 c.EXCHANGE
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
-                WHERE p.date_time IN (@1, @2, @3, @4)` + byExchange +
+                WHERE p.date_time IN (@0, @2, @3, @4)` + byExchange +
                 `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
                 GROUP BY c.LV2, c.EXCHANGE, p.date_time
                 ORDER BY p.date_time DESC
@@ -251,7 +251,7 @@ export class StockService {
 
             //Sum total_market_cap by industry (ICBID.LV2)
             const marketCap: IndustryRawInterface[]
-                = await this.db.query(marketCapQuery, [exchange, latestDate, previousDate, weekDate, monthDate]);
+                = await this.db.query(marketCapQuery, [latestDate, exchange, previousDate, weekDate, monthDate]);
 
             // return marketCap as any;
 
@@ -273,7 +273,7 @@ export class StockService {
 
             //Get data of the 1st day and the 2nd day
             const [dataToday, dataYesterday]: [IndustryRawInterface[], IndustryRawInterface[]] =
-                await Promise.all([this.db.query(query, [exchange, latestDate]), this.db.query(query, [exchange, previousDate])])
+                await Promise.all([this.db.query(query, [latestDate, exchange]), this.db.query(query, [previousDate, exchange])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result = dataToday.map((item) => {
@@ -320,7 +320,7 @@ export class StockService {
                 .sort((a, b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
-            await this.redis.store.set(`{RedisKeys.Industry}:${exchange}`, mappedData, TimeToLive.Minute);
+            await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, mappedData, TimeToLive.Minute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
