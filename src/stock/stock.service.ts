@@ -229,37 +229,37 @@ export class StockService {
             const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const byExchange = exchange == "ALL"  ? " " : ' AND c.EXCHANGE = @1 ';
+            const byExchange = exchange == "ALL"  ? " " : ' AND c.EXCHANGE = @0 ';
+            const groupBy = exchange == 'ALL' ? " " : ', c.EXCHANGE '
 
             const query: string = `
                 SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
-                ON c.TICKER = p.ticker WHERE p.date_time = @0` + byExchange +
+                ON c.TICKER = p.ticker WHERE p.date_time = @1` + byExchange +
                 `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
             `;
 
             const marketCapQuery: string = `
-                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap,
-                c.EXCHANGE
-                FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
+                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap`
+                + groupBy +
+                ` FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
-                WHERE p.date_time IN (@0, @2, @3, @4)` + byExchange +
+                WHERE p.date_time IN (@1, @2, @3, @4)` + byExchange +
                 `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
-                GROUP BY c.LV2, c.EXCHANGE, p.date_time
+                GROUP BY c.LV2` + groupBy + `, p.date_time
                 ORDER BY p.date_time DESC
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
             const marketCap: IndustryRawInterface[]
-                = await this.db.query(marketCapQuery, [latestDate, exchange, previousDate, weekDate, monthDate]);
-
-            // return marketCap as any;
+                = await this.db.query(marketCapQuery, [exchange, latestDate, previousDate, weekDate, monthDate]);
 
             //Group by industry
             const groupByIndustry = marketCap.reduce((result, item) => {
                 (result[item.industry] || (result[item.industry] = [])).push(item);
                 return result;
             }, {});
+
 
             //Calculate change percent per day, week, month
             const industryChanges = Object.entries(groupByIndustry).map(([industry, values]: any) => {
@@ -273,7 +273,7 @@ export class StockService {
 
             //Get data of the 1st day and the 2nd day
             const [dataToday, dataYesterday]: [IndustryRawInterface[], IndustryRawInterface[]] =
-                await Promise.all([this.db.query(query, [latestDate, exchange]), this.db.query(query, [previousDate, exchange])])
+                await Promise.all([this.db.query(query, [exchange, latestDate]), this.db.query(query, [exchange, previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result = dataToday.map((item) => {
@@ -320,7 +320,7 @@ export class StockService {
                 .sort((a, b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
-            await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, mappedData, TimeToLive.Minute);
+            await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, mappedData);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
