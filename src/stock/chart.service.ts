@@ -77,10 +77,10 @@ export class ChartService {
             let startDate: Date | string;
             switch (type) {
                 case TransactionTimeTypeEnum.OneWeek:
-                    startDate = UtilCommonTemplate.toDateTime(moment().startOf('week'));
+                    startDate = weekDate;
                     break;
                 case TransactionTimeTypeEnum.OneMonth:
-                    startDate = weekDate;
+                    startDate = UtilCommonTemplate.toDateTime(moment().startOf('month'));
                     break;
                 case TransactionTimeTypeEnum.YearToDate:
                     startDate = UtilCommonTemplate.toDateTime(moment().startOf('year'));
@@ -92,7 +92,7 @@ export class ChartService {
             const query: string = `
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
                 from [PHANTICH].[dbo].[database_chisotoday]
-                where ticker = 'VNINDEX' and (date_time >= @0 and date_time <= @1)
+                where ticker = 'VNINDEX' and date_time >= @0 and date_time <= @1
                 ORDER BY date_time desc
             `;
 

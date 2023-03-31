@@ -219,36 +219,41 @@ export class StockService {
     }
 
     //Phân ngành
-    async getIndustry(): Promise<IndustryResponse[]> {
+    async getIndustry(exchange: string): Promise<IndustryResponse[]> {
         try {
             //Check caching data is existed
-            const redisData: IndustryResponse[] = await this.redis.get(RedisKeys.Industry);
+            const redisData: IndustryResponse[] = await this.redis.get(`{RedisKeys.Industry}:${exchange}`);
             if (redisData) return redisData;
 
             //Get 2 latest date
             const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
+            const byExchange = !exchange  ? "" : ' AND c.EXCHANGE = @0 ';
+
             const query: string = `
-                SELECT company.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
-                FROM [PHANTICH].[dbo].[ICBID] company JOIN [PHANTICH].[dbo].[database_mkt] p
-                ON company.TICKER = p.ticker WHERE p.date_time = @0
-                AND company.LV2 != '#N/A' AND company.LV2 NOT LIKE 'C__________________'
+                SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
+                FROM [PHANTICH].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
+                ON c.TICKER = p.ticker WHERE p.date_time = @1` + byExchange +
+                `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
             `;
 
             const marketCapQuery: string = `
-                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
+                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap,
+                c.EXCHANGE
                 FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
-                WHERE p.date_time IN (@0, @1, @2, @3)
-                AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
-                GROUP BY c.LV2, p.date_time
+                WHERE p.date_time IN (@1, @2, @3, @4)` + byExchange +
+                `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
+                GROUP BY c.LV2, c.EXCHANGE, p.date_time
                 ORDER BY p.date_time DESC
             `;
 
             //Sum total_market_cap by industry (ICBID.LV2)
             const marketCap: IndustryRawInterface[]
-                = await this.db.query(marketCapQuery, [latestDate, previousDate, weekDate, monthDate]);
+                = await this.db.query(marketCapQuery, [exchange, latestDate, previousDate, weekDate, monthDate]);
+
+            // return marketCap as any;
 
             //Group by industry
             const groupByIndustry = marketCap.reduce((result, item) => {
@@ -268,7 +273,7 @@ export class StockService {
 
             //Get data of the 1st day and the 2nd day
             const [dataToday, dataYesterday]: [IndustryRawInterface[], IndustryRawInterface[]] =
-                await Promise.all([this.db.query(query, [latestDate]), this.db.query(query, [previousDate])])
+                await Promise.all([this.db.query(query, [exchange, latestDate]), this.db.query(query, [exchange, previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
             const result = dataToday.map((item) => {
@@ -315,7 +320,7 @@ export class StockService {
                 .sort((a, b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
-            await this.redis.store.set(RedisKeys.Industry, mappedData, TimeToLive.Minute);
+            await this.redis.store.set(`{RedisKeys.Industry}:${exchange}`, mappedData, TimeToLive.Minute);
             return mappedData
         } catch (error) {
             throw new CatchException(error);
