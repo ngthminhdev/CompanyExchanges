@@ -27,8 +27,8 @@ export class AuthController {
     @ApiResponse({status: HttpStatus.CREATED, type: BaseResponse})
     async register(@Body() body: RegisterDto, @Res() res: Response) {
         try {
-            const data = await this.authService.register(body);
-            return res.status(HttpStatus.CREATED).send(new BaseResponse({data: data}));
+            const message = await this.authService.register(body);
+            return res.status(HttpStatus.CREATED).send(new BaseResponse({message}));
         } catch (e) {
             throw new CatchException(e)
         }
@@ -54,8 +54,8 @@ export class AuthController {
     @Post('logout')
     async logout(@GetUserIdFromToken() userId: number, @GetDeviceId() deviceId: string, @Res() res: Response) {
         try {
-            const data = await this.authService.logout(userId, deviceId, res);
-            return res.status(HttpStatus.OK).send(new BaseResponse({data: data}));
+            const message = await this.authService.logout(userId, deviceId, res);
+            return res.status(HttpStatus.OK).send(new BaseResponse({message}));
         } catch (e) {
             throw new CatchException(e)
         }
@@ -70,7 +70,7 @@ export class AuthController {
     async refreshToken(@Req() req: MRequest, @Res() res: Response) {
         try {
             const data = await this.authService.refreshToken(req, res);
-            return res.status(HttpStatus.OK).send(new BaseResponse({data: data}));
+            return res.status(HttpStatus.OK).send(new BaseResponse({data}));
         } catch (e) {
             throw new CatchException(e)
         }

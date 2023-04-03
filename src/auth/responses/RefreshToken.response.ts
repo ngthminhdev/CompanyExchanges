@@ -1,6 +1,5 @@
-import {ApiProperty, ApiResponseProperty, PartialType} from "@nestjs/swagger";
+import {ApiProperty, PartialType} from "@nestjs/swagger";
 import {BaseResponse} from "../../utils/utils.response";
-import {UtilCommonTemplate} from "../../utils/utils.common";
 
 
 export class RefreshTokenResponse {
@@ -10,14 +9,8 @@ export class RefreshTokenResponse {
     })
     access_token: string;
 
-    @ApiResponseProperty({
-        type: Date,
-    })
-    expired_at: Date | string;
-
     constructor(data: any) {
         this.access_token = data?.access_token || ""
-        this.expired_at = UtilCommonTemplate.toDateTime(data?.expired_at || Date.now());
     }
 }
 
