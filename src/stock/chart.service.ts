@@ -12,6 +12,7 @@ import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import * as moment from "moment";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
+import {IndustryFullInterface} from "./interfaces/industry-full.interface";
 
 
 @Injectable()
@@ -61,17 +62,19 @@ export class ChartService {
     }
 
     // Chỉ số Vn index
-    async getVnIndex(type: number): Promise<VnIndexResponse[]> {
+    async getVnIndex(type: number): Promise<any> {
         try {
+            const industryFull = await this.redis.get(RedisKeys.IndustryFull)
             if (type === TransactionTimeTypeEnum.Latest) {
                 const data = await this.db.query(`
                     SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
                     ORDER BY tradingDate ASC
-                `)
-                return new VnIndexResponse().mapToList(data, type);
+                `);
+
+                return { vnindexData: new VnIndexResponse().mapToList(data, type), industryFull };
             }
             const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
-            if (redisData) return redisData;
+            if (redisData) return {vnindexData: redisData, industryFull};
 
             const {latestDate, weekDate}: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
             let startDate: Date | string;
@@ -98,7 +101,7 @@ export class ChartService {
 
             const mappedData = new VnIndexResponse().mapToList(await this.db.query(query, [startDate, latestDate]), type);
             await this.redis.set(`${RedisKeys.VnIndex}:${type}`, mappedData);
-            return mappedData;
+            return {vnidexData: mappedData, industryFull};
         } catch (e) {
             throw new CatchException(e)
         }

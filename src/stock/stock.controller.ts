@@ -179,4 +179,14 @@ export class StockController {
         const data = await this.stockService.getLiquidityContribute(q);
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
+
+    @Get('get-market-map')
+    @ApiOperation({
+        summary: 'Bản đồ thị trường',
+    })
+    @ApiOkResponse({type: BaseResponse})
+    async getMarketMap(@Query() q: any, @Res() res: Response) {
+        const data = await this.stockService.getMarketMap(q);
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
 }

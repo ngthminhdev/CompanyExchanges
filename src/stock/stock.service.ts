@@ -315,6 +315,24 @@ export class StockService {
                 return stats;
             }, []);
 
+            const marketVolatility: any = final.reduce((prev, curr) => {
+                return {
+                    equal : prev.equal + curr.equal,
+                    high : prev.high + curr.high,
+                    low : prev.low + curr.low,
+                    increase : prev.increase + curr.increase,
+                    decrease : prev.decrease + curr.decrease,
+                }
+            }, {
+                equal: 0,
+                high: 0,
+                low: 0,
+                increase: 0,
+                decrease: 0,
+            })
+
+            await this.redis.set(RedisKeys.IndustryFull, marketVolatility);
+
             //Map response
             const mappedData: IndustryResponse[] = [...new IndustryResponse().mapToList(final)]
                 .sort((a, b) => a.industry > b.industry ? 1 : -1);
@@ -726,4 +744,14 @@ export class StockService {
             throw new CatchException(e)
         }
     }
+
+    //Bản đồ toàn thị trường
+    async getMarketMap(q) {
+        try {
+
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
 }
