@@ -10,14 +10,8 @@ export class RefreshTokenResponse {
     })
     access_token: string;
 
-    @ApiResponseProperty({
-        type: Date,
-    })
-    expired_at: Date | string;
-
     constructor(data: any) {
         this.access_token = data?.access_token || ""
-        this.expired_at = UtilCommonTemplate.toDateTime(data?.expired_at || Date.now());
     }
 }
 

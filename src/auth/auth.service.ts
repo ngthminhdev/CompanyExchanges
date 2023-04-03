@@ -36,7 +36,7 @@ export class AuthService {
             deviceId: deviceId
         }, {
             secret: secretKey,
-            expiresIn: TimeToLive.OneDayMiliSeconds
+            expiresIn: TimeToLive.OneHour
         });
     }
 
@@ -46,11 +46,11 @@ export class AuthService {
             deviceId: deviceId
         }, {
             secret: process.env.REFRESH_TOKEN_SECRET,
-            expiresIn: TimeToLive.OneWeekMiliSeconds
+            expiresIn: TimeToLive.OneWeek
         });
     }
 
-    async register(data: RegisterDto): Promise<boolean> {
+    async register(data: RegisterDto): Promise<string> {
         const user = await this.userRepo.findOne({
             where: {phone: data.phone},
         });
@@ -65,7 +65,7 @@ export class AuthService {
             password: hash,
         });
 
-        return true;
+        return "register successfully";
     }
 
     async login(req: MRequest, loginDto: LoginDto, headers: Headers, res: Response): Promise<UserResponse> {
@@ -143,7 +143,7 @@ export class AuthService {
         return {accessToken, refreshToken, expiredAt};
     }
 
-    async logout(userId: number, deviceId: string, res: Response): Promise<boolean> {
+    async logout(userId: number, deviceId: string, res: Response): Promise<string> {
         const currentSession = await this.deviceRepo
             .createQueryBuilder('device')
             .leftJoinAndSelect('device.user', 'user')
@@ -163,15 +163,15 @@ export class AuthService {
         })
 
         await this.deviceRepo.delete({device_id: deviceId});
-        return true;
+        return "logged out successfully";
     }
 
-    async getSecretKey(deviceId: string): Promise<string> {
+    async getSecretKey(deviceId: string): Promise<Pick<DeviceEntity, "secret_key" | "expired_at">> {
         return (await this.deviceRepo.findOne({
                 where: {device_id: deviceId},
-                select: ['secret_key']
+                select: ['secret_key', "expired_at"]
             })
-        )?.['secret_key'];
+        );
     }
 
     async refreshToken(req: MRequest, res: Response): Promise<RefreshTokenResponse> {
@@ -199,8 +199,8 @@ export class AuthService {
         }
 
         // Lấy thời gian hết hạn của refreshToken
-        const refreshExpired: number = (this.jwtService.decode(refreshToken))?.['exp'] * 1000;
-        if (refreshExpired < new Date().valueOf()) {
+        const refreshExpired: number = (this.jwtService.decode(refreshToken))?.['exp'];
+        if (refreshExpired < new Date().valueOf() / 1000) {
             // Nếu refreshToken đã hết hạn thì trả về lỗi BAD_REQUEST
             throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'refresh token is not valid')
         }
@@ -223,20 +223,16 @@ export class AuthService {
             path: '/',
         });
         // Cập nhật thông tin của device trong database
-        const expiredAt: Date = new Date(Date.now() + TimeToLive.OneDayMiliSeconds);
         await this.deviceRepo.update({device_id: deviceId},
             {
                 secret_key: secretKey,
                 refresh_token: newRefreshToken,
-                expired_at: expiredAt,
             })
         // Trả về đối tượng RefreshTokenResponse cho client
         return new RefreshTokenResponse({
             access_token: newAccessToken,
-            expire_at: expiredAt,
         });
     }
-
 
     async getHistorySession(userId: number) {
         const data: DeviceEntity[] = await this.deviceRepo
