@@ -387,7 +387,8 @@ export class StockService {
             const query: string = `
                 SELECT t1.ticker, t1.date_time, t1.close_price,
                     (t1.close_price - t2.close_price) AS change_price,
-                    (((t1.close_price - t2.close_price) / t2.close_price) * 100) AS percent_d
+                    (((t1.close_price - t2.close_price) / t2.close_price) * 100) AS percent_d,
+                    t1.net_value_foreign
                 FROM [PHANTICH].[dbo].[database_chisotoday] t1
                 JOIN [PHANTICH].[dbo].[database_chisotoday] t2
                 ON t1.ticker = t2.ticker AND t2.date_time = @1

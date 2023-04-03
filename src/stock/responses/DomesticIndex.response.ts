@@ -19,6 +19,24 @@ export class DomesticIndexResponse {
 
     @ApiProperty({
         type: Number,
+        example: 502.9
+    })
+    net_value_foreign: number;
+
+    @ApiProperty({
+        type: Number,
+        example: 502.9
+    })
+    volume: number;
+
+    @ApiProperty({
+        type: Number,
+        example: 502.9
+    })
+    value: number;
+
+    @ApiProperty({
+        type: Number,
         example: 5.2
     })
     change_price: number;
@@ -50,6 +68,9 @@ export class DomesticIndexResponse {
         }
         this.price = data?.close_price || 0;
         this.change_price = data?.change_price|| 0;
+        this.volume = data?.volume || 0;
+        this.value = data?.value || 0;
+        this.net_value_foreign = data?.net_value_foreign || 0;
         this.percent_d = +data?.percent_d || 0;
         this.lastUpdated = UtilCommonTemplate.toDateTime(data?.date_time) || "";
     }
