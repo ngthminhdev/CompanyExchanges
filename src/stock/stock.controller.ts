@@ -68,10 +68,18 @@ export class StockController {
     }
 
     @Get('get-news')
-    @ApiOperation({summary: 'Tin tức thị trường chứng'})
+    @ApiOperation({summary: 'Tin tức thị trường chứng khoán'})
     @ApiOkResponse({type: StockNewsSwagger})
     async getNews(@Res() res: Response) {
         const data = await this.stockService.getNews();
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
+
+    @Get('get-macro-news')
+    @ApiOperation({summary: 'Tin tức thị trường vĩ mô'})
+    @ApiOkResponse({type: StockNewsSwagger})
+    async getMacroNews(@Res() res: Response) {
+        const data = await this.stockService.getMacroNews();
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 

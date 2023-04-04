@@ -5,6 +5,7 @@ export enum RedisKeys {
   MarketLiquidity = 'market-liquidity',
   ExchangeVolume = 'exchange-volume',
   StockNews = 'stock-news',
+  StockMacroNews = 'stock-macro-news',
   StockEvents = 'stock-events',
   DomesticIndex = 'domestic-index',
   InternationalIndex = 'international-index',

@@ -393,6 +393,23 @@ export class StockService {
         }
     }
 
+    //Tin tức vĩ mô thế giới
+    async getMacroNews(): Promise<StockNewsResponse[]> {
+        try {
+            const redisData: StockNewsResponse[] = await this.redis.get(RedisKeys.StockMacroNews);
+            if (redisData) return redisData;
+            const query = `
+                SELECT TOP 80 * FROM [DULIEUVIMOTHEGIOI].[dbo].[TinTucViMo]
+                ORDER BY Date DESC
+            `;
+            const data = new StockNewsResponse().mapToList(await this.db.query(query));
+            await this.redis.set(RedisKeys.StockMacroNews, data)
+            return data;
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
     //Chỉ số trong nước
     async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
         try {
