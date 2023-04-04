@@ -20,5 +20,6 @@ export enum RedisKeys {
   Rsi = 'rsi',
   MarketEvaluation = 'market-evaluation',
   VnIndex = 'vn-index',
-  IndustryFull = 'industry-full'
+  IndustryFull = 'industry-full',
+  MarketMap = 'market-map',
 }

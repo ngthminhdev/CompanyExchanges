@@ -23,6 +23,8 @@ import {MerchandisePriceSwagger} from "./responses/MerchandisePrice.response";
 import {RsiQueryDto} from "./dto/rsiQuery.dto";
 import {RsiSwagger} from "./responses/Rsi.response";
 import {MarketEvaluationSwagger} from "./responses/MarketEvaluation.response";
+import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
+import {MarketMapSwagger} from "./responses/market-map.response";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -184,8 +186,8 @@ export class StockController {
     @ApiOperation({
         summary: 'Bản đồ thị trường',
     })
-    @ApiOkResponse({type: BaseResponse})
-    async getMarketMap(@Query() q: any, @Res() res: Response) {
+    @ApiOkResponse({type: MarketMapSwagger, description: 'ALL, HSX, HNX, UPCOM'})
+    async getMarketMap(@Query() q: GetMarketMapQueryDto, @Res() res: Response) {
         const data = await this.stockService.getMarketMap(q);
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }

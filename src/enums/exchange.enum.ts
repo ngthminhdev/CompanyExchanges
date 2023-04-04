@@ -3,3 +3,10 @@ export enum ExchangeEnum {
     HNX,
     UPCOM,
 }
+
+export enum MarketMapEnum {
+    MarketCap,
+    Value,
+    Volume,
+    Foreign
+}
