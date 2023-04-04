@@ -39,6 +39,9 @@ import {InternationalSubResponse} from "./responses/InternationalSub.response";
 import {RsiInterface, TransactionGroup} from "./interfaces/rsi.interface";
 import {RsiResponse} from "./responses/Rsi.response";
 import {MarketEvaluationResponse} from "./responses/MarketEvaluation.response";
+import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
+import {MarketMapResponse} from "./responses/market-map.response";
+import {MarketMapEnum} from "../enums/exchange.enum";
 
 @Injectable()
 export class StockService {
@@ -746,9 +749,57 @@ export class StockService {
     }
 
     //Bản đồ toàn thị trường
-    async getMarketMap(q) {
+    async getMarketMap(q: GetMarketMapQueryDto) {
         try {
+            const {exchange, order} = q;
+            const ex = exchange.toUpperCase();
+            const byExchange = ex === 'ALL' ? " " : " AND c.EXCHANGE = @1 "
+            const redisData =
+                await this.redis.get<MarketMapResponse[]>(`${RedisKeys.MarketMap}:${exchange}:${order}`);
+            if (redisData) return redisData;
 
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
+            if (+order === MarketMapEnum.Foreign) {
+                const query: string = `
+                SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
+                c.ticker, n.net_value_foreign AS value
+                FROM [PHANTICH].[dbo].[BCN_netvalue] n
+                JOIN [PHANTICH].[dbo].[ICBID] c
+                ON c.TICKER = n.ticker ${byExchange}
+                WHERE date_time = @0
+            `;
+                const mappedData =
+                    new MarketMapResponse().mapToList((await this.db.query(query,[latestDate, ex])));
+                await this.redis.set(`${RedisKeys.MarketMap}:${exchange}:${order}`, mappedData);
+                return mappedData;
+            }
+
+            let field: string;
+            switch (parseInt(order)) {
+                case MarketMapEnum.MarketCap:
+                    field = 'mkt_cap'
+                break;
+                case MarketMapEnum.Value:
+                    field = 'total_value_mil'
+                break;
+                default:
+                    field = 'total_vol'
+            }
+
+            const query: string = `
+                SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
+                c.ticker, n.${field} AS value 
+                FROM [PHANTICH].[dbo].[database_mkt] n
+                JOIN [PHANTICH].[dbo].[ICBID] c
+                ON c.TICKER = n.ticker ${byExchange}
+                WHERE date_time = @0
+            `;
+
+            const mappedData =
+                new MarketMapResponse().mapToList((await this.db.query(query,[latestDate, ex])));
+            await this.redis.set(`${RedisKeys.MarketMap}:${exchange}:${order}`, mappedData);
+
+            return mappedData;
         } catch (e) {
             throw new CatchException(e)
         }
