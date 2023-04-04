@@ -10,7 +10,7 @@ export class StockNewsResponse {
         example: ['ACB', 'VCB'],
         description: 'Những mã cổ phiếu trong tin tức'
     })
-    TickerInNews: string;
+    TickerInNews: string[];
 
     @ApiProperty({
         type: String,

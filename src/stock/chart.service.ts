@@ -12,7 +12,6 @@ import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import * as moment from "moment";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
-import {IndustryFullInterface} from "./interfaces/industry-full.interface";
 
 
 @Injectable()
@@ -96,7 +95,7 @@ export class ChartService {
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
                 from [PHANTICH].[dbo].[database_chisotoday]
                 where ticker = 'VNINDEX' and date_time >= @0 and date_time <= @1
-                ORDER BY date_time desc
+                ORDER BY date_time
             `;
 
             const mappedData = new VnIndexResponse().mapToList(await this.db.query(query, [startDate, latestDate]), type);
