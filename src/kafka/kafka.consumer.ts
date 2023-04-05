@@ -43,7 +43,7 @@ export class KafkaConsumer {
 
   @MessagePattern(Topics.DoRongThiTruong)
   handleMarketBreadth(
-    @Payload() payload: MarketBreadthKafkaInterface,
+    @Payload() payload: MarketBreadthKafkaInterface[],
     @Ctx() context: KafkaContext,
   ) {
     try {

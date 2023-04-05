@@ -1,6 +1,6 @@
-import {ApiProperty, PartialType} from "@nestjs/swagger";
-import {MarketBreadthKafkaInterface} from "../../kafka/interfaces/market-breadth-kafka.interface";
-import {BaseResponse} from "../../utils/utils.response";
+import { ApiProperty, PartialType } from "@nestjs/swagger";
+import { MarketBreadthKafkaInterface } from "../../kafka/interfaces/market-breadth-kafka.interface";
+import { BaseResponse } from "../../utils/utils.response";
 
 
 export class MarketBreadthResponse {
@@ -32,14 +32,14 @@ export class MarketBreadthResponse {
         type: String,
         example: "09:15:55"
     })
-    time: Date | string;
+    time: any;
 
     constructor(data?: MarketBreadthKafkaInterface) {
         this.index = data?.index || "";
         this.noChange = data?.noChange || 0;
         this.decline = data?.decline || 0;
         this.advance = data?.advance || 0;
-        this.time = data?.time || "";
+        this.time = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +data?.time.split(":")[0], +data?.time.split(":")[1]).valueOf();
     }
 
     public mapToList(data?: MarketBreadthKafkaInterface[]) {

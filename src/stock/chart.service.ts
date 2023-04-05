@@ -75,14 +75,14 @@ export class ChartService {
             const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
             if (redisData) return {vnindexData: redisData, industryFull};
 
-            const {latestDate, weekDate}: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
+            const {latestDate, weekDate, monthDate}: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
             let startDate: Date | string;
             switch (type) {
                 case TransactionTimeTypeEnum.OneWeek:
                     startDate = weekDate;
                     break;
                 case TransactionTimeTypeEnum.OneMonth:
-                    startDate = UtilCommonTemplate.toDateTime(moment().startOf('month'));
+                    startDate = monthDate;
                     break;
                 case TransactionTimeTypeEnum.YearToDate:
                     startDate = UtilCommonTemplate.toDateTime(moment().startOf('year'));

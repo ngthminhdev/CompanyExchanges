@@ -3,5 +3,5 @@ export interface MarketBreadthKafkaInterface {
     noChange: number;
     decline: number;
     advance:  number;
-    time: Date | string
+    time: Date | string | any
 }

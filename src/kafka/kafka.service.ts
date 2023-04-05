@@ -17,6 +17,7 @@ import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
 import {VnIndexInterface} from "./interfaces/vnindex.interface";
 import {VnIndexResponse} from "../stock/responses/Vnindex.response";
+import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 
 @Injectable()
 export class KafkaService {
@@ -39,8 +40,8 @@ export class KafkaService {
         }
     }
 
-    handleMarketBreadth(payload: MarketBreadthKafkaInterface): void {
-        this.send(SocketEmit.DoRongThiTruong, payload)
+    handleMarketBreadth(payload: MarketBreadthKafkaInterface[]): void {
+        this.send(SocketEmit.DoRongThiTruong, new MarketBreadthResponse().mapToList(payload))
     }
 
     handleMarketLiquidityNow(payload: MarketLiquidityKafkaInterface): void {

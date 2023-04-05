@@ -85,7 +85,7 @@ export class VnIndexResponse {
         this.type = data?.type || 0;
         this.comGroupCode = data?.comGroupCode || "";
         this.indexValue = data?.indexValue || 0;
-        this.tradingDate = UtilCommonTemplate.toDateNumber(data?.tradingDate || new Date());
+        this.tradingDate = UtilCommonTemplate.toDateNumberUTC(data?.tradingDate || new Date());
         this.indexChange = data?.indexChange || 0;
         this.percentIndexChange = data?.percentIndexChange || 0;
         this.referenceIndex = data?.referenceIndex || 0;

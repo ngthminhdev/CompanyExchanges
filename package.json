@@ -1,6 +1,6 @@
 {
-  "name": "stock-exchanges-backend",
-  "version": "0.0.58",
+  "name": "company-exchanges",
+  "version": "0.0.59",
   "description": "",
   "author": "Minh Nguyen",
   "private": true,
