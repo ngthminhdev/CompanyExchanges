@@ -11,7 +11,7 @@ RUN chmod -R 777 /SERVICE
 
 RUN chmod -R 777 /start.sh
 
-EXPOSE 3001
+EXPOSE 3002
 
 WORKDIR /SERVICE
 
