@@ -8,6 +8,13 @@ export class UtilCommonTemplate {
     return moment(value).utcOffset(420).format('YYYY/MM/DD HH:mm:ss');
   }
 
+  static toTime(value?: any): any | string {
+    if (!value) {
+      return '';
+    }
+    return moment(value).utcOffset(420).format('HH:mm:ss');
+  }
+
   static toDateNumber(value?: any): number {
     if (!value) {
       return 0;
@@ -19,7 +26,7 @@ export class UtilCommonTemplate {
     if (!value) {
       return 0;
     }
-    return moment(value).valueOf();
+    return moment(value).utc().valueOf();
   }
 
   static toDate(value: any): any {

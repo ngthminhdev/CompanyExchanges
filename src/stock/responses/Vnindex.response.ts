@@ -2,6 +2,7 @@ import {ApiProperty, ApiResponseProperty, PartialType} from "@nestjs/swagger";
 import {BaseResponse} from "../../utils/utils.response";
 import {UtilCommonTemplate} from "../../utils/utils.common";
 import {VnIndexInterface} from "../../kafka/interfaces/vnindex.interface";
+import { TransactionTimeTypeEnum } from "../../enums/common.enum";
 
 
 export class VnIndexResponse {
@@ -85,7 +86,10 @@ export class VnIndexResponse {
         this.type = data?.type || 0;
         this.comGroupCode = data?.comGroupCode || "";
         this.indexValue = data?.indexValue || 0;
-        this.tradingDate = UtilCommonTemplate.toDateNumberUTC(data?.tradingDate || new Date());
+        this.tradingDate = data?.type === TransactionTimeTypeEnum.Latest
+        // ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[0], +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[1]).valueOf()
+            ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[0], +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[1]).valueOf()
+            :   UtilCommonTemplate.toDateNumberUTC(data?.tradingDate || new Date());
         this.indexChange = data?.indexChange || 0;
         this.percentIndexChange = data?.percentIndexChange || 0;
         this.referenceIndex = data?.referenceIndex || 0;
