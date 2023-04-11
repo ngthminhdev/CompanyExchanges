@@ -1,6 +1,6 @@
 {
   "name": "company-exchanges",
-  "version": "0.0.60",
+  "version": "0.0.61",
   "description": "",
   "author": "Minh Nguyen",
   "private": true,
@@ -33,6 +33,7 @@
     "@nestjs/swagger": "^6.2.1",
     "@nestjs/typeorm": "^9.0.1",
     "@nestjs/websockets": "^9.3.9",
+    "@types/mssql": "^8.1.2",
     "aws-sdk": "^2.1341.0",
     "bcrypt": "^5.1.0",
     "cache-manager": "^5.1.6",

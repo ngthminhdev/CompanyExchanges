@@ -6,10 +6,9 @@ import {CatchException} from '../exceptions/common.exception';
 import {MarketVolatilityResponse} from './responses/MarketVolatiliy.response';
 import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "./responses/NetTransactionValue.response";
-import {IndustryRawInterface} from "./interfaces/industry.interface";
 import {IndustryResponse} from "./responses/Industry.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
-import {BooleanEnum, TimeToLive} from "../enums/common.enum";
+import {TimeToLive} from "../enums/common.enum";
 import * as moment from "moment";
 import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import {ExchangeValueInterface, TickerByExchangeInterface} from "./interfaces/exchange-value.interface";
@@ -199,17 +198,17 @@ export class StockService {
     }
 
     //Phân ngành
-    async getIndustry(exchange: string): Promise<IndustryResponse[]> {
+    async getIndustry(exchange: string): Promise<any> {
         try {
             //Check caching data is existed
-            // const redisData: IndustryResponse[] = await this.redis.get(`${RedisKeys.Industry}:${exchange}`);
-            // if (redisData) return redisData;
+            const redisData: IndustryResponse[] = await this.redis.get(`${RedisKeys.Industry}:${exchange}`);
+            if (redisData) return redisData;
 
             //Get 2 latest date
             const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const byExchange = exchange == "ALL"  ? " " : ' AND c.EXCHANGE = @0 ';
+            const byExchange = exchange == "ALL"  ? " " : ` AND c.EXCHANGE = '${exchange}' `;
             const groupBy = exchange == 'ALL' ? " " : ', c.EXCHANGE '
 
             const query = (date): string => `
@@ -234,11 +233,11 @@ export class StockService {
 
             const industryChild: ChildProcess = fork(__dirname + '/processes/industry-child.js' );
             industryChild.send({ marketCapQuery })
-            const industryChanges = await new Promise((resolve, reject) => {
-                industryChild.on('message', (industryChanges) => {
+            const industryChanges = await new Promise((resolve, reject): void => {
+                industryChild.on('message', (industryChanges): void => {
                     resolve(industryChanges)
                 });
-                industryChild.on('exit', (code, e) => {
+                industryChild.on('exit', (code, e): void=> {
                     if (code !== 0) reject(e)
                 })
             }) as any;
@@ -250,11 +249,11 @@ export class StockService {
                 query2: query(UtilCommonTemplate.toDate(previousDate))
             })
 
-            const result = await new Promise((resolve, reject) => {
-                industryDataChild.on('message', ({result}: any) => {
+            const result = await new Promise((resolve, reject): void => {
+                industryDataChild.on('message', (result: any): void => {
                     resolve(result)
                 });
-                industryDataChild.on('exit', (code, e) => {
+                industryDataChild.on('exit', (code, e): void => {
                     if (code !== 0) reject(e)
                 })
             }) as any;
@@ -304,13 +303,25 @@ export class StockService {
 
             await this.redis.set(RedisKeys.IndustryFull, marketVolatility);
 
+            const buySellPressure: ChildProcess = fork(__dirname + '/processes/buy-sell-pressure-child.js')
+            buySellPressure.send({exchange});
+
+            const buySellData = await new Promise((resolve, reject): void => {
+                buySellPressure.on('message', (buySellData: any): void => {
+                    resolve(buySellData)
+                });
+                buySellPressure.on('exit', (code, e): void => {
+                    if (code !== 0) reject(e)
+                })
+            }) as any;
+
             //Map response
             const mappedData: IndustryResponse[] = [...new IndustryResponse().mapToList(final)]
                 .sort((a, b) => a.industry > b.industry ? 1 : -1);
 
             //Caching data for the next request
-            await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, mappedData);
-            return mappedData
+            await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, {data: mappedData, buySellData: buySellData?.[0] });
+            return {data: mappedData, buySellData: buySellData?.[0] }
         } catch (error) {
             throw new CatchException(error);
         }
@@ -789,5 +800,6 @@ export class StockService {
             throw new CatchException(e)
         }
     }
+
 
 }
