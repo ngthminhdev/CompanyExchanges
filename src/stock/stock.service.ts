@@ -42,6 +42,8 @@ import {MarketEvaluationResponse} from "./responses/MarketEvaluation.response";
 import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
 import {MarketMapResponse} from "./responses/market-map.response";
 import {MarketMapEnum} from "../enums/exchange.enum";
+import {ChildProcess, fork} from "child_process";
+import {UtilCommonTemplate} from "../utils/utils.common";
 
 @Injectable()
 export class StockService {
@@ -78,31 +80,6 @@ export class StockService {
             yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
         }
     }
-
-    private isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        const change = item.close_price - yesterdayItem.close_price;
-        return change === 0 ? BooleanEnum.True : BooleanEnum.False
-    };
-
-    private isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
-
-    private isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-        return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
-            ? BooleanEnum.True : BooleanEnum.False;
-    };
 
     //Biến động thị trường
     async getMarketVolatility(): Promise<MarketVolatilityResponse[]> {
@@ -225,8 +202,8 @@ export class StockService {
     async getIndustry(exchange: string): Promise<IndustryResponse[]> {
         try {
             //Check caching data is existed
-            const redisData: IndustryResponse[] = await this.redis.get(`${RedisKeys.Industry}:${exchange}`);
-            if (redisData) return redisData;
+            // const redisData: IndustryResponse[] = await this.redis.get(`${RedisKeys.Industry}:${exchange}`);
+            // if (redisData) return redisData;
 
             //Get 2 latest date
             const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
@@ -235,64 +212,55 @@ export class StockService {
             const byExchange = exchange == "ALL"  ? " " : ' AND c.EXCHANGE = @0 ';
             const groupBy = exchange == 'ALL' ? " " : ', c.EXCHANGE '
 
-            const query: string = `
+            const query = (date): string => `
                 SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
                 FROM [PHANTICH].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
-                ON c.TICKER = p.ticker WHERE p.date_time = @1` + byExchange +
-                `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
+                ON c.TICKER = p.ticker WHERE p.date_time = '${date}' ${byExchange} AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
             `;
 
             const marketCapQuery: string = `
-                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap`
-                + groupBy +
-                ` FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
+                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
+                ${groupBy} FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
-                WHERE p.date_time IN (@1, @2, @3, @4)` + byExchange +
-                `AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
-                GROUP BY c.LV2` + groupBy + `, p.date_time
+                WHERE p.date_time IN 
+                    ('${UtilCommonTemplate.toDate(latestDate)}', 
+                    '${UtilCommonTemplate.toDate(previousDate)}', 
+                    '${UtilCommonTemplate.toDate(weekDate)}', 
+                    '${UtilCommonTemplate.toDate(monthDate)}' ) ${byExchange}
+                AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
+                GROUP BY c.LV2 ${groupBy}, p.date_time
                 ORDER BY p.date_time DESC
             `;
 
-            //Sum total_market_cap by industry (ICBID.LV2)
-            const marketCap: IndustryRawInterface[]
-                = await this.db.query(marketCapQuery, [exchange, latestDate, previousDate, weekDate, monthDate]);
+            const industryChild: ChildProcess = fork(__dirname + '/processes/industry-child.js' );
+            industryChild.send({ marketCapQuery })
+            const industryChanges = await new Promise((resolve, reject) => {
+                industryChild.on('message', (industryChanges) => {
+                    resolve(industryChanges)
+                });
+                industryChild.on('exit', (code, e) => {
+                    if (code !== 0) reject(e)
+                })
+            }) as any;
 
-            //Group by industry
-            const groupByIndustry = marketCap.reduce((result, item) => {
-                (result[item.industry] || (result[item.industry] = [])).push(item);
-                return result;
-            }, {});
+            const industryDataChild: ChildProcess = fork(__dirname + '/processes/industry-data-child.js')
 
+            industryDataChild.send({
+                query1: query(UtilCommonTemplate.toDate(latestDate)),
+                query2: query(UtilCommonTemplate.toDate(previousDate))
+            })
 
-            //Calculate change percent per day, week, month
-            const industryChanges = Object.entries(groupByIndustry).map(([industry, values]: any) => {
-                return {
-                    industry,
-                    day_change_percent: ((values[0].total_market_cap - values[1].total_market_cap) / values[1].total_market_cap) * 100,
-                    week_change_percent: ((values[0].total_market_cap - values[2].total_market_cap) / values[2].total_market_cap) * 100,
-                    month_change_percent: ((values[0].total_market_cap - values[3].total_market_cap) / values[3].total_market_cap) * 100,
-                };
-            });
+            const result = await new Promise((resolve, reject) => {
+                industryDataChild.on('message', ({result}: any) => {
+                    resolve(result)
+                });
+                industryDataChild.on('exit', (code, e) => {
+                    if (code !== 0) reject(e)
+                })
+            }) as any;
 
-            //Get data of the 1st day and the 2nd day
-            const [dataToday, dataYesterday]: [IndustryRawInterface[], IndustryRawInterface[]] =
-                await Promise.all([this.db.query(query, [exchange, latestDate]), this.db.query(query, [exchange, previousDate])])
 
             //Count how many stock change (increase, decrease, equal, ....) by industry(ICBID.LV2)
-            const result = dataToday.map((item) => {
-                const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
-                if (!yesterdayItem) return;
-                return {
-                    industry: item.industry,
-                    equal: this.isEqual(yesterdayItem, item),
-                    increase: this.isIncrease(yesterdayItem, item),
-                    decrease: this.isDecrease(yesterdayItem, item),
-                    high: this.isHigh(yesterdayItem, item),
-                    low: this.isLow(yesterdayItem, item),
-                };
-            });
-
-
             const final = result.reduce((stats, record) => {
                 const existingStats = stats.find((s) => s?.industry === record?.industry);
                 const industryChange = industryChanges.find((i) => i?.industry == record?.industry);
