@@ -1,6 +1,6 @@
 import {CacheModule, MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
 import {ConfigModule} from '@nestjs/config';
-import {KafkaModule as KafkaConfigModule} from 'nestjs-config-kafka';
+import {KafkaModule as KafkaConfigModule} from 'ngthminhdev-nestjs-kafka';
 import {JwtModule} from '@nestjs/jwt';
 import {TypeOrmModule} from '@nestjs/typeorm';
 import {AuthModule} from './auth/auth.module';
