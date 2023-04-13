@@ -10,3 +10,10 @@ export enum MarketMapEnum {
     Volume,
     Foreign
 }
+
+export enum LiquidContributeEnum {
+    Ticker,
+    LV1,
+    LV2,
+    LV3,
+}

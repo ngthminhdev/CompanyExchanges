@@ -10,7 +10,7 @@ export class UtilCommonTemplate {
 
   static toTime(value?: any): any | string {
     if (!value) {
-      return '';
+      return moment().utcOffset(420).format('HH:mm:ss');
     }
     return moment(value).utcOffset(420).format('HH:mm:ss');
   }

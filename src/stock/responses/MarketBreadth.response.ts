@@ -39,7 +39,7 @@ export class MarketBreadthResponse {
         this.noChange = data?.noChange || 0;
         this.decline = data?.decline || 0;
         this.advance = data?.advance || 0;
-        this.time = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +data?.time.split(":")[0], +data?.time.split(":")[1]).valueOf();
+        this.time = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +data?.time?.split(":")![0], +data?.time?.split(":")![1]).valueOf();
     }
 
     public mapToList(data?: MarketBreadthKafkaInterface[]) {

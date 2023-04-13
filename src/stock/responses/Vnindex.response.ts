@@ -88,7 +88,7 @@ export class VnIndexResponse {
         this.indexValue = data?.indexValue || 0;
         this.tradingDate = data?.type === TransactionTimeTypeEnum.Latest
         // ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[0], +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[1]).valueOf()
-            ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[0], +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[1]).valueOf()
+            ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![0] || new Date().getHours(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![1] || new Date().getMinutes()).valueOf()
             :   UtilCommonTemplate.toDateNumberUTC(data?.tradingDate || new Date());
         this.indexChange = data?.indexChange || 0;
         this.percentIndexChange = data?.percentIndexChange || 0;
