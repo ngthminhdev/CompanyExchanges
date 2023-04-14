@@ -25,6 +25,8 @@ import {RsiSwagger} from "./responses/Rsi.response";
 import {MarketEvaluationSwagger} from "./responses/MarketEvaluation.response";
 import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
 import {MarketMapSwagger} from "./responses/market-map.response";
+import {LiquidContributeSwagger} from "./responses/LiquidityContribute.response";
+import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -183,9 +185,10 @@ export class StockController {
     @Get('liquidity-contribute')
     @ApiOperation({
         summary: 'Đóng góp thanh khoản',
+        description: 'ALL, HSX, HNX, UPCOM'
     })
-    @ApiOkResponse({type: BaseResponse})
-    async getLiquidityContribute(@Query() q: any, @Res() res: Response) {
+    @ApiOkResponse({type: LiquidContributeSwagger})
+    async getLiquidityContribute(@Query() q: GetLiquidityQueryDto, @Res() res: Response) {
         const data = await this.stockService.getLiquidityContribute(q);
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }

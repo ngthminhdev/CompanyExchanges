@@ -23,4 +23,5 @@ export enum RedisKeys {
   VnIndex = 'vn-index',
   IndustryFull = 'industry-full',
   MarketMap = 'market-map',
+  LiquidityContribute = 'liquidity-contribute'
 }

@@ -55,12 +55,12 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  await app.startAllMicroservices().catch((e) => console.log(e));
+  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  // await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(
-      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.65`,
+      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.66`,
     );
   });
 }

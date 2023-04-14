@@ -40,9 +40,11 @@ import {RsiResponse} from "./responses/Rsi.response";
 import {MarketEvaluationResponse} from "./responses/MarketEvaluation.response";
 import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
 import {MarketMapResponse} from "./responses/market-map.response";
-import {MarketMapEnum} from "../enums/exchange.enum";
+import {LiquidContributeEnum, MarketMapEnum} from "../enums/exchange.enum";
 import {ChildProcess, fork} from "child_process";
 import {UtilCommonTemplate} from "../utils/utils.common";
+import {LiquidContributeResponse} from "./responses/LiquidityContribute.response";
+import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 
 @Injectable()
 export class StockService {
@@ -51,6 +53,31 @@ export class StockService {
         private readonly redis: Cache,
         @InjectDataSource() private readonly db: DataSource,
     ) {
+    }
+
+    public async getExchangesVolume(): Promise<any> {
+        try {
+            const {latestDate}: SessionDatesInterface = await this.getSessionDate('PHANTICH.dbo.database_mkt')
+            //Calculate exchange volume
+            let exchange: any = await this.redis.get(RedisKeys.ExchangeVolume);
+            if (exchange) return exchange;
+
+            if (!exchange) {
+                exchange = (await this.db.query(`
+                    SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
+                    FROM PHANTICH.dbo.database_mkt t
+                    JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
+                    WHERE date_time = @0
+                    GROUP BY exchange
+                `, [latestDate])).reduce((prev, curr) => {
+                    return {...prev, [curr.exchange]: curr.value}
+                }, {});
+                await this.redis.set(RedisKeys.ExchangeVolume, {...exchange, ALL: exchange?.["HSX"] + exchange?.["HNX"] + exchange?.["UPCOM"]});
+                return {...exchange, ALL: exchange?.["HSX"] + exchange?.["HNX"] + exchange?.["UPCOM"]};
+            }
+        } catch (e) {
+            throw new CatchException(e)
+        }
     }
 
     //Get the nearest day have transaction in session, week, month...
@@ -138,19 +165,7 @@ export class StockService {
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
             //Calculate exchange volume
-            let exchange: ExchangeValueInterface[] = await this.redis.get(RedisKeys.ExchangeVolume);
-            if (!exchange) {
-                exchange = (await this.db.query(`
-                    SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
-                    FROM PHANTICH.dbo.database_mkt t
-                    JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                    WHERE date_time = @0
-                    GROUP BY exchange
-                `, [latestDate])).reduce((prev, curr) => {
-                    return {...prev, [curr.exchange]: curr.value}
-                }, {});
-                await this.redis.set(RedisKeys.ExchangeVolume, exchange, TimeToLive.Minute);
-            }
+            let exchange: ExchangeValueInterface[] = await this.getExchangesVolume();
 
             const query: string = `
                 SELECT t.total_value_mil AS value, t.ticker, c.LV2 AS industry, c.EXCHANGE AS exchange,
@@ -736,8 +751,54 @@ export class StockService {
     }
 
     // Đóng góp thanh khoản
-    async getLiquidityContribute(q) {
+    async getLiquidityContribute(q: GetLiquidityQueryDto) {
         try {
+            const {order, type, exchange} = q;
+            const redisData = await this.redis.get(`${RedisKeys.LiquidityContribute}:${type}:${order}:${exchange}`);
+            if (redisData) return redisData;
+
+            let group: string = ` `;
+            let select: string = ` t.Ticker as symbol, `;
+            let select2: string = `
+                        sum(m.total_value_mil) as totalValueMil,
+                        sum(m.total_vol) as totalVolume,
+                        sum(t.Gia_tri_mua) - sum(t.Gia_tri_ban) as supplyDemandValueGap,
+                        sum(t.Chenh_lech_cung_cau) as supplyDemandVolumeGap `;
+            let ex: string = exchange.toUpperCase() == 'ALL' ?  " " : `where c.EXCHANGE = '${exchange.toUpperCase()}'`;
+            switch (parseInt(type)) {
+                case LiquidContributeEnum.LV1:
+                    select = ' c.LV1 as symbol, ';
+                    group = ' group by c.LV1 '
+                break;
+                case LiquidContributeEnum.LV2:
+                    select = ' c.LV2 as symbol, ';
+                    group = ' group by c.LV2 '
+                break;
+                case LiquidContributeEnum.LV3:
+                    select = ' c.LV3 as symbol, ';
+                    group = ' group by c.LV3 '
+                break;
+                default:
+                    select2 = ` 
+                       m.total_value_mil as totalValueMil,
+                       m.total_vol as totalVolume,
+                       t.Gia_tri_mua - t.Gia_tri_ban as supplyDemandValueGap,
+                       t.Chenh_lech_cung_cau as supplyDemandVolumeGap `
+            }
+
+            const query: string = `
+                select ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
+                join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
+                join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
+                and t.[Date Time] = m.date_time ${ex} ${group} 
+                order by totalValueMil desc
+            `;
+
+            const data = await this.db.query(query);
+            const exchangesVolume: any = await this.getExchangesVolume();
+            const mappedData = new LiquidContributeResponse().mapToList(data, exchangesVolume[exchange.toUpperCase()])
+            await this.redis.set(`${RedisKeys.LiquidityContribute}:${type}:${order}:${exchange}`, mappedData)
+            return mappedData
 
         } catch (e) {
             throw new CatchException(e)
@@ -800,6 +861,5 @@ export class StockService {
             throw new CatchException(e)
         }
     }
-
 
 }
