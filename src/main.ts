@@ -7,7 +7,7 @@ import {DocumentBuilder, SwaggerModule} from '@nestjs/swagger';
 import {ExceptionResponse} from './exceptions/common.exception';
 import {UtilCommonTemplate} from './utils/utils.common';
 import {ValidationFilter} from './filters/validation.filter';
-import {HttpLogger} from './interceptors/http-logger';
+import {HttpLoggerInterceptor} from './interceptors/http-logger.interceptor';
 import * as cookieParser from 'cookie-parser';
 import {CONFIG_SERVICE} from './constants';
 
@@ -26,7 +26,7 @@ async function bootstrap() {
   // app.enableCors({origin: '*'})
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
-  app.useGlobalInterceptors(new HttpLogger());
+  app.useGlobalInterceptors(new HttpLoggerInterceptor());
 
   const config = new DocumentBuilder()
     .addBearerAuth()
@@ -55,12 +55,12 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  // await app.startAllMicroservices().catch((e) => console.log(e));
+  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(
-      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.66`,
+      `Server is running at ${process.env.SERVER_HOST}:${process.env.SERVER_PORT} --version: 0.0.67`,
     );
   });
 }

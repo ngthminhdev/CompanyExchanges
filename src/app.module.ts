@@ -12,6 +12,7 @@ import {ClientProxyFactory} from '@nestjs/microservices';
 import {SocketModule} from './socket/socket.module';
 import {KafkaModule} from "./kafka/kafka.module";
 import {MacMiddleware} from "./middlewares/mac.middleware";
+import {QueueModule} from "./queue/queue.module";
 
 @Module({
     imports: [
@@ -57,6 +58,7 @@ import {MacMiddleware} from "./middlewares/mac.middleware";
         StockModule,
         AuthModule,
         UserModule,
+        QueueModule,
         SocketModule,
         KafkaModule,
     ],

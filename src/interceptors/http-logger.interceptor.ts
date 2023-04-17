@@ -8,7 +8,7 @@ import {
 import { Observable } from 'rxjs';
 
 @Injectable()
-export class HttpLogger implements NestInterceptor {
+export class HttpLoggerInterceptor implements NestInterceptor {
   private logger = new Logger('HTTP-Logger');
   intercept(
     context: ExecutionContext,

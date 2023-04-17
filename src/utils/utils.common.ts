@@ -75,4 +75,19 @@ export class UtilCommonTemplate {
     return uuid.slice(0, 25)
   }
 
+
+  static fileNameRegex(fileName: string): string {
+    return fileName.slice(0, fileName.lastIndexOf(".")).toLowerCase().normalize("NFD")
+        .replace(/[\u0300-\u036f\s]/g, "")
+        .replace(/\s+/g, "-") + this.uuid();
+  }
+
+  static getFileExt(fileName: string): string {
+    return fileName.slice(fileName.lastIndexOf(".") + 1, fileName.length)
+  }
+
+  static generateOTP(): string {
+    return Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+  }
+
 }

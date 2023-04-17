@@ -1,4 +1,4 @@
-import {HttpStatus, Injectable} from '@nestjs/common';
+import {CACHE_MANAGER, HttpStatus, Inject, Injectable} from '@nestjs/common';
 import {JwtService} from '@nestjs/jwt';
 import {InjectRepository} from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -10,13 +10,20 @@ import {LoginDto} from './dto/login.dto';
 import {RegisterDto} from './dto/register.dto';
 import {DeviceEntity} from './entities/device.entity';
 import {Response} from "express";
-import {TimeToLive} from "../enums/common.enum";
+import {BooleanEnum, TimeToLive} from "../enums/common.enum";
 import {MRequest} from "../types/middleware";
 import {randomUUID} from "crypto";
 import {DeviceLoginInterface} from "./interfaces/device-login.interface";
 import {UtilCommonTemplate} from "../utils/utils.common";
 import {DeviceSessionResponse} from "./responses/DeviceSession.response";
 import {RefreshTokenResponse} from "./responses/RefreshToken.response";
+import {VerifyEntity} from "./entities/verify.entity";
+import {QueueService} from "../queue/queue.service";
+import {SmsService} from "../sms/sms.service";
+import {RedisKeys} from "../enums/redis-keys.enum";
+import { Cache } from "cache-manager";
+import {RegisterResponse} from "./responses/Register.response";
+
 
 @Injectable()
 export class AuthService {
@@ -25,7 +32,13 @@ export class AuthService {
         private readonly deviceRepo: Repository<DeviceEntity>,
         @InjectRepository(UserEntity)
         private readonly userRepo: Repository<UserEntity>,
+        @InjectRepository(VerifyEntity)
+        private readonly verifyRepo: Repository<VerifyEntity>,
+        @Inject(CACHE_MANAGER)
+        private readonly redis: Cache,
         private readonly jwtService: JwtService,
+        private readonly smsService: SmsService,
+        private readonly queueService: QueueService
     ) {
     }
 
@@ -50,7 +63,7 @@ export class AuthService {
         });
     }
 
-    async register(data: RegisterDto): Promise<string> {
+    async register(data: RegisterDto): Promise<RegisterResponse> {
         const user = await this.userRepo.findOne({
             where: {phone: data.phone},
         });
@@ -59,13 +72,20 @@ export class AuthService {
         }
         const saltOrRounds = 10;
         const hash: string = await bcrypt.hash(data.password, saltOrRounds);
-        await this.userRepo.save({
+        const newUser: UserEntity = await this.userRepo.save({
             name: data.first_name + ' ' + data.last_name,
             phone: data.phone,
             password: hash,
         });
 
-        return "register successfully";
+        // Gửi một OTP đến người dùng mới đăng ký
+        await this.sendOTP(newUser);
+
+        // Lưu thông tin người dùng mới vào Redis để sử dụng trong các yêu cầu sau này
+        await this.redis.set(`${RedisKeys.User}:${newUser.user_id}`, new UserResponse(newUser));
+
+        // Trả về đối tượng RegisterResponse với thông tin người dùng mới được đăng ký thành công
+        return new RegisterResponse(newUser);
     }
 
     async login(req: MRequest, loginDto: LoginDto, headers: Headers, res: Response): Promise<UserResponse> {
@@ -120,7 +140,7 @@ export class AuthService {
         // Tạo accessToken, refreshToken và expiredAt mới
         const accessToken: string = this.generateAccessToken(user.user_id, user.role, deviceId, secretKey);
         const refreshToken: string = this.generateRefreshToken(user.user_id, deviceId);
-        const expiredAt: Date = new Date(Date.now() + TimeToLive.OneDayMiliSeconds);
+        const expiredAt: Date = new Date(Date.now() + TimeToLive.OneDayMilliSeconds);
 
         // Lưu thông tin của thiết bị mới vào database
         const newDevice = await this.deviceRepo.save({
@@ -234,6 +254,68 @@ export class AuthService {
         });
     }
 
+    async getVerifyOTP(userId: number): Promise<string> {
+        // Tìm VerifyEntity với user_id được cung cấp
+        const verifyEntity: VerifyEntity = await this.verifyRepo.createQueryBuilder("verify_otp")
+            .leftJoinAndSelect("verify_otp.user", "user")
+            .where("verify_otp.user_id = :userId", { userId })
+            .getOne();
+
+        console.log(verifyEntity);
+
+        // Nếu VerifyEntity đã tồn tại, throw một ExceptionResponse với mã lỗi BAD_REQUEST
+        if (verifyEntity) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, "please wait, and try again later");
+
+        const user: UserEntity = await this.userRepo.findOne({where: { user_id: userId }})
+
+        if (!user) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, "invalid request");
+
+        // Gửi một OTP mới đến người dùng
+        await this.sendOTP(user);
+
+        // Trả về một thông báo cho người dùng cho biết đã gửi thành công một OTP mới đến số điện thoại của họ
+        return "sent an OTP to your phone number";
+    }
+
+    async verifyOTP(userId: number, verifyOTP: string): Promise<string> {
+        // Tìm VerifyEntity với user_id và verify_otp được cung cấp
+        const verifyEntity: VerifyEntity = await this.verifyRepo.createQueryBuilder("verify_otp")
+            .leftJoinAndSelect("verify_otp.user", "user")
+            .where("verify_otp.user_id = :userId", { userId })
+            .andWhere("verify_otp.verify_otp = :verifyOTP", { verifyOTP })
+            .getOne();
+
+        // Nếu VerifyEntity không tồn tại, throw một ExceptionResponse với mã lỗi BAD_REQUEST
+        if (!verifyEntity) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, "OTP is not valid");
+
+        // Xóa VerifyEntity đã được sử dụng và cập nhật is_verified của UserEntity tương ứng
+        await this.verifyRepo.delete({ id: verifyEntity.id });
+        await this.userRepo.update({ user_id: userId }, { is_verified: BooleanEnum.True });
+
+        // Cập nhật Redis cache nếu UserEntity đã được lưu trữ trong cache
+        const userRedis: UserResponse = await this.redis.get(`${RedisKeys.User}:${userId}`);
+        if (userRedis) await this.redis.set(`${RedisKeys.User}:${userId}`, { ...userRedis, is_verified: BooleanEnum.True });
+
+        // Trả về một thông báo cho người dùng cho biết tài khoản của họ đã được xác thực thành công
+        return "your account is verified successfully";
+    }
+
+    async sendOTP(user: UserEntity): Promise<void> {
+        // Tạo mã OTP ngẫu nhiên
+        const verifyOTP: string = UtilCommonTemplate.generateOTP();
+
+        // Gửi tin nhắn SMS chứa mã OTP đến số điện thoại của người dùng (có thời hạn 5 phút)
+        await this.smsService.sendSMS(user.phone, `Your OTP is: ${verifyOTP} (5 minutes)`);
+
+        // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
+        const verifyData: VerifyEntity = await this.verifyRepo.save({
+            user_id: user.user_id,
+            user: user,
+            verify_otp: verifyOTP
+        });
+        await this.queueService.addJob("delete-expired-otp", verifyData, TimeToLive.FiveMinutesMilliSeconds);
+    }
+
     async getHistorySession(userId: number) {
         const data: DeviceEntity[] = await this.deviceRepo
             .createQueryBuilder('device')
@@ -242,5 +324,10 @@ export class AuthService {
             .getMany();
 
         return new DeviceSessionResponse().mapToList(data);
+    }
+
+    async removeLoginSession(device_id): Promise<string> {
+        await this.deviceRepo.delete({device_id});
+        return `remove ${device_id} login session successfully`
     }
 }

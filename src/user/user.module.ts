@@ -6,10 +6,22 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import {JwtService} from "@nestjs/jwt";
 import {AuthService} from "../auth/auth.service";
+import {QueueEnum} from "../enums/queue.enum";
+import {BullModule} from "@nestjs/bull";
+import {SmsService} from "../sms/sms.service";
+import {QueueService} from "../queue/queue.service";
+import {VerifyEntity} from "../auth/entities/verify.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity, DeviceEntity])],
+  imports: [
+    TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
+
+    //queue
+    BullModule.registerQueue(
+        {name: QueueEnum.MainProcessor}
+    ),
+  ],
   controllers: [UserController],
-  providers: [UserService, JwtService, AuthService],
+  providers: [UserService, JwtService, AuthService, QueueService, SmsService],
 })
 export class UserModule {}

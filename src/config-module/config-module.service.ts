@@ -5,6 +5,7 @@ import {redisStore} from 'cache-manager-redis-store';
 import {KafkaOptions, Transport} from '@nestjs/microservices';
 import {Partitioners} from 'kafkajs';
 import {TimeToLive} from "../enums/common.enum";
+import {BullModuleOptions} from "@nestjs/bull";
 
 @Injectable()
 export class  ConfigServiceProvider {
@@ -29,6 +30,21 @@ export class  ConfigServiceProvider {
   createJwtOptions(): JwtModuleOptions {
     return {
     };
+  }
+
+  createBullOptions(): BullModuleOptions {
+    return {
+      redis: {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT),
+        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB),
+      },
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    }
   }
 
   async createRedisOptions(): Promise<any> {
