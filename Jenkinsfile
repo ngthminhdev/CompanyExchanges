@@ -49,7 +49,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB', usernameVariable: 'ngthminhdev', passwordVariable: 'kimlien0602')]) {
                     script {
-                        def dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
+                        def dockerImage = docker.build("${DOCKER_REGISTRY}/ngthminhdev/stock-docker-hub:${version}")
                         docker.withRegistry("https://${DOCKER_REGISTRY}", "docker") {
                             dockerImage.push()
                         }
