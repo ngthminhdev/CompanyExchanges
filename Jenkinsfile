@@ -45,7 +45,7 @@ pipeline {
         stage('Login Docker') {
             steps {
                 withDockerRegistry(
-                    credentialsId: "${env.DOCKER_USERNAME}",
+                    credentialsId: "ngthminhdev",
                     url: 'https://index.docker.io/v1/'
                 )
             }
@@ -64,12 +64,12 @@ pipeline {
             steps {
                 script {
                     docker.build(
-                        "${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}",
+                        "ngthminhdev/stock-docker-hub:${version}",
                         './docker',
                         '--progress plain'
                     )
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        docker.push("${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
+                        docker.push("ngthminhdev/stock-docker-hub:${version}")
                     }
                 }
             }
@@ -78,7 +78,7 @@ pipeline {
             steps {
                 script {
                     sshagent(['SSH_CREDENTIALS']) {
-                        sshCommand remoteUser: "${SSH_USERNAME}", remotePassword: "${SSH_PASSWORD}", remoteHost: "${SSH_HOST}", port: "${SSH_PORT}", command: "export TAG=${version} && cd ~/services/b-infor-backend && sudo chmod +x ./deploy.sh && ./deploy.sh"
+                        sshCommand remoteUser: "beta", remotePassword: "Beta123", remoteHost: "192.168.9.150", port: "22", command: "export TAG=${version} && cd ~/services/b-infor-backend && sudo chmod +x ./deploy.sh && ./deploy.sh"
                     }
                 }
             }
