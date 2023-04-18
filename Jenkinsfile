@@ -13,21 +13,21 @@ pipeline {
                 checkout scm
             }
         }
-//         stage('SonarQube Scan') {
-//             steps {
-//                 withSonarQubeEnv(SONARQUBE_SERVER) {
-//                     sh '''
-//                         sonar-scanner \
-//                         -Dsonar.projectKey=ngthminhdev_CompanyExchanges \
-//                         -Dsonar.projectName=CompanyExchanges \
-//                         -Dsonar.organization=ngthminhdev \
-//                         -Dsonar.host.url=${SONAR_HOST_URL} \
-//                         -Dsonar.login=${SONAR_TOKEN} \
-//                         -Dsonar.qualitygate.wait=true
-//                     '''
-//                 }
-//             }
-//         }
+        stage('SonarQube Scan') {
+            steps {
+                withSonarQubeEnv(SONARQUBE_SERVER) {
+                    sh '''
+                        ./sonar-scanner \
+                        -Dsonar.projectKey=ngthminhdev_CompanyExchanges \
+                        -Dsonar.projectName=CompanyExchanges \
+                        -Dsonar.organization=ngthminhdev \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_TOKEN} \
+                        -Dsonar.qualitygate.wait=true
+                    '''
+                }
+            }
+        }
         stage('Get package version') {
             steps {
                 sh '''
@@ -45,7 +45,7 @@ pipeline {
         stage('Login Docker') {
             steps {
                 withDockerRegistry(
-                    credentialsId: "${DOCKER_USERNAME}",
+                    credentialsId: "${Docker Username}",
                     url: 'https://index.docker.io/v1/'
                 )
             }
