@@ -12,23 +12,6 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Install SonarScanner') {
-            steps {
-                script {
-                    def scannerHome = tool 'SonarScanner'
-                    if (scannerHome == null) {
-                        def downloadUrl = 'https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip'
-                        def toolName = 'SonarScanner'
-                        def scannerDir = toolName + '/'
-                        def home = pwd() + '/' + scannerDir
-                        sh "curl -L ${downloadUrl} -o sonar-scanner.zip"
-                        sh "unzip sonar-scanner.zip"
-                        sh "mv sonar-scanner-* ${scannerDir}"
-                        tool name: toolName, type: 'hudson.plugins.sonar.SonarRunnerInstallation', home: home
-                    }
-                }
-            }
-        }
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv('SonarQube') {
