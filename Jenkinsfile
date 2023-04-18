@@ -1,7 +1,8 @@
 pipeline {
     agent any
     environment {
-        SONAR_HOST_URL = 'https://sonarcloud.io'
+        SONAR_HOST_URL = 'https://sonarcloud.io',
+        SONARQUBE_SERVER = 'SonarQube'
     }
     triggers {
         githubPush()
@@ -14,7 +15,7 @@ pipeline {
         }
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv(SONARQUBE_SERVER) {
                     sh '''
                         sonar-scanner \
                         -Dsonar.projectKey=ngthminhdev_CompanyExchanges \
