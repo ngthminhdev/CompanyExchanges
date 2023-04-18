@@ -24,6 +24,9 @@ pipeline {
         }
 
         stage('Build Docker Image') {
+            agent {
+                docker: { image 'docker:latest' }
+            }
             steps {
                 script {
                     def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
