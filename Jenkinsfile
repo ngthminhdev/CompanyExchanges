@@ -1,8 +1,15 @@
+@Library('docker') _
+
 pipeline {
     agent any
     environment {
         SONAR_HOST_URL = 'https://sonarcloud.io';
         SONARQUBE_SERVER = 'SonarQube'
+        DOCKER_USERNAME = credentials('DOCKER_HUB').username
+        DOCKER_PASSWORD = credentials('DOCKER_HUB').password
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_IMAGE = 'my-image'
+        DOCKER_TAG = 'latest'
     }
     triggers {
         githubPush()
@@ -42,24 +49,30 @@ pipeline {
                 '''
             }
         }
-        stage('Login Docker') {
-            steps {
-                withDockerRegistry(
-                    credentialsId: "ngthminhdev",
-                    url: 'https://index.docker.io/v1/'
-                )
-            }
-        }
-        stage('Setup Docker Buildx') {
-            steps {
-                script {
-                    def buildx = dockerTool.getDescriptor().getBuildx()
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        docker.buildx(buildx: buildx, args: '--allow 775')
+        stages {
+            stage('Build and push image') {
+                steps {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        script {
+                            def dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
+                            docker.withRegistry("https://${DOCKER_REGISTRY}", "docker") {
+                                dockerImage.push()
+                            }
+                        }
                     }
                 }
             }
         }
+//         stage('Setup Docker Buildx') {
+//             steps {
+//                 script {
+//                     def buildx = dockerTool.getDescriptor().getBuildx()
+//                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+//                         docker.buildx(buildx: buildx, args: '--allow 775')
+//                     }
+//                 }
+//             }
+//         }
         stage('Build and push docker image') {
             steps {
                 script {
