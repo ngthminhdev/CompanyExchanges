@@ -33,7 +33,7 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-                        def dockerImage = docker.build(registryUrl + "/" + dockerImageName, + ":${VERSION} ./docker")
+                        def dockerImage = docker.build(registryUrl + "/" + dockerImageName, + ":${VERSION} .")
                         dockerImage.push()
                     }
                 }
