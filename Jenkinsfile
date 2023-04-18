@@ -4,8 +4,11 @@ pipeline {
         SONAR_HOST_URL = 'https://sonarcloud.io'
     }
     triggers {
-        githubPush()
-        githubPullRequest()
+        github (
+            branches: 'main',
+            allowPush: true,
+            allowPr: true
+        )
     }
     stages {
         stage('Checkout') {
