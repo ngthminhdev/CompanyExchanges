@@ -4,12 +4,10 @@ pipeline {
     agent any
     environment {
         SONAR_HOST_URL = 'https://sonarcloud.io';
-        SONARQUBE_SERVER = 'SonarQube'
-        DOCKER_USERNAME = credentials('DOCKER_HUB').username
-        DOCKER_PASSWORD = credentials('DOCKER_HUB').password
-        DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE = 'my-image'
-        DOCKER_TAG = 'latest'
+        SONARQUBE_SERVER = 'SonarQube';
+        DOCKER_REGISTRY = 'docker.io';
+        DOCKER_IMAGE = 'my-image';
+        DOCKER_TAG = 'latest';
     }
     triggers {
         githubPush()
@@ -49,15 +47,13 @@ pipeline {
                 '''
             }
         }
-        stages {
-            stage('Build and push image') {
-                steps {
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        script {
-                            def dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
-                            docker.withRegistry("https://${DOCKER_REGISTRY}", "docker") {
-                                dockerImage.push()
-                            }
+        stage('Build and push image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'ngthminhdev', passwordVariable: 'kimlien0602')]) {
+                    script {
+                        def dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
+                        docker.withRegistry("https://${DOCKER_REGISTRY}", "docker") {
+                            dockerImage.push()
                         }
                     }
                 }
