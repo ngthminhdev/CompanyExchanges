@@ -33,7 +33,7 @@ pipeline {
 
         stage('Push Docker Image to Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD'))]) {
+                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     script {
                         sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
                         sh 'docker push ngthminhdev/stock-docker-hub:${VERSION}'
