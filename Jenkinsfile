@@ -45,7 +45,7 @@ pipeline {
         stage('Login Docker') {
             steps {
                 withDockerRegistry(
-                    credentialsId: "${DOCKER_USERNAME}",
+                    credentialsId: "${env.DOCKER_USERNAME}",
                     url: 'https://index.docker.io/v1/'
                 )
             }
