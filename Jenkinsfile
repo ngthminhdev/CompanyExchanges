@@ -5,7 +5,7 @@ pipeline {
         SONARQUBE_SERVER = 'SonarQube';
         DOCKER_REGISTRY = 'docker.io';
         DOCKER_IMAGE = 'my-image';
-        DOCKER_TAG = 'latest';
+        version = 'latest';
     }
     triggers {
         githubPush()
@@ -75,7 +75,7 @@ pipeline {
                         './docker',
                         '--progress plain'
                     )
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKER_HUB') {
                         docker.push("ngthminhdev/stock-docker-hub:${version}")
                     }
                 }
