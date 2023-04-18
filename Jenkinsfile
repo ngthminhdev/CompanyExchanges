@@ -47,7 +47,7 @@ pipeline {
         }
         stage('Build and push image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'ngthminhdev', passwordVariable: 'kimlien0602')]) {
+                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB', usernameVariable: 'ngthminhdev', passwordVariable: 'kimlien0602')]) {
                     script {
                         def dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/${DOCKER_IMAGE}:${version}")
                         docker.withRegistry("https://${DOCKER_REGISTRY}", "docker") {
