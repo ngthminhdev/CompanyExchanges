@@ -10,7 +10,7 @@ pipeline {
 
         stage('Get version') {
             steps {
-                sh 'sudo apt-get update && sudo apt-get install -y jq && chmod +rw package.json'
+                sh 'apt-get update && sudo apt-get install -y jq && chmod +rw package.json'
                 script {
                     VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
                     echo "Version: $VERSION"
