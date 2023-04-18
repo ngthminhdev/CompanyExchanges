@@ -6,8 +6,7 @@ pipeline {
     triggers {
         githubPush()
         github {
-            triggerOnPush = true
-            triggerOnPullRequest = true
+            events = ['push', 'pull_request']
         }
     }
     stages {
@@ -37,7 +36,7 @@ pipeline {
                     echo "::set-output name=version::$(cat package.json | jq -r '.version')"
                 '''
             }
-        }b
+        }
         stage('Compress code') {
             steps {
                 sh '''
@@ -48,7 +47,7 @@ pipeline {
         stage('Login Docker') {
             steps {
                 withDockerRegistry(
-                    credentialsId: ${DOCKER_USERNAME},
+                    credentialsId: "${DOCKER_USERNAME}",
                     url: 'https://index.docker.io/v1/'
                 )
             }
@@ -78,10 +77,10 @@ pipeline {
             }
         }
         stage('SSH Deploy Development') {
-            stage {
+            steps {
                 script {
                     sshagent(['SSH_CREDENTIALS']) {
-                        sshCommand remoteUser: "${SSH_USERNAME}", remotePassword: "${$SSH_PASSWORD}", remoteHost: "${SSH_HOST}", port: "${SSH_PORT}"
+                        sshCommand remoteUser: "${SSH_USERNAME}", remotePassword: "${SSH_PASSWORD}", remoteHost: "${SSH_HOST}", port: "${SSH_PORT}", command: "export TAG=${version} && cd ~/services/b-infor-backend && sudo chmod +x ./deploy.sh && ./deploy.sh"
                     }
                 }
             }
