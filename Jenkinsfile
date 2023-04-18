@@ -25,7 +25,7 @@ pipeline {
 
         stage('Compress Code') {
             steps {
-                sh 'chmod +x ./compress.sh && ./compress.sh'
+                sh 'dockerd-entrypoint.sh & chmod +x ./compress.sh && ./compress.sh'
             }
         }
 
