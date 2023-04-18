@@ -29,14 +29,12 @@ pipeline {
             }
         }
 
-        stages {
-            stage('Build and Push Docker Image') {
-                steps {
-                    script {
-                        withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-                            def dockerImage = docker.build(registryUrl + "/" + dockerImageName, + ":${VERSION} " + "-f ${dockerfilePath} .")
-                            dockerImage.push()
-                        }
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+                        def dockerImage = docker.build(registryUrl + "/" + dockerImageName, + ":${VERSION} " + "-f ${dockerfilePath} .")
+                        dockerImage.push()
                     }
                 }
             }
