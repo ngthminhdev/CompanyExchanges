@@ -5,7 +5,7 @@ pipeline {
     }
     triggers {
         githubPush(
-            branchFilter: 'main'
+            branches: [[name: 'main']]
         )
     }
     stages {
