@@ -1,5 +1,11 @@
 pipeline {
     agent any
+    environment {
+        registryUrl = "https://index.docker.io/v1/"
+        credentialsId = "DOCKER_HUB"
+        dockerImageName = "stock-docker-hub:"
+        dockerfilePath = "./docker"
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -23,24 +29,19 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
-                }
-            }
-        }
-
-        stage('Push Docker Image to Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+        stages {
+            stage('Build and Push Docker Image') {
+                steps {
                     script {
-                        sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
-                        sh 'docker push ngthminhdev/stock-docker-hub:${VERSION}'
+                        withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+                            def dockerImage = docker.build(registryUrl + "/" + dockerImageName, + ":${VERSION} " + "-f ${dockerfilePath} .")
+                            dockerImage.push()
+                        }
                     }
                 }
             }
         }
+
     }
 
     post {
