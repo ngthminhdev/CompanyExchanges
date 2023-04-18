@@ -5,9 +5,7 @@ pipeline {
     }
     triggers {
         githubPush()
-        github {
-            events = ['push', 'pull_request']
-        }
+        githubPullRequest()
     }
     stages {
         stage('Checkout') {
