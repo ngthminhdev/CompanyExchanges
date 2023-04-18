@@ -67,20 +67,20 @@ pipeline {
 //                 }
 //             }
 //         }
-        stage('Build and push docker image') {
-            steps {
-                script {
-                    docker.build(
-                        "ngthminhdev/stock-docker-hub:${version}",
-                        './docker',
-                        '--progress plain'
-                    )
-                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKER_HUB') {
-                        docker.push("ngthminhdev/stock-docker-hub:${version}")
-                    }
-                }
-            }
-        }
+//         stage('Build and push docker image') {
+//             steps {
+//                 script {
+//                     docker.build(
+//                         "ngthminhdev/stock-docker-hub:${version}",
+//                         './docker',
+//                         '--progress plain'
+//                     )
+//                     docker.withRegistry('https://index.docker.io/v1/', 'DOCKER_HUB') {
+//                         docker.push("ngthminhdev/stock-docker-hub:${version}")
+//                     }
+//                 }
+//             }
+//         }
         stage('SSH Deploy Development') {
             steps {
                 script {
