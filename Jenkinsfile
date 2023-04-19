@@ -1,7 +1,11 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'registry.hub.docker.com/library/ubuntu:latest'
+            }
+    }
     environment {
-        registryUrl = "https://registry-1.docker.io"
+        registryUrl = "https://index.docker.io/v1/"
         credentialsId = "DOCKER_CE_HUB"
         dockerImageName = "stock-docker-hub"
         dockerfilePath = "./docker"
