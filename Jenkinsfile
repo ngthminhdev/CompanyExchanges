@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'registry.hub.docker.com/library/ubuntu:latest'
+            image 'node:16.13.1-alpine'
             }
     }
     environment {
