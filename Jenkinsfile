@@ -2,8 +2,8 @@ pipeline {
     agent any
     environment {
         registryUrl = "https://index.docker.io/v1/"
-        credentialsId = "DOCKER_HUB"
-        dockerImageName = "stock-docker-hub:"
+        credentialsId = "DOCKER_CE_HUB"
+        dockerImageName = "stock-docker-hub"
         dockerfilePath = "./docker"
     }
     stages {
@@ -25,11 +25,12 @@ pipeline {
 
         stage('Compress Code') {
             steps {
-                sh 'dockerd-entrypoint.sh & chmod +x ./compress.sh && ./compress.sh'
+                sh 'chmod +x ./compress.sh && ./compress.sh'
             }
         }
 
         stage('Build and Push Docker Image') {
+
             steps {
                 script {
                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
@@ -39,7 +40,6 @@ pipeline {
                 }
             }
         }
-
     }
 
     post {
