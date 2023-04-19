@@ -1,9 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:16.13.1-alpine'
-            }
-    }
+    agent any
     environment {
         registryUrl = "https://index.docker.io/v1/"
         credentialsId = "DOCKER_CE_HUB"
@@ -44,7 +40,7 @@ pipeline {
         stage('Deploy to 7.20') {
             steps {
                 script {
-                    sh 'ls'
+                    sh 'ls -l'
                 }
             }
         }
