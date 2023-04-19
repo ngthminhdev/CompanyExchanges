@@ -41,7 +41,7 @@ pipeline {
             steps {
                 script {
 //                     sh 'echo y | export TAG=${VERSION} && cd ~/services/b-info && chmod +x ./deploy.sh && ./deploy.sh'
-                    sh 'echo y | export TAG=${VERSION} && ls ~/services/b-info'
+                    sh 'echo y | export TAG=${VERSION} && ls /home/beta/services/b-info'
                 }
             }
         }
