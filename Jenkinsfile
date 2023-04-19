@@ -40,7 +40,7 @@ pipeline {
         stage('Deploy to 192.168.7.20') {
             steps {
                 script {
-                     sh 'echo password | sudo -S export TAG=${VERSION} && cd /home/beta/services/b-infor-backend && sudo -S ./deploy.sh <<< "Beta123"'
+                     sh 'echo Beta123 | sudo -S export TAG=${VERSION} && cd /home/beta/services/b-infor-backend && sudo -S ./deploy.sh <<< "Beta123"'
                 }
             }
         }
