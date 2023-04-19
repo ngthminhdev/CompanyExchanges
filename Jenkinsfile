@@ -7,8 +7,6 @@ pipeline {
     environment {
         registryUrl = "https://index.docker.io/v1/"
         credentialsId = "DOCKER_CE_HUB"
-        dockerImageName = "stock-docker-hub"
-        dockerfilePath = "./docker"
     }
     stages {
         stage('Checkout') {
@@ -19,7 +17,6 @@ pipeline {
 
         stage('Get version') {
             steps {
-                sh 'chmod +rw package.json'
                 script {
                     VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
                     echo "Version: $VERSION"
@@ -34,7 +31,6 @@ pipeline {
         }
 
         stage('Build and Push Docker Image') {
-
             steps {
                 script {
                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
@@ -44,8 +40,29 @@ pipeline {
                 }
             }
         }
-    }
 
+        stage('Deploy to 7.20') {
+            steps {
+                script {
+                    sh 'ls'
+                }
+            }
+        }
+
+//         stage('Deploy to EC2') {
+//             steps {
+//                 script {
+//                     def remote = [:]
+//                     remote.name = 'Leader'
+//                     remote.host = 'ec2-52-77-145-158.ap-southeast-1.compute.amazonaws.com'
+//                     remote.user = 'ubuntu'
+//                     remote.allowAnyHosts = true
+//                     remote.identityFile = credentials('leader-key.pem')
+//                     sshCommand remote: remote, command: 'export TAG=${VERSION} && cd ~/stock-server && chmod +x ./deploy.sh && ./deploy.sh'
+//                 }
+//             }
+//         }
+    }
     post {
         always {
             cleanWs()
