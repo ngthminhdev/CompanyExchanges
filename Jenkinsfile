@@ -43,7 +43,7 @@ pipeline {
                     VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
                     echo "Version: $VERSION"
                     sh 'ls -l'
-//                     sh 'echo y | export TAG=$VERSION && cd /home/beta/services/b-infor-backend && ./deploy.sh'
+                    sh 'cd docker/ && export TAG=$VERSION && ./deploy.sh'
                 }
             }
         }
