@@ -26,39 +26,26 @@ pipeline {
             }
         }
 
-//         stage('Build and Push Docker Image') {
-//             steps {
-//                 script {
-//                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-//                         def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
-//                         dockerImage.push()
-//                     }
-//                 }
-//             }
-//         }
-
-        stage('Deploy to 7.20') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    sh 'echo y | docker ps -a'
+                    withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+                        def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
+                        dockerImage.push()
+                    }
                 }
             }
         }
 
-//         stage('Deploy to EC2') {
-//             steps {
-//                 script {
-//                     def remote = [:]
-//                     remote.name = 'Leader'
-//                     remote.host = 'ec2-52-77-145-158.ap-southeast-1.compute.amazonaws.com'
-//                     remote.user = 'ubuntu'
-//                     remote.allowAnyHosts = true
-//                     remote.identityFile = credentials('leader-key.pem')
-//                     sshCommand remote: remote, command: 'export TAG=${VERSION} && cd ~/stock-server && chmod +x ./deploy.sh && ./deploy.sh'
-//                 }
-//             }
-//         }
+        stage('Deploy to 192.168.7.20') {
+            steps {
+                script {
+                    sh 'echo y | export TAG=${VERSION} && cd ~/services/b-info && chmod +x ./deploy.sh && ./deploy.sh'
+                }
+            }
+        }
     }
+
     post {
         always {
             cleanWs()
