@@ -26,21 +26,21 @@ pipeline {
             }
         }
 
-        stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-                        def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
-                        dockerImage.push()
-                    }
-                }
-            }
-        }
+//         stage('Build and Push Docker Image') {
+//             steps {
+//                 script {
+//                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+//                         def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
+//                         dockerImage.push()
+//                     }
+//                 }
+//             }
+//         }
 
         stage('Deploy to 7.20') {
             steps {
                 script {
-                    sh 'ls -l'
+                    sh 'echo y | docker ps -a'
                 }
             }
         }
