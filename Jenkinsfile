@@ -40,7 +40,7 @@ pipeline {
         stage('Deploy to 192.168.7.20') {
             steps {
                 script {
-                    sh 'echo y | export TAG=${VERSION} && cd /home/beta/services/b-infor-backend && chmod +x ./deploy.sh && ./deploy.sh'
+                    sh 'echo y | export TAG=${VERSION} && cd /home/beta/services/b-infor-backend ./deploy.sh && ./deploy.sh'
                 }
             }
         }
