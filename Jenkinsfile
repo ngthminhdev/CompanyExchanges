@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        registryUrl = "https://index.docker.io/v1/"
+        registryUrl = "https://registry-1.docker.io"
         credentialsId = "DOCKER_CE_HUB"
         dockerImageName = "stock-docker-hub"
         dockerfilePath = "./docker"
