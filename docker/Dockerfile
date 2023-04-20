@@ -1,6 +1,7 @@
 #Base image
 FROM node:latest
 
+USER root
 COPY ["SERVICE.tgz", "/SERVICE.tgz"]
 COPY ["env", "/SERVICE/.env"]
 COPY ["start.sh", "/start.sh"]

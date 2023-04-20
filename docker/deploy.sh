@@ -1,1 +1,1 @@
-docker stack deploy --compose-file docker-compose.yml --with-registry-auth stock_api_service
+TAG=${TAG} docker stack deploy --compose-file docker-compose.yml --with-registry-auth binfo_backend_service
