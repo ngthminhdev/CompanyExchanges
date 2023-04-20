@@ -3,6 +3,7 @@ pipeline {
     environment {
         registryUrl = "https://index.docker.io/v1/"
         credentialsId = "DOCKER_CE_HUB"
+        VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
     }
     stages {
         stage('Checkout') {
@@ -14,7 +15,6 @@ pipeline {
         stage('Get version') {
             steps {
                 script {
-                    VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
                     echo "Version: $VERSION"
                 }
             }
@@ -26,24 +26,25 @@ pipeline {
             }
         }
 
-//         stage('Build and Push Docker Image') {
-//             steps {
-//                 script {
-//                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-//                         def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
-//                         dockerImage.push()
-//                     }
-//                 }
-//             }
-//         }
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+                        def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
 
         stage('Deploy to 192.168.7.20') {
             steps {
                 script {
                     VERSION = sh(returnStdout: true, script: "cat package.json | jq -r '.version'").trim()
-                    echo "Version: $VERSION"
+                    echo "Version1: $VERSION"
+                    echo "Version2: ${VERSION}"
                     sh 'ls -l'
-                    sh 'export TAG=0.0.67 && cd /home/beta/services/b-infor-backend && ./deploy.sh'
+//                     sh 'export TAG=0.0.67 && cd /home/beta/services/b-infor-backend && ./deploy.sh'
                 }
             }
         }
