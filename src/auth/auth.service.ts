@@ -261,8 +261,6 @@ export class AuthService {
             .where("verify_otp.user_id = :userId", { userId })
             .getOne();
 
-        console.log(verifyEntity);
-
         // Nếu VerifyEntity đã tồn tại, throw một ExceptionResponse với mã lỗi BAD_REQUEST
         if (verifyEntity) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, "please wait, and try again later");
 
