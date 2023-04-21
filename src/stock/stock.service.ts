@@ -85,6 +85,7 @@ export class StockService {
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
         const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
         const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+        const firstDateYear = moment().startOf("year").format('YYYY-MM-DD');
 
         const dates = await this.db.query(`
             SELECT DISTINCT TOP 2 ${column} FROM ${table}
@@ -104,6 +105,7 @@ export class StockService {
             weekDate: (await this.db.query(query, [lastWeek]))[0]?.[column] || new Date(),
             monthDate: (await this.db.query(query, [lastMonth]))[0]?.[column] || new Date(),
             yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
+            firstDateYear: (await this.db.query(query, [firstDateYear]))[0]?.[column] || new Date(),
         }
     }
 
@@ -220,11 +222,11 @@ export class StockService {
             if (redisData) return redisData;
 
             //Get 2 latest date
-            const {latestDate, previousDate, weekDate, monthDate}: SessionDatesInterface =
+            const {latestDate, previousDate, weekDate, monthDate, firstDateYear}: SessionDatesInterface =
                 await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
-            const byExchange = exchange == "ALL"  ? " " : ` AND c.EXCHANGE = '${exchange}' `;
-            const groupBy = exchange == 'ALL' ? " " : ', c.EXCHANGE '
+            const byExchange: string = exchange == "ALL"  ? " " : ` AND c.EXCHANGE = '${exchange}' `;
+            const groupBy: string = exchange == 'ALL' ? " " : ', c.EXCHANGE '
 
             const query = (date): string => `
                 SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
@@ -240,7 +242,8 @@ export class StockService {
                     ('${UtilCommonTemplate.toDate(latestDate)}', 
                     '${UtilCommonTemplate.toDate(previousDate)}', 
                     '${UtilCommonTemplate.toDate(weekDate)}', 
-                    '${UtilCommonTemplate.toDate(monthDate)}' ) ${byExchange}
+                    '${UtilCommonTemplate.toDate(monthDate)}', 
+                    '${UtilCommonTemplate.toDate(firstDateYear)}' ) ${byExchange}
                 AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
                 GROUP BY c.LV2 ${groupBy}, p.date_time
                 ORDER BY p.date_time DESC

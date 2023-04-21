@@ -3,5 +3,6 @@ export interface SessionDatesInterface {
     previousDate: Date,
     weekDate: Date,
     monthDate: Date,
-    yearDate: Date
+    yearDate: Date,
+    firstDateYear: Date
 }

@@ -26,24 +26,23 @@ pipeline {
             }
         }
 
-//         stage('Build and Push Docker Image') {
-//             steps {
-//                 script {
-//                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-//                         def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
-//                         dockerImage.push()
-//                     }
-//                 }
-//             }
-//         }
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
+                        def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
 
         stage('Deploy to 192.168.7.20') {
             steps {
                 script {
                     echo "Version1: $VERSION"
                     echo "Version2: ${VERSION}"
-                    sh 'ls -l'
-//                     sh 'export TAG=0.0.67 && cd /home/beta/services/b-infor-backend && ./deploy.sh'
+                    sh 'export TAG=${VERSION} && cd /home/beta/services/b-infor-backend && ./deploy.sh'
                 }
             }
         }

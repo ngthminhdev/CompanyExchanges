@@ -8,6 +8,7 @@ export interface IndustryInterface {
   day_change_percent: number;
   week_change_percent: number;
   month_change_percent: number;
+  ytd: number
 }
 
 export interface IndustryRawInterface {
