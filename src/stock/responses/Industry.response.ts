@@ -66,6 +66,13 @@ export class IndustryResponse {
   })
   month_change_percent: number;
 
+  @ApiProperty({
+    type: 'float',
+    description: '% Giá giảm từ đầu năm',
+    example: 99.99,
+  })
+  ytd: number;
+
   constructor(data?: IndustryInterface) {
     this.industry = data?.industry || '';
     this.equal = data?.equal || 0;
@@ -76,6 +83,7 @@ export class IndustryResponse {
     this.day_change_percent = data?.day_change_percent || 0;
     this.week_change_percent = data?.week_change_percent || 0;
     this.month_change_percent = data?.month_change_percent || 0;
+    this.ytd = data?.ytd || 0;
   }
 
   public mapToList(data?: IndustryInterface[]) {

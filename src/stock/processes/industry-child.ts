@@ -24,6 +24,7 @@ process.on('message', async (data: any) => {
                 day_change_percent: ((values[0].total_market_cap - values[1].total_market_cap) / values[1].total_market_cap) * 100,
                 week_change_percent: ((values[0].total_market_cap - values[2].total_market_cap) / values[2].total_market_cap) * 100,
                 month_change_percent: ((values[0].total_market_cap - values[3].total_market_cap) / values[3].total_market_cap) * 100,
+                ytd: ((values[0].total_market_cap - values[4].total_market_cap) / values[4].total_market_cap) * 100,
             };
         });
 
