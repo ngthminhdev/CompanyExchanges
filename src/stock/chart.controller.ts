@@ -52,4 +52,12 @@ export class ChartController {
         const data = await this.chartService.getVnIndex(parseInt(q.type));
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
+
+    @Get('vnindex-now')
+    @ApiOperation({summary: 'chart line chỉ số vnindex realtime'})
+    @ApiOkResponse({type: VnIndexSwagger})
+    async getVnIndexNow(@Res() res: Response) {
+        const data = await this.chartService.getVnIndexNow();
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
 }
