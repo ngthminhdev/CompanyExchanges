@@ -15,7 +15,7 @@ import {Cache} from "cache-manager";
 import {InjectDataSource} from "@nestjs/typeorm";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
-import {VnIndexInterface} from "./interfaces/vnindex.interface";
+import {LineChartInterface} from "./interfaces/line-chart.interface";
 import {VnIndexResponse} from "../stock/responses/Vnindex.response";
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 
@@ -120,7 +120,32 @@ export class KafkaService {
         }
     }
 
-    handleVNIndex(payload: VnIndexInterface[]) {
+    handleVNIndex(payload: LineChartInterface[]) {
         this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleVNAll(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleVN30(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleHNXIndex(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleHNX30(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleUPCOM(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
     }
 }

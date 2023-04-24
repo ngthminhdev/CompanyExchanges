@@ -1,7 +1,7 @@
 import {ApiProperty, ApiResponseProperty, PartialType} from "@nestjs/swagger";
 import {BaseResponse} from "../../utils/utils.response";
 import {UtilCommonTemplate} from "../../utils/utils.common";
-import {VnIndexInterface} from "../../kafka/interfaces/vnindex.interface";
+import {LineChartInterface} from "../../kafka/interfaces/line-chart.interface";
 import { TransactionTimeTypeEnum } from "../../enums/common.enum";
 
 
@@ -82,7 +82,7 @@ export class VnIndexResponse {
     })
     totalMatchValue: number;
 
-    constructor(data?: VnIndexInterface) {
+    constructor(data?: LineChartInterface) {
         this.type = data?.type || 0;
         this.comGroupCode = data?.comGroupCode || "";
         this.indexValue = data?.indexValue || 0;
@@ -103,7 +103,7 @@ export class VnIndexResponse {
         this.totalMatchValue = data?.totalMatchValue || 0;
     }
 
-    public mapToList(data?: VnIndexInterface[], type: number = 0) {
+    public mapToList(data?: LineChartInterface[], type: number = 0) {
         return data.map(i => new VnIndexResponse({...i, type: type}))
     }
 }

@@ -1,4 +1,4 @@
-export interface VnIndexInterface {
+export interface LineChartInterface {
     type?: number;
     comGroupCode: string;
     indexValue: number;

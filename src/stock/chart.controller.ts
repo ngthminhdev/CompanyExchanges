@@ -7,6 +7,7 @@ import {MarketBreadthSwagger} from "./responses/MarketBreadth.response";
 import {ChartService} from "./chart.service";
 import {VnIndexSwagger} from "./responses/Vnindex.response";
 import {TimestampQueryDto} from "./dto/timestampQuery.dto";
+import {LineChartSwagger} from "../kafka/responses/LineChart.response";
 
 
 @Controller('chart')
@@ -55,7 +56,7 @@ export class ChartController {
 
     @Get('vnindex-now')
     @ApiOperation({summary: 'chart line chỉ số vnindex realtime'})
-    @ApiOkResponse({type: VnIndexSwagger})
+    @ApiOkResponse({type: LineChartSwagger})
     async getVnIndexNow(@Res() res: Response) {
         const data = await this.chartService.getVnIndexNow();
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));

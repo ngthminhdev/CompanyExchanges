@@ -12,6 +12,7 @@ import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import * as moment from "moment";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
+import {LineChartResponse} from "../kafka/responses/LineChart.response";
 
 
 @Injectable()
@@ -116,7 +117,7 @@ export class ChartService {
                     SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
                     ORDER BY tradingDate ASC
                 `);
-            return {vnindexData: new VnIndexResponse().mapToList(data, 0)};
+            return new LineChartResponse().mapToList(data);
         } catch (e) {
             throw new CatchException(e)
         }
