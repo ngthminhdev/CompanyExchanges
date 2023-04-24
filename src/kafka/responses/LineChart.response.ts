@@ -1,9 +1,8 @@
 import {ApiProperty, ApiResponseProperty, PartialType} from "@nestjs/swagger";
 import {BaseResponse} from "../../utils/utils.response";
 import {UtilCommonTemplate} from "../../utils/utils.common";
-import {LineChartInterface} from "../../kafka/interfaces/line-chart.interface";
-import {TransactionTimeTypeEnum} from "../../enums/common.enum";
 import {VnIndexResponse} from "../../stock/responses/Vnindex.response";
+import {LineChartInterface} from "../interfaces/line-chart.interface";
 
 
 export class LineChartResponse extends VnIndexResponse{
@@ -11,9 +10,9 @@ export class LineChartResponse extends VnIndexResponse{
         type: Number
     })
     tradingDate: number;
-    
+
     constructor(data?: LineChartInterface) {
-        super();
+        super(data);
         this.tradingDate = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![0] || new Date().getHours(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![1] || new Date().getMinutes()).valueOf()
     }
 
