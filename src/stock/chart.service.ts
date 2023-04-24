@@ -64,6 +64,14 @@ export class ChartService {
     async getVnIndex(type: number): Promise<any> {
         try {
             const industryFull = await this.redis.get(RedisKeys.IndustryFull)
+            if (type === TransactionTimeTypeEnum.Latest) {
+                const data = await this.db.query(`
+                    SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
+                    ORDER BY tradingDate ASC
+                `);
+
+                return {vnindexData: new VnIndexResponse().mapToList(data, type), industryFull};
+            }
             const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
             if (redisData) return {vnindexData: redisData, industryFull};
 
