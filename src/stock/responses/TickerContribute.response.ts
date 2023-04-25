@@ -8,7 +8,7 @@ export class TickerContributeResponse {
         type: String,
         example: 'VCB'
     })
-    ticker: string;
+    symbol: string;
 
     @ApiProperty({
         type: Number,
@@ -18,7 +18,7 @@ export class TickerContributeResponse {
 
 
     constructor(data?: TickerContributeInterface) {
-        this.ticker = data?.ticker || '';
+        this.symbol = data?.symbol || '';
         this.contribute_price = data?.contribute_price || 0;
     }
 

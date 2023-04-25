@@ -11,7 +11,7 @@ export enum MarketMapEnum {
     Foreign
 }
 
-export enum LiquidContributeEnum {
+export enum SelectorTypeEnum {
     Ticker,
     LV1,
     LV2,

@@ -15,6 +15,7 @@ import {UtilCommonTemplate} from "../utils/utils.common";
 import {LineChartResponse} from "../kafka/responses/LineChart.response";
 import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 import {TickerContributeResponse} from "./responses/TickerContribute.response";
+import {SelectorTypeEnum} from "../enums/exchange.enum";
 
 
 @Injectable()
@@ -150,25 +151,51 @@ export class ChartService {
                 break;
             }
 
-            const query = (startDate, endDate): string => `
-                WITH temp AS (
-                  SELECT TOP 10 ticker, sum(diemanhhuong) as contribute_price
-                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                  WHERE date >= '${startDate}' and date <= '${endDate}'
-                  GROUP BY ticker
-                  ORDER BY contribute_price DESC
-                  UNION ALL
-                  SELECT TOP 10 ticker, sum(diemanhhuong) as contribute_price
-                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                  WHERE date >= '${startDate}' and date <= '${endDate}'
-                  GROUP BY ticker
-                  ORDER BY contribute_price ASC
+            const industryMap = {
+                [SelectorTypeEnum.LV1]: ' c.LV1 ',
+                [SelectorTypeEnum.LV2]: ' c.LV2 ',
+                [SelectorTypeEnum.LV3]: ' c.LV3 ',
+            };
+
+            let industry = industryMap[+type] || ' c.LV3 ';
+            const dateRangeFilter = ` date >= '${endDate}' and date <= '${UtilCommonTemplate.toDate(latestDate)}' `
+            let query: string =`
+               WITH temp AS (
+                  SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
+                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
+                  JOIN [PHANTICH].[dbo].[ICBID] c on c.TICKER = t.ticker
+                  WHERE ${dateRangeFilter}
+                  GROUP BY ${industry}
                 )
                 SELECT *
-                FROM temp;
+                FROM temp
+                ORDER BY contribute_price DESC;
             `;
 
-            const data = await this.db.query(query(endDate, UtilCommonTemplate.toDate(latestDate)));
+            if (+type == SelectorTypeEnum.Ticker) {
+                query = `
+                    WITH temp AS (
+                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
+                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                      WHERE ${dateRangeFilter}
+                      GROUP BY ticker
+                      ORDER BY contribute_price DESC
+                      UNION ALL
+                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
+                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                      WHERE ${dateRangeFilter}
+                      GROUP BY ticker
+                      ORDER BY contribute_price ASC
+                    )
+                    SELECT *
+                    FROM temp;
+                `;
+            }
+
+            console.log(query)
+
+
+            const data = await this.db.query(query);
             const mappedData = new TickerContributeResponse().mapToList(data);
             await this.redis.set(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`, mappedData)
             return mappedData;
