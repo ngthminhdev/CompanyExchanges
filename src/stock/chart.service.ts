@@ -13,6 +13,8 @@ import * as moment from "moment";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
 import {LineChartResponse} from "../kafka/responses/LineChart.response";
+import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
+import {TickerContributeResponse} from "./responses/TickerContribute.response";
 
 
 @Injectable()
@@ -119,6 +121,60 @@ export class ChartService {
                 `);
             return new LineChartResponse().mapToList(data)
                 .sort((a, b) => a.tradingDate - b.tradingDate > 0 ? 1: -1);
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
+        try {
+            const {exchange, order, type} = q;
+            const redisData = await this.redis.get(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`);
+            if (redisData) return redisData;
+
+            const {latestDate, weekDate, monthDate, firstDateYear} = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]')
+            const ex:string = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+            let endDate: Date | string;
+
+            switch (+order) {
+                case TransactionTimeTypeEnum.Latest:
+                    endDate = UtilCommonTemplate.toDate(latestDate);
+                break;
+                case TransactionTimeTypeEnum.OneWeek:
+                    endDate = UtilCommonTemplate.toDate(weekDate);
+                break;
+                case TransactionTimeTypeEnum.OneMonth:
+                    endDate = UtilCommonTemplate.toDate(monthDate);
+                break;
+                default:
+                    endDate = UtilCommonTemplate.toDate(firstDateYear);
+                break;
+            }
+
+            const query = (startDate, endDate): string => `
+                WITH temp AS (
+                  SELECT TOP 10 ticker, sum(diemanhhuong) as contribute_price
+                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                  WHERE date >= '${startDate}' and date <= '${endDate}'
+                  GROUP BY ticker
+                  ORDER BY contribute_price DESC
+                  UNION ALL
+                  SELECT TOP 10 ticker, sum(diemanhhuong) as contribute_price
+                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                  WHERE date >= '${startDate}' and date <= '${endDate}'
+                  GROUP BY ticker
+                  ORDER BY contribute_price ASC
+                )
+                SELECT *
+                FROM temp;
+            `;
+
+            const data = await this.db.query(query(endDate, UtilCommonTemplate.toDate(latestDate)));
+            const mappedData = new TickerContributeResponse().mapToList(data);
+            await this.redis.set(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`, mappedData)
+            return mappedData;
+
+
         } catch (e) {
             throw new CatchException(e)
         }

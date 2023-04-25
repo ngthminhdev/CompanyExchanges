@@ -13,7 +13,7 @@ export class LineChartResponse extends VnIndexResponse{
 
     constructor(data?: LineChartInterface) {
         super(data);
-        this.tradingDate = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![0] || new Date().getHours(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![1] || new Date().getMinutes(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![2] || new Date().getSeconds()).valueOf()
+        this.tradingDate = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![0] || new Date().getHours(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![1] || new Date().getMinutes()).valueOf()
     }
 
     public mapToList(data?: LineChartInterface[]) {

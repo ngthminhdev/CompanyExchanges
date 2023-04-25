@@ -15,13 +15,14 @@ export enum RedisKeys {
   TopRoc5 = 'top-roc-5',
   MerchandisePrice = 'merchandise-price',
   User = 'user',
-  HNXTicker = 'hnx-ticker',
-  HSXTicker = 'hsx-ticker',
-  UPCOMTicker = 'upcom-ticker',
+  HNX = 'hnx-ticker',
+  HOSE = 'hsx-ticker',
+  UPCoM = 'upcom-ticker',
   Rsi = 'rsi',
   MarketEvaluation = 'market-evaluation',
   VnIndex = 'vn-index',
   IndustryFull = 'industry-full',
   MarketMap = 'market-map',
-  LiquidityContribute = 'liquidity-contribute'
+  LiquidityContribute = 'liquidity-contribute',
+  TickerContribute = 'ticker-contribute',
 }

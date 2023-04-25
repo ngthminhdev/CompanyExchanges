@@ -790,7 +790,7 @@ export class StockService {
             }
 
             const query: string = `
-                select ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
+                select top 30 ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
                 and t.[Date Time] = m.date_time ${ex} ${group} 
