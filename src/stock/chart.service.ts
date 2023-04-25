@@ -118,7 +118,7 @@ export class ChartService {
                     ORDER BY tradingDate ASC
                 `);
             return new LineChartResponse().mapToList(data)
-                .sort((a, b) => b.tradingDate - a.tradingDate > 0 ? 1: -1);
+                .sort((a, b) => a.tradingDate - b.tradingDate > 0 ? 1: -1);
         } catch (e) {
             throw new CatchException(e)
         }
