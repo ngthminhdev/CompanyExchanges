@@ -7,15 +7,27 @@ export class GetLiquidityQueryDto extends GetExchangeQuery {
     @ApiProperty({
         type: Number,
         example: 0,
-        description: '0 - Cổ phiếu, 1 - Ngành LV1, 2 - Ngành LV2, 3 - Ngành LV3'
+        description:
+            `<p>
+                <div><font color="#228b22">0: </font><font color="gray">Cổ phiếu</font></div>
+                <div><font color="#228b22">1: </font><font color="gray">Ngành LV1</font></div>
+                <div><font color="#228b22">2: </font><font color="gray">Ngành LV2</font></div>
+                <div><font color="#228b22">3: </font><font color="gray">Ngành LV3</font></div>
+            </p>`
     })
-    type: string
+    type: string;
 
-    @IsEnum(["0"],{message: 'order not found!'})
+    @IsEnum(["0", "1", "2", "3"],{message: 'order not found!'})
     @ApiProperty({
         type: Number,
         example: 0,
-        description: '0 - 1 ngày, 1 - 5 ngày, 2 - 1 tuần, 3 - YtD'
+        description:
+            `<p>
+                <div><font color="#228b22">0: </font><font color="gray">Phiên gần nhất</font></div>
+                <div><font color="#228b22">1: </font><font color="gray">5 phiên</font></div>
+                <div><font color="#228b22">2: </font><font color="gray">1 tháng</font></div>
+                <div><font color="#228b22">3: </font><font color="gray">Từ đầu năm - YtD</font></div>
+            </p>`
     })
     order: string
 }

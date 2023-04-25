@@ -15,7 +15,7 @@ import {Cache} from "cache-manager";
 import {InjectDataSource} from "@nestjs/typeorm";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
-import {VnIndexInterface} from "./interfaces/vnindex.interface";
+import {LineChartInterface} from "./interfaces/line-chart.interface";
 import {VnIndexResponse} from "../stock/responses/Vnindex.response";
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 
@@ -38,6 +38,17 @@ export class KafkaService {
         } catch (e) {
             throw new CatchSocketException(e)
         }
+    }
+
+     getTickerInEx = async (ex: string): Promise<any> => {
+        let data = await this.redis.get(RedisKeys[ex]);
+        if (!data) {
+            data = await this.db.query(`
+                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[${ex}] ORDER BY ticker;
+                `);
+            await this.redis.set(RedisKeys[ex], data, TimeToLive.Forever);
+        }
+        return data;
     }
 
     handleMarketBreadth(payload: MarketBreadthKafkaInterface[]): void {
@@ -65,13 +76,7 @@ export class KafkaService {
 
     async handleTopRocHNX(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.HNXTicker);
-            if (!data) {
-                data = await this.db.query(`
-                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[HNX] ORDER BY ticker;
-                `);
-                await this.redis.set(RedisKeys.HNXTicker, data, TimeToLive.Forever);
-            }
+            const data: Pick<TickerChangeInterface, 'ticker'>[] = await this.getTickerInEx('HNX');
             const tickerInExchanges = (data.map((record) => {
                 return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
@@ -84,13 +89,7 @@ export class KafkaService {
 
     async handleTopRocUPCOM(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.UPCOMTicker);
-            if (!data) {
-                data = await this.db.query(`
-                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[UPCoM] ORDER BY ticker;
-                `);
-                await this.redis.set(RedisKeys.UPCOMTicker, data, TimeToLive.Forever);
-            }
+            const data: Pick<TickerChangeInterface, 'ticker'>[] = await this.getTickerInEx('UPCoM');
             const tickerInExchanges = (data.map((record) => {
                 return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
@@ -103,13 +102,7 @@ export class KafkaService {
 
     async handleTopRocHSX(payload: TickerChangeInterface[]): Promise<void> {
         try {
-            let data: Pick<TickerChangeInterface, 'ticker'>[] = await this.redis.get(RedisKeys.HSXTicker);
-            if (!data) {
-                data = await this.db.query(`
-                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[HOSE] ORDER BY ticker;
-                `);
-                await this.redis.set(RedisKeys.HSXTicker, data, TimeToLive.Forever);
-            }
+            const data: Pick<TickerChangeInterface, 'ticker'>[] = await this.getTickerInEx('HOSE');
             const tickerInExchanges = (data.map((record) => {
                 return payload.find((item) => item.ticker == record.ticker);
             })).filter((item) => !!item);
@@ -120,7 +113,32 @@ export class KafkaService {
         }
     }
 
-    handleVNIndex(payload: VnIndexInterface[]) {
+    handleVNIndex(payload: LineChartInterface[]) {
         this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleVNAll(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleVN30(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleHNXIndex(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleHNX30(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    }
+
+    handleUPCOM(payload: LineChartInterface[]) {
+        console.log(payload)
+        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
     }
 }

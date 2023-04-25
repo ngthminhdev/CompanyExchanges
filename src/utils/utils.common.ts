@@ -1,7 +1,7 @@
 import { ValidationError } from '@nestjs/common';
 import * as moment from 'moment';
 export class UtilCommonTemplate {
-  static toDateTime(value?: any): Date | string {
+  static toDateTime(value?: any): any | string {
     if (!value) {
       return '';
     }

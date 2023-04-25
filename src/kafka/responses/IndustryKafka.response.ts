@@ -11,24 +11,31 @@ export class IndustryKafkaResponse {
 
     @ApiProperty({
         type: 'float',
-        description: '% Giá giảm ngày',
+        description: '% Giá thay đổi ngày',
         example: 99.99,
     })
     day_change_percent: number;
 
     @ApiProperty({
         type: 'float',
-        description: '% Giá giảm tuần',
+        description: '% Giá thay đổi tuần',
         example: 99.99,
     })
     week_change_percent: number;
 
     @ApiProperty({
         type: 'float',
-        description: '% Giá giảm tháng',
+        description: '% Giá thay đổi tháng',
         example: 99.99,
     })
     month_change_percent: number;
+
+    @ApiProperty({
+        type: 'float',
+        description: '% Giá thay đổi 1 năm',
+        example: 99.99,
+    })
+    ytd: number;
 
     constructor(data?: IndustryKafkaInterface) {
         switch(data?.vietnameseName) {
@@ -68,6 +75,7 @@ export class IndustryKafkaResponse {
         this.day_change_percent = data?.PerChange1D || 0;
         this.week_change_percent = data?.PerChange5D || 0;
         this.month_change_percent = data?.PerChange1M || 0;
+        this.ytd = data?.PerChange1Y || 0;
     }
 
     public mapToList(data?: IndustryKafkaInterface[]) {

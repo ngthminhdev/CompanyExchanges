@@ -40,7 +40,7 @@ import {RsiResponse} from "./responses/Rsi.response";
 import {MarketEvaluationResponse} from "./responses/MarketEvaluation.response";
 import {GetMarketMapQueryDto} from "./dto/getMarketMapQuery.dto";
 import {MarketMapResponse} from "./responses/market-map.response";
-import {LiquidContributeEnum, MarketMapEnum} from "../enums/exchange.enum";
+import {SelectorTypeEnum, MarketMapEnum} from "../enums/exchange.enum";
 import {ChildProcess, fork} from "child_process";
 import {UtilCommonTemplate} from "../utils/utils.common";
 import {LiquidContributeResponse} from "./responses/LiquidityContribute.response";
@@ -769,15 +769,15 @@ export class StockService {
                         sum(t.Chenh_lech_cung_cau) as supplyDemandVolumeGap `;
             let ex: string = exchange.toUpperCase() == 'ALL' ?  " " : `where c.EXCHANGE = '${exchange.toUpperCase()}'`;
             switch (parseInt(type)) {
-                case LiquidContributeEnum.LV1:
+                case SelectorTypeEnum.LV1:
                     select = ' c.LV1 as symbol, ';
                     group = ' group by c.LV1 '
                 break;
-                case LiquidContributeEnum.LV2:
+                case SelectorTypeEnum.LV2:
                     select = ' c.LV2 as symbol, ';
                     group = ' group by c.LV2 '
                 break;
-                case LiquidContributeEnum.LV3:
+                case SelectorTypeEnum.LV3:
                     select = ' c.LV3 as symbol, ';
                     group = ' group by c.LV3 '
                 break;
@@ -790,7 +790,7 @@ export class StockService {
             }
 
             const query: string = `
-                select ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
+                select top 30 ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
                 and t.[Date Time] = m.date_time ${ex} ${group} 

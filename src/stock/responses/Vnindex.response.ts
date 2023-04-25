@@ -1,7 +1,7 @@
 import {ApiProperty, ApiResponseProperty, PartialType} from "@nestjs/swagger";
 import {BaseResponse} from "../../utils/utils.response";
 import {UtilCommonTemplate} from "../../utils/utils.common";
-import {VnIndexInterface} from "../../kafka/interfaces/vnindex.interface";
+import {LineChartInterface} from "../../kafka/interfaces/line-chart.interface";
 import { TransactionTimeTypeEnum } from "../../enums/common.enum";
 
 
@@ -82,13 +82,15 @@ export class VnIndexResponse {
     })
     totalMatchValue: number;
 
-    constructor(data?: VnIndexInterface) {
+    constructor(data?: LineChartInterface) {
         this.type = data?.type || 0;
         this.comGroupCode = data?.comGroupCode || "";
         this.indexValue = data?.indexValue || 0;
         this.tradingDate = data?.type === TransactionTimeTypeEnum.Latest
         // ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[0], +UtilCommonTemplate.toTime(data?.tradingDate).split(":")[1]).valueOf()
-            ?   Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![0] || new Date().getHours(), +UtilCommonTemplate.toTime(data?.tradingDate)?.split(":")![1] || new Date().getMinutes()).valueOf()
+            ?  Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 
+            new Date(data?.tradingDate)?.getHours(), 
+            new Date(data?.tradingDate)?.getMinutes()).valueOf()
             :   UtilCommonTemplate.toDateNumberUTC(data?.tradingDate || new Date());
         this.indexChange = data?.indexChange || 0;
         this.percentIndexChange = data?.percentIndexChange || 0;
@@ -103,7 +105,7 @@ export class VnIndexResponse {
         this.totalMatchValue = data?.totalMatchValue || 0;
     }
 
-    public mapToList(data?: VnIndexInterface[], type: number = 0) {
+    public mapToList(data?: LineChartInterface[], type: number = 0) {
         return data.map(i => new VnIndexResponse({...i, type: type}))
     }
 }

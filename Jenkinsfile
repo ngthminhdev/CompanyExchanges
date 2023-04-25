@@ -37,11 +37,9 @@ pipeline {
             }
         }
 
-        stage('Deploy to 192.168.7.20') {
+        stage('Deploy Backend') {
             steps {
                 script {
-                    echo "Version1: $VERSION"
-                    echo "Version2: ${VERSION}"
                     sh 'export TAG=${VERSION} && cd /home/beta/services/b-infor-backend && ./deploy.sh'
                 }
             }

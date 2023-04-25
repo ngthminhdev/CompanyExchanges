@@ -11,8 +11,8 @@ import {UserModule} from './user/user.module';
 import {ClientProxyFactory} from '@nestjs/microservices';
 import {SocketModule} from './socket/socket.module';
 import {KafkaModule} from "./kafka/kafka.module";
-import {MacMiddleware} from "./middlewares/mac.middleware";
 import {QueueModule} from "./queue/queue.module";
+import {RealIpMiddleware} from "./middlewares/real-ip.middleware";
 
 @Module({
     imports: [
@@ -67,7 +67,7 @@ import {QueueModule} from "./queue/queue.module";
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         consumer
-            .apply(MacMiddleware)
+            .apply(RealIpMiddleware)
             .forRoutes('*')
     }
 }

@@ -12,6 +12,10 @@ import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import * as moment from "moment";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {UtilCommonTemplate} from "../utils/utils.common";
+import {LineChartResponse} from "../kafka/responses/LineChart.response";
+import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
+import {TickerContributeResponse} from "./responses/TickerContribute.response";
+import {SelectorTypeEnum} from "../enums/exchange.enum";
 
 
 @Injectable()
@@ -70,12 +74,16 @@ export class ChartService {
                     ORDER BY tradingDate ASC
                 `);
 
-                return { vnindexData: new VnIndexResponse().mapToList(data, type), industryFull };
+                return {vnindexData: new LineChartResponse().mapToList(data), industryFull};
             }
             const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
             if (redisData) return {vnindexData: redisData, industryFull};
 
-            const {latestDate, weekDate, monthDate}: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
+            const {
+                latestDate,
+                weekDate,
+                monthDate
+            }: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
             let startDate: Date | string;
             switch (type) {
                 case TransactionTimeTypeEnum.OneWeek:
@@ -101,6 +109,101 @@ export class ChartService {
             const mappedData = new VnIndexResponse().mapToList(await this.db.query(query, [startDate, latestDate]), type);
             await this.redis.set(`${RedisKeys.VnIndex}:${type}`, mappedData);
             return {vnidexData: mappedData, industryFull};
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getVnIndexNow(): Promise<any> {
+        try {
+            const data = await this.db.query(`
+                    SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
+                    ORDER BY tradingDate ASC
+                `);
+            return new LineChartResponse().mapToList(data);
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
+    async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
+        try {
+            const {exchange, order, type} = q;
+            const redisData = await this.redis.get(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`);
+            // if (redisData) return redisData;
+
+            const {latestDate, weekDate, monthDate, firstDateYear} = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]')
+            const ex:string = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+            let endDate: Date | string;
+
+            switch (+order) {
+                case TransactionTimeTypeEnum.Latest:
+                    endDate = UtilCommonTemplate.toDate(latestDate);
+                break;
+                case TransactionTimeTypeEnum.OneWeek:
+                    endDate = UtilCommonTemplate.toDate(weekDate);
+                break;
+                case TransactionTimeTypeEnum.OneMonth:
+                    endDate = UtilCommonTemplate.toDate(monthDate);
+                break;
+                default:
+                    endDate = UtilCommonTemplate.toDate(firstDateYear);
+                break;
+            }
+
+            const industryMap = {
+                [SelectorTypeEnum.LV1]: ' c.LV1 ',
+                [SelectorTypeEnum.LV2]: ' c.LV2 ',
+                [SelectorTypeEnum.LV3]: ' c.LV3 ',
+            };
+
+            let industry = industryMap[+type] || ' c.LV3 ';
+            const dateRangeFilter = ` date >= '${endDate}' and date <= '${UtilCommonTemplate.toDate(latestDate)}' `
+            let query: string =`
+               WITH temp AS (
+                  SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
+                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
+                  JOIN [PHANTICH].[dbo].[ICBID] c on c.TICKER = t.ticker
+                  WHERE ${dateRangeFilter}
+                  GROUP BY ${industry}
+                )
+                SELECT *
+                FROM temp
+                ORDER BY contribute_price DESC;
+            `;
+
+            if (+type == SelectorTypeEnum.Ticker) {
+                query = `
+                    WITH temp AS (
+                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
+                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                      WHERE ${dateRangeFilter}
+                      GROUP BY ticker
+                      ORDER BY contribute_price DESC
+                      UNION ALL
+                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
+                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
+                      WHERE ${dateRangeFilter}
+                      GROUP BY ticker
+                      ORDER BY contribute_price ASC
+                    )
+                    SELECT *
+                    FROM temp
+                    ORDER BY
+                    CASE
+                    WHEN symbol IN (SELECT TOP 10 symbol FROM temp ORDER BY contribute_price ASC)
+                    THEN 1
+                    ELSE 0
+                    END,
+                    contribute_price DESC;
+                `;
+            }
+
+            const data = await this.db.query(query);
+            const mappedData = new TickerContributeResponse().mapToList(data);
+            await this.redis.set(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`, mappedData)
+            return mappedData;
+
         } catch (e) {
             throw new CatchException(e)
         }
