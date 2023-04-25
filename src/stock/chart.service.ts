@@ -130,7 +130,7 @@ export class ChartService {
         try {
             const {exchange, order, type} = q;
             const redisData = await this.redis.get(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`);
-            if (redisData) return redisData;
+            // if (redisData) return redisData;
 
             const {latestDate, weekDate, monthDate, firstDateYear} = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]')
             const ex:string = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
@@ -188,18 +188,21 @@ export class ChartService {
                       ORDER BY contribute_price ASC
                     )
                     SELECT *
-                    FROM temp;
+                    FROM temp
+                    ORDER BY
+                    CASE
+                    WHEN symbol IN (SELECT TOP 10 symbol FROM temp ORDER BY contribute_price ASC)
+                    THEN 1
+                    ELSE 0
+                    END,
+                    contribute_price DESC;
                 `;
             }
-
-            console.log(query)
-
 
             const data = await this.db.query(query);
             const mappedData = new TickerContributeResponse().mapToList(data);
             await this.redis.set(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`, mappedData)
             return mappedData;
-
 
         } catch (e) {
             throw new CatchException(e)
