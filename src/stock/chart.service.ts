@@ -130,7 +130,7 @@ export class ChartService {
         try {
             const {exchange, order, type} = q;
             const redisData = await this.redis.get(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`);
-            // if (redisData) return redisData;
+            if (redisData) return redisData;
 
             const {latestDate, weekDate, monthDate, firstDateYear} = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]')
             const ex:string = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
@@ -164,7 +164,7 @@ export class ChartService {
                   SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
                   FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
                   JOIN [PHANTICH].[dbo].[ICBID] c on c.TICKER = t.ticker
-                  WHERE ${dateRangeFilter}
+                  WHERE ${dateRangeFilter} and ${industry} != '#N/A'
                   GROUP BY ${industry}
                 )
                 SELECT *
