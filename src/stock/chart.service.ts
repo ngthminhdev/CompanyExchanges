@@ -73,7 +73,7 @@ export class ChartService {
                     ORDER BY tradingDate ASC
                 `);
 
-                return {vnindexData: new VnIndexResponse().mapToList(data, type), industryFull};
+                return {vnindexData: new LineChartResponse().mapToList(data), industryFull};
             }
             const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
             if (redisData) return {vnindexData: redisData, industryFull};
@@ -119,8 +119,7 @@ export class ChartService {
                     SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
                     ORDER BY tradingDate ASC
                 `);
-            return new LineChartResponse().mapToList(data)
-                .sort((a, b) => a.tradingDate - b.tradingDate > 0 ? 1: -1);
+            return new LineChartResponse().mapToList(data);
         } catch (e) {
             throw new CatchException(e)
         }
