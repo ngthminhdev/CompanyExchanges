@@ -17,6 +17,7 @@ import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
 import { TickerContributeResponse } from './responses/TickerContribute.response';
 import { SelectorTypeEnum } from '../enums/exchange.enum';
 import { IndexQueryDto } from './dto/indexQuery.dto';
+import {MarketCashFlowResponse} from "../kafka/responses/MarketCashFlow.response";
 
 @Injectable()
 export class ChartService {
@@ -247,4 +248,22 @@ export class ChartService {
       throw new CatchException(e);
     }
   }
+
+  async getMarketCashFlow() {
+    try {
+      const query: string = `
+        SELECT
+        SUM(CASE WHEN changePrice1d > 0 THEN accumulatedVal ELSE 0 END) as increase,
+        SUM(CASE WHEN changePrice1d < 0 THEN accumulatedVal ELSE 0 END) as decrease,
+        SUM(CASE WHEN changePrice1d = 0 THEN accumulatedVal ELSE 0 END) as equal
+        FROM
+        [WEBSITE_SERVER].[dbo].[stock_value]
+        WHERE [index] != 'VN30' AND [index] != 'HNX30';
+      `;
+      return new MarketCashFlowResponse((await this.db.query(query))![0])
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
 }

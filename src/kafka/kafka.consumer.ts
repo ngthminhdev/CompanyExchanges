@@ -9,6 +9,7 @@ import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
 import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
+import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -109,6 +110,18 @@ export class KafkaConsumer {
   ) {
     try {
       this.kafkaService.handleLineChart(payload);
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.StockValue)
+  handleStockValue(
+      @Payload() payload: MarketCashFlowInterface[],
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleStockValue(payload);
     } catch (error) {
       this.logger.error(error);
     }

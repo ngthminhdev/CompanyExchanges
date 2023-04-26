@@ -12,6 +12,7 @@ import {LiquidContributeQueryDto} from "./dto/liquidContributeQuery.dto";
 import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 import {TickerContributeSwagger} from "./responses/TickerContribute.response";
 import {IndexQueryDto} from "./dto/indexQuery.dto";
+import {MarketCashFlowSwagger} from "../kafka/responses/MarketCashFlow.response";
 
 
 @Controller('chart')
@@ -72,6 +73,15 @@ export class ChartController {
     @ApiOkResponse({type: LineChartSwagger})
     async getLineChartNow(@Query() q: IndexQueryDto, @Res() res: Response) {
         const data = await this.chartService.getLineChartNow(q.index.toUpperCase());
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
+
+    //Dòng tiền thị trường
+    @Get('market-cash-flow')
+    @ApiOperation({summary: 'chart line chỉ số realtime'})
+    @ApiOkResponse({type: MarketCashFlowSwagger})
+    async getMarketCashFlow(@Res() res: Response) {
+        const data = await this.chartService.getMarketCashFlow();
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 

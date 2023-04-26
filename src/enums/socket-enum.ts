@@ -18,4 +18,5 @@ export enum SocketEmit {
     ChiSoHNX = 'listen-chi-so-hnx',
     ChiSoHNX30 = 'listen-chi-so-hnx30',
     ChiSoUPCOM = 'listen-chi-so-upcom',
+    PhanBoDongTien = 'listen-phan-bo-dong-tien'
 }

@@ -19,6 +19,8 @@ import {LineChartInterface} from "./interfaces/line-chart.interface";
 import {VnIndexResponse} from "../stock/responses/Vnindex.response";
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 import {LineChartResponse} from "./responses/LineChart.response";
+import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
+import {MarketCashFlowResponse} from "./responses/MarketCashFlow.response";
 
 @Injectable()
 export class KafkaService {
@@ -143,5 +145,35 @@ export class KafkaService {
                     this.logger.error('Invalid IndexCode')
             }
         })
+    }
+
+    handleStockValue(payload: MarketCashFlowInterface[]) {
+        const calculatedData: any = payload.reduce((prev, curr) => {
+            if (curr.index === 'VNINDEX' || curr.index === 'HNX' || curr.index === 'UPCOM') {
+                if (curr.changePrice1d > 0) {
+                    return {
+                        ...prev,
+                        increase: prev.increase + curr.accumulatedVal,
+                    }
+                } else if (curr.changePrice1d < 0) {
+                    return {
+                        ...prev,
+                        decrease: prev.decrease + curr.accumulatedVal,
+                    }
+                } else if (curr.changePrice1d == 0) {
+                    return {
+                        ...prev,
+                        equal: prev.equal + curr.accumulatedVal,
+                    }
+                }
+            }
+            return prev;
+        }, {
+            equal: 0,
+            increase: 0,
+            decrease: 0
+        });
+
+        this.send(SocketEmit.PhanBoDongTien, new MarketCashFlowResponse(calculatedData))
     }
 }

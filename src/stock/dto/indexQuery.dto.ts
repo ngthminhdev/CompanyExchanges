@@ -1,7 +1,9 @@
 import {ApiProperty} from "@nestjs/swagger";
+import {IsString} from "class-validator";
 
 
 export class IndexQueryDto {
+    @IsString({message: "index not found"})
     @ApiProperty({
         type: String,
         description:
