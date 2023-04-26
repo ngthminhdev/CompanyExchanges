@@ -75,7 +75,8 @@ export class ChartService {
       const industryFull = await this.redis.get(RedisKeys.IndustryFull);
       if (type === TransactionTimeTypeEnum.Latest) {
         const data = await this.db.query(`
-                    SELECT comGroupCode, indexValue, tradingDate 
+                    SELECT comGroupCode, indexValue, tradingDate,
+                        openIndex, closeIndex, highestIndex, lowestIndex, referenceIndex
                     FROM [WEBSITE_SERVER].[dbo].[index_realtime]
                     WHERE comGroupCode = '${index}'
                     ORDER BY tradingDate ASC
@@ -89,7 +90,7 @@ export class ChartService {
       const redisData: VnIndexResponse[] = await this.redis.get(
         `${RedisKeys.VnIndex}:${type}:${index}`,
       );
-      if (redisData) return { vnindexData: redisData, industryFull };
+      if (redisData) return { lineChartData: redisData, industryFull };
 
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
@@ -161,12 +162,13 @@ export class ChartService {
       );
       if (redisData) return redisData;
 
-      const { latestDate, weekDate, monthDate, firstDateYear } =
-        await this.stockService.getSessionDate(
-          '[PHANTICH].[dbo].[database_mkt]',
-        );
       const ex: string =
         exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+
+      const { latestDate, weekDate, monthDate, firstDateYear } =
+        await this.stockService.getSessionDate(
+          `[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date'
+        );
       let endDate: Date | string;
 
       switch (+order) {

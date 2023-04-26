@@ -12,7 +12,19 @@ export class DomesticIndexKafkaResponse {
 
     lastUpdated: Date | string
     constructor(data?: DomesticIndexKafkaInterface) {
-        this.ticker = data?.name || '';
+        switch (data?.name) {
+            case 'VNXALLSHARE':
+                this.ticker = 'VNXALL';
+                break;
+            case 'HNX':
+                this.ticker = 'HNXINDEX';
+                break;
+            case 'UPCOM':
+                this.ticker = 'UPINDEX';
+                break;
+            default:
+                this.ticker = data?.name || "";
+        }
         this.price = data?.price || 0;
         this.change_price = data?.["1D"]|| 0;
         this.percent_d = data?.["%1D"] ? +data?.["%1D"].slice(0, data?.["%1D"].length - 1) : 0;
