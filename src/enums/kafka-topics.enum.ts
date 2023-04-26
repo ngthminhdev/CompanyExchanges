@@ -11,6 +11,7 @@ export enum Topics {
   ChiSoHNX = 'kafka-chi-so-hnx-topic',
   ChiSoHNX30 = 'kafka-chi-so-hnx30-topic',
   ChiSoUPCOM = 'kafka-chi-so-upcom-topic',
+  LineChart = 'kafka-index-line-chart-topic'
 }
 
 export const requestPatterns: string[] = [

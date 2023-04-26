@@ -102,61 +102,13 @@ export class KafkaConsumer {
     }
   }
 
-  @MessagePattern(Topics.ChiSoVNAll)
-  handleVNAll(
+  @MessagePattern(Topics.LineChart)
+  handleLineChart(
       @Payload() payload: LineChartInterface[],
       @Ctx() context: KafkaContext,
   ) {
     try {
-      this.kafkaService.handleVNAll(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoVN30)
-  handleVN30(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleVN30(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoHNX)
-  handleHNXIndex(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleHNXIndex(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoHNX30)
-  handleHNX30(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleHNX30(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoUPCOM)
-  handleUPCOM(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleUPCOM(payload);
+      this.kafkaService.handleLineChart(payload);
     } catch (error) {
       this.logger.error(error);
     }

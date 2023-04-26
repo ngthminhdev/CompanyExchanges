@@ -18,6 +18,7 @@ import {TimeToLive} from "../enums/common.enum";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
 import {VnIndexResponse} from "../stock/responses/Vnindex.response";
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import {LineChartResponse} from "./responses/LineChart.response";
 
 @Injectable()
 export class KafkaService {
@@ -114,31 +115,33 @@ export class KafkaService {
     }
 
     handleVNIndex(payload: LineChartInterface[]) {
-        this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+        this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList(payload))
     }
 
-    handleVNAll(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleVN30(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleHNXIndex(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleHNX30(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleUPCOM(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    handleLineChart(payload: LineChartInterface[]) {
+        payload.forEach((item) => {
+            switch (item.comGroupCode) {
+                case 'VNINDEX':
+                    this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList(payload))
+                break;
+                case 'VNXALL':
+                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList(payload))
+                    break;
+                case 'VN30':
+                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList(payload))
+                    break;
+                case 'HNX30':
+                    this.send(SocketEmit.ChiSoHNX30, new LineChartResponse().mapToList(payload))
+                    break;
+                case 'HNXINDEX':
+                    this.send(SocketEmit.ChiSoHNX, new LineChartResponse().mapToList(payload))
+                    break;
+                case 'UPINDEX':
+                    this.send(SocketEmit.ChiSoUPCOM, new LineChartResponse().mapToList(payload))
+                    break;
+                default:
+                    this.logger.error('Invalid IndexCode')
+            }
+        })
     }
 }
