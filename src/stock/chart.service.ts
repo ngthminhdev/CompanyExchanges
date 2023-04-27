@@ -76,7 +76,7 @@ export class ChartService {
       const industryFull = await this.redis.get(RedisKeys.IndustryFull);
       if (type === TransactionTimeTypeEnum.Latest) {
         const data = await this.db.query(`
-                    SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange
+                    SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange,
                         openIndex, closeIndex, highestIndex, lowestIndex, referenceIndex
                     FROM [WEBSITE_SERVER].[dbo].[index_realtime]
                     WHERE comGroupCode = '${index}'
