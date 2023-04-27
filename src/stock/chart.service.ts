@@ -76,7 +76,7 @@ export class ChartService {
       const industryFull = await this.redis.get(RedisKeys.IndustryFull);
       if (type === TransactionTimeTypeEnum.Latest) {
         const data = await this.db.query(`
-                    SELECT comGroupCode, indexValue, tradingDate,
+                    SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange
                         openIndex, closeIndex, highestIndex, lowestIndex, referenceIndex
                     FROM [WEBSITE_SERVER].[dbo].[index_realtime]
                     WHERE comGroupCode = '${index}'
@@ -125,18 +125,6 @@ export class ChartService {
       );
       await this.redis.set(`${RedisKeys.VnIndex}:${type}:${index}`, mappedData);
       return { lineChartData: mappedData, industryFull };
-    } catch (e) {
-      throw new CatchException(e);
-    }
-  }
-
-  async getVnIndexNow(): Promise<any> {
-    try {
-      const data = await this.db.query(`
-                    SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
-                    ORDER BY tradingDate ASC
-                `);
-      return new LineChartResponse().mapToList(data);
     } catch (e) {
       throw new CatchException(e);
     }

@@ -51,14 +51,6 @@ export class ChartController {
     }
 
 
-    @Get('vnindex-now')
-    @ApiOperation({summary: 'chart line chỉ số vnindex realtime'})
-    @ApiOkResponse({type: LineChartSwagger})
-    async getVnIndexNow(@Res() res: Response) {
-        const data = await this.chartService.getVnIndexNow();
-        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
-    }
-
     @Get('line-chart')
     @ApiOperation({summary: 'chart line'})
     @ApiOkResponse({type: VnIndexSwagger})
