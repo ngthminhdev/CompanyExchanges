@@ -8,7 +8,6 @@ import {ChartService} from "./chart.service";
 import {VnIndexSwagger} from "./responses/Vnindex.response";
 import {TimestampQueryDto} from "./dto/timestampQuery.dto";
 import {LineChartSwagger} from "../kafka/responses/LineChart.response";
-import {LiquidContributeQueryDto} from "./dto/liquidContributeQuery.dto";
 import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 import {TickerContributeSwagger} from "./responses/TickerContribute.response";
 import {IndexQueryDto} from "./dto/indexQuery.dto";
@@ -61,7 +60,7 @@ export class ChartController {
     }
 
     @Get('line-chart')
-    @ApiOperation({summary: 'chart line chỉ số vnindex'})
+    @ApiOperation({summary: 'chart line'})
     @ApiOkResponse({type: VnIndexSwagger})
     async getVnIndex(@Query() q: TimestampQueryDto, @Res() res: Response) {
         const data = await this.chartService.getLineChart(parseInt(q.type), q.index.toUpperCase());
@@ -78,7 +77,7 @@ export class ChartController {
 
     //Dòng tiền thị trường
     @Get('market-cash-flow')
-    @ApiOperation({summary: 'chart line chỉ số realtime'})
+    @ApiOperation({summary: 'phân bố dòng tiền'})
     @ApiOkResponse({type: MarketCashFlowSwagger})
     async getMarketCashFlow(@Res() res: Response) {
         const data = await this.chartService.getMarketCashFlow();
