@@ -16,8 +16,7 @@ import {InjectDataSource} from "@nestjs/typeorm";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
-import {VnIndexResponse} from "../stock/responses/Vnindex.response";
-import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import {MarketBreadthResponse} from '../stock/responses/MarketBreadth.response';
 import {LineChartResponse} from "./responses/LineChart.response";
 import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
 import {MarketCashFlowResponse} from "./responses/MarketCashFlow.response";
@@ -124,22 +123,22 @@ export class KafkaService {
         payload.forEach((item) => {
             switch (item.comGroupCode) {
                 case 'VNINDEX':
-                    this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList([item]))
                 break;
                 case 'VNXALL':
-                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList([item]))
                     break;
                 case 'VN30':
-                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList([item]))
                     break;
                 case 'HNX30':
-                    this.send(SocketEmit.ChiSoHNX30, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoHNX30, new LineChartResponse().mapToList([item]))
                     break;
                 case 'HNXINDEX':
-                    this.send(SocketEmit.ChiSoHNX, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoHNX, new LineChartResponse().mapToList([item]))
                     break;
                 case 'UPINDEX':
-                    this.send(SocketEmit.ChiSoUPCOM, new LineChartResponse().mapToList(payload))
+                    this.send(SocketEmit.ChiSoUPCOM, new LineChartResponse().mapToList([item]))
                     break;
                 default:
                     this.logger.error('Invalid IndexCode')
