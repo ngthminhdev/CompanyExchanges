@@ -129,7 +129,7 @@ export class KafkaService {
                     this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList([item]))
                     break;
                 case 'VN30':
-                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList([item]))
+                    this.send(SocketEmit.ChiSoVN30, new LineChartResponse().mapToList([item]))
                     break;
                 case 'HNX30':
                     this.send(SocketEmit.ChiSoHNX30, new LineChartResponse().mapToList([item]))
