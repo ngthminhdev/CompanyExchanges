@@ -1,22 +1,21 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
-import { MarketLiquidityChartResponse } from './responses/MarketLiquidityChart.response';
-import { CatchException } from '../exceptions/common.exception';
-import { Cache } from 'cache-manager';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { MarketBreadthResponse } from './responses/MarketBreadth.response';
-import { VnIndexResponse } from './responses/Vnindex.response';
-import { TransactionTimeTypeEnum } from '../enums/common.enum';
-import { StockService } from './stock.service';
-import { SessionDatesInterface } from './interfaces/session-dates.interface';
+import {CACHE_MANAGER, Inject, Injectable} from '@nestjs/common';
+import {MarketLiquidityChartResponse} from './responses/MarketLiquidityChart.response';
+import {CatchException} from '../exceptions/common.exception';
+import {Cache} from 'cache-manager';
+import {InjectDataSource} from '@nestjs/typeorm';
+import {DataSource} from 'typeorm';
+import {MarketBreadthResponse} from './responses/MarketBreadth.response';
+import {VnIndexResponse} from './responses/Vnindex.response';
+import {TransactionTimeTypeEnum} from '../enums/common.enum';
+import {StockService} from './stock.service';
+import {SessionDatesInterface} from './interfaces/session-dates.interface';
 import * as moment from 'moment';
-import { RedisKeys } from '../enums/redis-keys.enum';
-import { UtilCommonTemplate } from '../utils/utils.common';
-import { LineChartResponse } from '../kafka/responses/LineChart.response';
-import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
-import { TickerContributeResponse } from './responses/TickerContribute.response';
-import { SelectorTypeEnum } from '../enums/exchange.enum';
-import { IndexQueryDto } from './dto/indexQuery.dto';
+import {RedisKeys} from '../enums/redis-keys.enum';
+import {UtilCommonTemplate} from '../utils/utils.common';
+import {LineChartResponse} from '../kafka/responses/LineChart.response';
+import {GetLiquidityQueryDto} from './dto/getLiquidityQuery.dto';
+import {TickerContributeResponse} from './responses/TickerContribute.response';
+import {SelectorTypeEnum} from '../enums/exchange.enum';
 import {MarketCashFlowResponse} from "../kafka/responses/MarketCashFlow.response";
 
 @Injectable()
@@ -89,7 +88,7 @@ export class ChartService {
         };
       }
       const redisData: VnIndexResponse[] = await this.redis.get(
-        `${RedisKeys.VnIndex}:${type}:${index}`,
+        `${RedisKeys.LineChart}:${type}:${index}`,
       );
       if (redisData) return { lineChartData: redisData, industryFull };
 
@@ -112,6 +111,8 @@ export class ChartService {
           startDate = latestDate;
       }
 
+      console.log({startDate, latestDate})
+
       const query: string = `
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
                 from [PHANTICH].[dbo].[database_chisotoday]
@@ -123,7 +124,7 @@ export class ChartService {
         await this.db.query(query, [startDate, latestDate]),
         type,
       );
-      await this.redis.set(`${RedisKeys.VnIndex}:${type}:${index}`, mappedData);
+      await this.redis.set(`${RedisKeys.LineChart}:${type}:${index}`, mappedData);
       return { lineChartData: mappedData, industryFull };
     } catch (e) {
       throw new CatchException(e);
