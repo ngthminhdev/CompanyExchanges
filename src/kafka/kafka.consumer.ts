@@ -9,6 +9,7 @@ import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
 import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
 import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
+import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
 
 @Controller()
 export class KafkaConsumer {
@@ -102,61 +103,25 @@ export class KafkaConsumer {
     }
   }
 
-  @MessagePattern(Topics.ChiSoVNAll)
-  handleVNAll(
+  @MessagePattern(Topics.LineChart)
+  handleLineChart(
       @Payload() payload: LineChartInterface[],
       @Ctx() context: KafkaContext,
   ) {
     try {
-      this.kafkaService.handleVNAll(payload);
+      this.kafkaService.handleLineChart(payload);
     } catch (error) {
       this.logger.error(error);
     }
   }
 
-  @MessagePattern(Topics.ChiSoVN30)
-  handleVN30(
-      @Payload() payload: LineChartInterface[],
+  @MessagePattern(Topics.StockValue)
+  handleStockValue(
+      @Payload() payload: MarketCashFlowInterface[],
       @Ctx() context: KafkaContext,
   ) {
     try {
-      this.kafkaService.handleVN30(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoHNX)
-  handleHNXIndex(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleHNXIndex(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoHNX30)
-  handleHNX30(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleHNX30(payload);
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  @MessagePattern(Topics.ChiSoUPCOM)
-  handleUPCOM(
-      @Payload() payload: LineChartInterface[],
-      @Ctx() context: KafkaContext,
-  ) {
-    try {
-      this.kafkaService.handleUPCOM(payload);
+      this.kafkaService.handleStockValue(payload);
     } catch (error) {
       this.logger.error(error);
     }

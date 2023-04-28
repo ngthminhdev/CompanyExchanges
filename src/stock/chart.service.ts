@@ -1,169 +1,196 @@
-import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
-import {MarketLiquidityChartResponse} from "./responses/MarketLiquidityChart.response";
-import {CatchException} from "../exceptions/common.exception";
-import {Cache} from "cache-manager";
-import {InjectDataSource} from "@nestjs/typeorm";
-import {DataSource} from "typeorm";
-import {MarketBreadthResponse} from "./responses/MarketBreadth.response";
-import {VnIndexResponse} from "./responses/Vnindex.response";
-import {TransactionTimeTypeEnum} from "../enums/common.enum";
-import {StockService} from "./stock.service";
-import {SessionDatesInterface} from "./interfaces/session-dates.interface";
-import * as moment from "moment";
-import {RedisKeys} from "../enums/redis-keys.enum";
-import {UtilCommonTemplate} from "../utils/utils.common";
-import {LineChartResponse} from "../kafka/responses/LineChart.response";
-import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
-import {TickerContributeResponse} from "./responses/TickerContribute.response";
-import {SelectorTypeEnum} from "../enums/exchange.enum";
-
+import {CACHE_MANAGER, Inject, Injectable} from '@nestjs/common';
+import {MarketLiquidityChartResponse} from './responses/MarketLiquidityChart.response';
+import {CatchException} from '../exceptions/common.exception';
+import {Cache} from 'cache-manager';
+import {InjectDataSource} from '@nestjs/typeorm';
+import {DataSource} from 'typeorm';
+import {MarketBreadthResponse} from './responses/MarketBreadth.response';
+import {VnIndexResponse} from './responses/Vnindex.response';
+import {TransactionTimeTypeEnum} from '../enums/common.enum';
+import {StockService} from './stock.service';
+import {SessionDatesInterface} from './interfaces/session-dates.interface';
+import * as moment from 'moment';
+import {RedisKeys} from '../enums/redis-keys.enum';
+import {UtilCommonTemplate} from '../utils/utils.common';
+import {LineChartResponse} from '../kafka/responses/LineChart.response';
+import {GetLiquidityQueryDto} from './dto/getLiquidityQuery.dto';
+import {TickerContributeResponse} from './responses/TickerContribute.response';
+import {SelectorTypeEnum} from '../enums/exchange.enum';
+import {MarketCashFlowResponse} from "../kafka/responses/MarketCashFlow.response";
 
 @Injectable()
 export class ChartService {
-    constructor(
-        @Inject(CACHE_MANAGER)
-        private readonly redis: Cache,
-        @InjectDataSource() private readonly db: DataSource,
-        private readonly stockService: StockService,
-    ) {
-    }
+  constructor(
+    @Inject(CACHE_MANAGER)
+    private readonly redis: Cache,
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly stockService: StockService,
+  ) {}
 
-    // Thanh khoản phiên trước
-    async getMarketLiquidityYesterday() {
-        try {
-            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
+  // Thanh khoản phiên trước
+  async getMarketLiquidityYesterday() {
+    try {
+      return new MarketLiquidityChartResponse().mapToList(
+        await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
                 ORDER BY time ASC
-            `));
-        } catch (e) {
-            throw new CatchException(e)
-        }
+            `),
+      );
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
 
-    //Thanh khoản phiên hiện tại
-    async getMarketLiquidityToday() {
-        try {
-            return new MarketLiquidityChartResponse().mapToList(await this.db.query(`
+  //Thanh khoản phiên hiện tại
+  async getMarketLiquidityToday() {
+    try {
+      return new MarketLiquidityChartResponse().mapToList(
+        await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
                 ORDER BY time ASC
-            `));
-        } catch (e) {
-            throw new CatchException(e)
-        }
+            `),
+      );
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
 
-    // Độ rộng ngành
-    async getMarketBreadth() {
-        try {
-            return new MarketBreadthResponse().mapToList(await this.db.query(`
+  // Độ rộng ngành
+  async getMarketBreadth() {
+    try {
+      return new MarketBreadthResponse().mapToList(
+        await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
                 ORDER BY time ASC
-            `));
-        } catch (e) {
-            throw new CatchException(e)
-        }
+            `),
+      );
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
 
-    // Chỉ số Vn index
-    async getVnIndex(type: number): Promise<any> {
-        try {
-            const industryFull = await this.redis.get(RedisKeys.IndustryFull)
-            if (type === TransactionTimeTypeEnum.Latest) {
-                const data = await this.db.query(`
-                    SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
+  // Chỉ số các index
+  async getLineChart(type: number, index: string): Promise<any> {
+    try {
+      const industryFull = await this.redis.get(RedisKeys.IndustryFull);
+      if (type === TransactionTimeTypeEnum.Latest) {
+        const data = await this.db.query(`
+                    SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange,
+                        openIndex, closeIndex, highestIndex, lowestIndex, referenceIndex
+                    FROM [WEBSITE_SERVER].[dbo].[index_realtime]
+                    WHERE comGroupCode = '${index}'
                     ORDER BY tradingDate ASC
                 `);
 
-                return {vnindexData: new LineChartResponse().mapToList(data), industryFull};
-            }
-            const redisData: VnIndexResponse[] = await this.redis.get(`${RedisKeys.VnIndex}:${type}`);
-            if (redisData) return {vnindexData: redisData, industryFull};
+        return {
+          lineChartData: new LineChartResponse().mapToList(data),
+          industryFull,
+        };
+      }
+      const redisData: VnIndexResponse[] = await this.redis.get(
+        `${RedisKeys.LineChart}:${type}:${index}`,
+      );
+      if (redisData) return { lineChartData: redisData, industryFull };
 
-            const {
-                latestDate,
-                weekDate,
-                monthDate
-            }: SessionDatesInterface = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]')
-            let startDate: Date | string;
-            switch (type) {
-                case TransactionTimeTypeEnum.OneWeek:
-                    startDate = weekDate;
-                    break;
-                case TransactionTimeTypeEnum.OneMonth:
-                    startDate = monthDate;
-                    break;
-                case TransactionTimeTypeEnum.YearToDate:
-                    startDate = UtilCommonTemplate.toDateTime(moment().startOf('year'));
-                    break;
-                default:
-                    startDate = latestDate;
-            }
+      const { latestDate, weekDate, monthDate }: SessionDatesInterface =
+        await this.stockService.getSessionDate(
+          '[PHANTICH].[dbo].[database_chisotoday]',
+        );
+      let startDate: Date | string;
+      switch (type) {
+        case TransactionTimeTypeEnum.OneWeek:
+          startDate = weekDate;
+          break;
+        case TransactionTimeTypeEnum.OneMonth:
+          startDate = monthDate;
+          break;
+        case TransactionTimeTypeEnum.YearToDate:
+          startDate = UtilCommonTemplate.toDateTime(moment().startOf('year'));
+          break;
+        default:
+          startDate = latestDate;
+      }
 
-            const query: string = `
+      console.log({startDate, latestDate})
+
+      const query: string = `
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
                 from [PHANTICH].[dbo].[database_chisotoday]
-                where ticker = 'VNINDEX' and date_time >= @0 and date_time <= @1
+                where ticker = '${index}' and date_time >= @0 and date_time <= @1
                 ORDER BY date_time
             `;
 
-            const mappedData = new VnIndexResponse().mapToList(await this.db.query(query, [startDate, latestDate]), type);
-            await this.redis.set(`${RedisKeys.VnIndex}:${type}`, mappedData);
-            return {vnidexData: mappedData, industryFull};
-        } catch (e) {
-            throw new CatchException(e)
-        }
+      const mappedData = new VnIndexResponse().mapToList(
+        await this.db.query(query, [startDate, latestDate]),
+        type,
+      );
+      await this.redis.set(`${RedisKeys.LineChart}:${type}:${index}`, mappedData);
+      return { lineChartData: mappedData, industryFull };
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
 
-    async getVnIndexNow(): Promise<any> {
-        try {
-            const data = await this.db.query(`
-                    SELECT * FROM [WEBSITE_SERVER].[dbo].[VNI_realtime]
+  async getLineChartNow(index: string): Promise<any> {
+    try {
+      const data = await this.db.query(`
+                    SELECT comGroupCode, indexValue, tradingDate FROM [WEBSITE_SERVER].[dbo].[index_realtime]
+                    WHERE comGroupCode = '${index}'
                     ORDER BY tradingDate ASC
                 `);
-            return new LineChartResponse().mapToList(data);
-        } catch (e) {
-            throw new CatchException(e)
-        }
+      return new LineChartResponse().mapToList(data);
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
 
-    async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
-        try {
-            const {exchange, order, type} = q;
-            const redisData = await this.redis.get(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`);
-            if (redisData) return redisData;
+  async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
+    try {
+      const { exchange, order, type } = q;
+      const redisData = await this.redis.get(
+        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+      );
+      if (redisData) return redisData;
 
-            const {latestDate, weekDate, monthDate, firstDateYear} = await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]')
-            const ex:string = exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
-            let endDate: Date | string;
+      const ex: string =
+        exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
 
-            switch (+order) {
-                case TransactionTimeTypeEnum.Latest:
-                    endDate = UtilCommonTemplate.toDate(latestDate);
-                break;
-                case TransactionTimeTypeEnum.OneWeek:
-                    endDate = UtilCommonTemplate.toDate(weekDate);
-                break;
-                case TransactionTimeTypeEnum.OneMonth:
-                    endDate = UtilCommonTemplate.toDate(monthDate);
-                break;
-                default:
-                    endDate = UtilCommonTemplate.toDate(firstDateYear);
-                break;
-            }
+      const { latestDate, weekDate, monthDate, firstDateYear } =
+        await this.stockService.getSessionDate(
+          `[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date'
+        );
+      let endDate: Date | string;
 
-            const industryMap = {
-                [SelectorTypeEnum.LV1]: ' c.LV1 ',
-                [SelectorTypeEnum.LV2]: ' c.LV2 ',
-                [SelectorTypeEnum.LV3]: ' c.LV3 ',
-            };
+      switch (+order) {
+        case TransactionTimeTypeEnum.Latest:
+          endDate = UtilCommonTemplate.toDate(latestDate);
+          break;
+        case TransactionTimeTypeEnum.OneWeek:
+          endDate = UtilCommonTemplate.toDate(weekDate);
+          break;
+        case TransactionTimeTypeEnum.OneMonth:
+          endDate = UtilCommonTemplate.toDate(monthDate);
+          break;
+        default:
+          endDate = UtilCommonTemplate.toDate(firstDateYear);
+          break;
+      }
 
-            let industry = industryMap[+type] || ' c.LV3 ';
-            const dateRangeFilter = ` date >= '${endDate}' and date <= '${UtilCommonTemplate.toDate(latestDate)}' `
-            let query: string =`
+      const industryMap = {
+        [SelectorTypeEnum.LV1]: ' c.LV1 ',
+        [SelectorTypeEnum.LV2]: ' c.LV2 ',
+        [SelectorTypeEnum.LV3]: ' c.LV3 ',
+      };
+
+      let industry = industryMap[+type] || ' c.LV3 ';
+      const dateRangeFilter = ` date >= '${endDate}' and date <= '${UtilCommonTemplate.toDate(
+        latestDate,
+      )}' `;
+      let query: string = `
                WITH temp AS (
                   SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
                   FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
-                  JOIN [PHANTICH].[dbo].[ICBID] c on c.TICKER = t.ticker
+                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.ticker
                   WHERE ${dateRangeFilter} and ${industry} != '#N/A'
                   GROUP BY ${industry}
                 )
@@ -172,8 +199,8 @@ export class ChartService {
                 ORDER BY contribute_price DESC;
             `;
 
-            if (+type == SelectorTypeEnum.Ticker) {
-                query = `
+      if (+type == SelectorTypeEnum.Ticker) {
+        query = `
                     WITH temp AS (
                       SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
                       FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
@@ -197,15 +224,35 @@ export class ChartService {
                     END,
                     contribute_price DESC;
                 `;
-            }
+      }
 
-            const data = await this.db.query(query);
-            const mappedData = new TickerContributeResponse().mapToList(data);
-            await this.redis.set(`${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`, mappedData)
-            return mappedData;
-
-        } catch (e) {
-            throw new CatchException(e)
-        }
+      const data = await this.db.query(query);
+      const mappedData = new TickerContributeResponse().mapToList(data);
+      await this.redis.set(
+        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+        mappedData,
+      );
+      return mappedData;
+    } catch (e) {
+      throw new CatchException(e);
     }
+  }
+
+  async getMarketCashFlow() {
+    try {
+      const query: string = `
+        SELECT
+        SUM(CASE WHEN changePrice1d > 0 THEN accumulatedVal ELSE 0 END) as increase,
+        SUM(CASE WHEN changePrice1d < 0 THEN accumulatedVal ELSE 0 END) as decrease,
+        SUM(CASE WHEN changePrice1d = 0 THEN accumulatedVal ELSE 0 END) as equal
+        FROM
+        [WEBSITE_SERVER].[dbo].[stock_value]
+        WHERE [index] != 'VN30' AND [index] != 'HNX30';
+      `;
+      return new MarketCashFlowResponse((await this.db.query(query))![0])
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
 }

@@ -8,6 +8,7 @@ export enum TimeToLive {
     HaftMinute = 30,
     Minute= 60,
     FiveMinutes = 300,
+    HaftHour = 1800,
     FiveMinutesMilliSeconds = 300000,
     OneHour = 360,
     OneDay = 86400,

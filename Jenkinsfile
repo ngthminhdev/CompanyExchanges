@@ -27,10 +27,13 @@ pipeline {
         }
 
         stage('Build and Push Docker Image') {
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
             steps {
                 script {
                     withDockerRegistry([credentialsId: credentialsId, url: registryUrl]) {
-                        def dockerImage = docker.build("ngthminhdev/stock-docker-hub:${VERSION}", "./docker")
+                        def dockerImage = docker.build("ngthminhdev/b-info-backend:${VERSION}", "./docker")
                         dockerImage.push()
                     }
                 }

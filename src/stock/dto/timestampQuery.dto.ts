@@ -1,7 +1,8 @@
 import {ApiProperty} from "@nestjs/swagger";
 import {IsEnum} from "class-validator";
+import {IndexQueryDto} from "./indexQuery.dto";
 
-export class TimestampQueryDto {
+export class TimestampQueryDto extends IndexQueryDto {
     @IsEnum(["0","1","2","3"], {message: 'type not found'})
     @ApiProperty({
         type: Number,

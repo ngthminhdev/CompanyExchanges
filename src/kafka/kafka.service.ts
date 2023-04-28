@@ -16,8 +16,10 @@ import {InjectDataSource} from "@nestjs/typeorm";
 import {RedisKeys} from "../enums/redis-keys.enum";
 import {TimeToLive} from "../enums/common.enum";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
-import {VnIndexResponse} from "../stock/responses/Vnindex.response";
-import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import {MarketBreadthResponse} from '../stock/responses/MarketBreadth.response';
+import {LineChartResponse} from "./responses/LineChart.response";
+import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
+import {MarketCashFlowResponse} from "./responses/MarketCashFlow.response";
 
 @Injectable()
 export class KafkaService {
@@ -114,31 +116,63 @@ export class KafkaService {
     }
 
     handleVNIndex(payload: LineChartInterface[]) {
-        this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+        this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList(payload))
     }
 
-    handleVNAll(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+    handleLineChart(payload: LineChartInterface[]) {
+        payload.forEach((item) => {
+            switch (item.comGroupCode) {
+                case 'VNINDEX':
+                    this.send(SocketEmit.ChiSoVnIndex, new LineChartResponse().mapToList([item]))
+                break;
+                case 'VNXALL':
+                    this.send(SocketEmit.ChiSoVNAll, new LineChartResponse().mapToList([item]))
+                    break;
+                case 'VN30':
+                    this.send(SocketEmit.ChiSoVN30, new LineChartResponse().mapToList([item]))
+                    break;
+                case 'HNX30':
+                    this.send(SocketEmit.ChiSoHNX30, new LineChartResponse().mapToList([item]))
+                    break;
+                case 'HNXINDEX':
+                    this.send(SocketEmit.ChiSoHNX, new LineChartResponse().mapToList([item]))
+                    break;
+                case 'UPINDEX':
+                    this.send(SocketEmit.ChiSoUPCOM, new LineChartResponse().mapToList([item]))
+                    break;
+                default:
+                    this.logger.error('Invalid IndexCode')
+            }
+        })
     }
 
-    handleVN30(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
+    handleStockValue(payload: MarketCashFlowInterface[]) {
+        const calculatedData: any = payload.reduce((prev, curr) => {
+            if (curr.index === 'VNINDEX' || curr.index === 'HNX' || curr.index === 'UPCOM') {
+                if (curr.changePrice1d > 0) {
+                    return {
+                        ...prev,
+                        increase: prev.increase + curr.accumulatedVal,
+                    }
+                } else if (curr.changePrice1d < 0) {
+                    return {
+                        ...prev,
+                        decrease: prev.decrease + curr.accumulatedVal,
+                    }
+                } else if (curr.changePrice1d == 0) {
+                    return {
+                        ...prev,
+                        equal: prev.equal + curr.accumulatedVal,
+                    }
+                }
+            }
+            return prev;
+        }, {
+            equal: 0,
+            increase: 0,
+            decrease: 0
+        });
 
-    handleHNXIndex(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleHNX30(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
-    }
-
-    handleUPCOM(payload: LineChartInterface[]) {
-        console.log(payload)
-        // this.send(SocketEmit.ChiSoVnIndex, new VnIndexResponse().mapToList(payload))
+        this.send(SocketEmit.PhanBoDongTien, new MarketCashFlowResponse(calculatedData))
     }
 }

@@ -8,9 +8,10 @@ import {ChartService} from "./chart.service";
 import {VnIndexSwagger} from "./responses/Vnindex.response";
 import {TimestampQueryDto} from "./dto/timestampQuery.dto";
 import {LineChartSwagger} from "../kafka/responses/LineChart.response";
-import {LiquidContributeQueryDto} from "./dto/liquidContributeQuery.dto";
 import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
 import {TickerContributeSwagger} from "./responses/TickerContribute.response";
+import {IndexQueryDto} from "./dto/indexQuery.dto";
+import {MarketCashFlowSwagger} from "../kafka/responses/MarketCashFlow.response";
 
 
 @Controller('chart')
@@ -49,19 +50,29 @@ export class ChartController {
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 
-    @Get('vnindex')
-    @ApiOperation({summary: 'chart line chỉ số vnindex'})
+
+    @Get('line-chart')
+    @ApiOperation({summary: 'chart line'})
     @ApiOkResponse({type: VnIndexSwagger})
-    async getVnIndex(@Query() q: TimestampQueryDto,@Res() res: Response) {
-        const data = await this.chartService.getVnIndex(parseInt(q.type));
+    async getVnIndex(@Query() q: TimestampQueryDto, @Res() res: Response) {
+        const data = await this.chartService.getLineChart(parseInt(q.type), q.index.toUpperCase());
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 
-    @Get('vnindex-now')
-    @ApiOperation({summary: 'chart line chỉ số vnindex realtime'})
+    @Get('line-chart-now')
+    @ApiOperation({summary: 'chart line chỉ số realtime'})
     @ApiOkResponse({type: LineChartSwagger})
-    async getVnIndexNow(@Res() res: Response) {
-        const data = await this.chartService.getVnIndexNow();
+    async getLineChartNow(@Query() q: IndexQueryDto, @Res() res: Response) {
+        const data = await this.chartService.getLineChartNow(q.index.toUpperCase());
+        return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+    }
+
+    //Dòng tiền thị trường
+    @Get('market-cash-flow')
+    @ApiOperation({summary: 'phân bố dòng tiền'})
+    @ApiOkResponse({type: MarketCashFlowSwagger})
+    async getMarketCashFlow(@Res() res: Response) {
+        const data = await this.chartService.getMarketCashFlow();
         return res.status(HttpStatus.OK).send(new BaseResponse({data}));
     }
 

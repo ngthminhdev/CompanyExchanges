@@ -20,7 +20,7 @@ export enum RedisKeys {
   UPCoM = 'upcom-ticker',
   Rsi = 'rsi',
   MarketEvaluation = 'market-evaluation',
-  VnIndex = 'vn-index',
+  LineChart = 'line-chart',
   IndustryFull = 'industry-full',
   MarketMap = 'market-map',
   LiquidityContribute = 'liquidity-contribute',

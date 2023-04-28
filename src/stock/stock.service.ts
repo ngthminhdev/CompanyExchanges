@@ -230,13 +230,13 @@ export class StockService {
 
             const query = (date): string => `
                 SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
-                FROM [PHANTICH].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
+                FROM [WEBSITE_SERVER].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
                 ON c.TICKER = p.ticker WHERE p.date_time = '${date}' ${byExchange} AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
             `;
 
             const marketCapQuery: string = `
                 SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
-                ${groupBy} FROM [PHANTICH].[dbo].[database_mkt] p JOIN [PHANTICH].[dbo].[ICBID] c
+                ${groupBy} FROM [PHANTICH].[dbo].[database_mkt] p JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON p.ticker = c.TICKER 
                 WHERE p.date_time IN 
                     ('${UtilCommonTemplate.toDate(latestDate)}', 
@@ -492,7 +492,7 @@ export class StockService {
             const query = (transaction: number): string => `
                 SELECT TOP 20 c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign AS total_value_${+transaction ? 'sell' : 'buy'}
                 FROM [PHANTICH].[dbo].[BCN_netvalue] n
-                JOIN [PHANTICH].[dbo].[ICBID] c
+                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker AND c.EXCHANGE = @1
                 WHERE date_time = @0
                 ORDER BY net_value_foreign ${+transaction ? 'ASC' : 'DESC'}
@@ -560,7 +560,7 @@ export class StockService {
                 SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
                     SUM(t1.net_value_foreign) AS net_value
                 FROM [PHANTICH].[dbo].[BCN_netvalue] t1
-                JOIN [PHANTICH].[dbo].[ICBID] c
+                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON t1.ticker = c.TICKER
                 WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
                 AND t1.date_time >= @1
@@ -675,7 +675,7 @@ export class StockService {
             const query = (count: number): string => `
                 select sum(total_value_mil) AS transaction_value, 
                 LV2 AS industry, date_time from [PHANTICH].[dbo].[database_mkt] t1
-                join [PHANTICH].[dbo].[ICBID] t2 on t1.ticker = t2.TICKER
+                join [WEBSITE_SERVER].[dbo].[ICBID] t2 on t1.ticker = t2.TICKER
                 where date_time
                 in (select distinct top ${count} date_time from 
                     [PHANTICH].[dbo].[database_mkt] order by date_time desc)
@@ -824,7 +824,7 @@ export class StockService {
                 SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
                 c.ticker, n.net_value_foreign AS value
                 FROM [PHANTICH].[dbo].[BCN_netvalue] n
-                JOIN [PHANTICH].[dbo].[ICBID] c
+                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker ${byExchange}
                 WHERE date_time = @0
             `;
@@ -850,7 +850,7 @@ export class StockService {
                 SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
                 c.ticker, n.${field} AS value 
                 FROM [PHANTICH].[dbo].[database_mkt] n
-                JOIN [PHANTICH].[dbo].[ICBID] c
+                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker ${byExchange}
                 WHERE date_time = @0
             `;
