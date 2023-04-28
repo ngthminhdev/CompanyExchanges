@@ -8,7 +8,7 @@ import {GetExchangeQuery} from "./dto/getExchangeQuery.dto";
 import {NetTransactionValueResponse} from "./responses/NetTransactionValue.response";
 import {IndustryResponse} from "./responses/Industry.response";
 import {RedisKeys} from "../enums/redis-keys.enum";
-import {TimeToLive} from "../enums/common.enum";
+import {TimeToLive, TransactionTimeTypeEnum} from "../enums/common.enum";
 import * as moment from "moment";
 import {SessionDatesInterface} from "./interfaces/session-dates.interface";
 import {ExchangeValueInterface, TickerByExchangeInterface} from "./interfaces/exchange-value.interface";
@@ -82,6 +82,11 @@ export class StockService {
 
     //Get the nearest day have transaction in session, week, month...
     public async getSessionDate(table: string, column: string = 'date_time'): Promise<SessionDatesInterface> {
+        let dateColumn = column;
+        if (column.startsWith('[')) {
+            dateColumn = column.slice(1, column.length - 1);
+        }
+
         const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
         const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
         const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
@@ -100,12 +105,12 @@ export class StockService {
             `;
 
         return {
-            latestDate: dates[0]?.[column] || new Date(),
-            previousDate: dates[1]?.[column] || new Date(),
-            weekDate: (await this.db.query(query, [lastWeek]))[0]?.[column] || new Date(),
-            monthDate: (await this.db.query(query, [lastMonth]))[0]?.[column] || new Date(),
-            yearDate: (await this.db.query(query, [lastYear]))[0]?.[column] || new Date(),
-            firstDateYear: (await this.db.query(query, [firstDateYear]))[0]?.[column] || new Date(),
+            latestDate: dates[0]?.[dateColumn] || new Date(),
+            previousDate: dates[1]?.[dateColumn] || new Date(),
+            weekDate: (await this.db.query(query, [lastWeek]))[0]?.[dateColumn] || new Date(),
+            monthDate: (await this.db.query(query, [lastMonth]))[0]?.[dateColumn] || new Date(),
+            yearDate: (await this.db.query(query, [lastYear]))[0]?.[dateColumn] || new Date(),
+            firstDateYear: (await this.db.query(query, [firstDateYear]))[0]?.[dateColumn] || new Date(),
         }
     }
 
@@ -758,7 +763,7 @@ export class StockService {
         try {
             const {order, type, exchange} = q;
             const redisData = await this.redis.get(`${RedisKeys.LiquidityContribute}:${type}:${order}:${exchange}`);
-            if (redisData) return redisData;
+            // if (redisData) return redisData;
 
             let group: string = ` `;
             let select: string = ` t.Ticker as symbol, `;
@@ -767,19 +772,19 @@ export class StockService {
                         sum(m.total_vol) as totalVolume,
                         sum(t.Gia_tri_mua) - sum(t.Gia_tri_ban) as supplyDemandValueGap,
                         sum(t.Chenh_lech_cung_cau) as supplyDemandVolumeGap `;
-            let ex: string = exchange.toUpperCase() == 'ALL' ?  " " : `where c.EXCHANGE = '${exchange.toUpperCase()}'`;
+            let ex: string = exchange.toUpperCase() == 'ALL' ?  " " : ` and c.EXCHANGE = '${exchange.toUpperCase()}'`;
             switch (parseInt(type)) {
                 case SelectorTypeEnum.LV1:
                     select = ' c.LV1 as symbol, ';
-                    group = ' group by c.LV1 '
+                    group = ` and c.LV1 != '#N/A' group by c.LV1 `
                 break;
                 case SelectorTypeEnum.LV2:
                     select = ' c.LV2 as symbol, ';
-                    group = ' group by c.LV2 '
+                    group = ` and c.LV2 != '#N/A' group by c.LV2 `
                 break;
                 case SelectorTypeEnum.LV3:
                     select = ' c.LV3 as symbol, ';
-                    group = ' group by c.LV3 '
+                    group = ` and c.LV3 != '#N/A' group by c.LV3 `
                 break;
                 default:
                     select2 = ` 
@@ -788,16 +793,36 @@ export class StockService {
                        t.Gia_tri_mua - t.Gia_tri_ban as supplyDemandValueGap,
                        t.Chenh_lech_cung_cau as supplyDemandVolumeGap `
             }
+            const { latestDate, weekDate, monthDate, firstDateYear } =
+                await this.getSessionDate(`[PHANTICH].[dbo].[TICKER_AC_CC]`, '[Date Time]');
+
+            let startDate: Date | string;
+
+            switch (+order) {
+                case TransactionTimeTypeEnum.Latest:
+                    startDate = UtilCommonTemplate.toDate(latestDate);
+                    break;
+                case TransactionTimeTypeEnum.OneWeek:
+                    startDate = UtilCommonTemplate.toDate(weekDate);
+                    break;
+                case TransactionTimeTypeEnum.OneMonth:
+                    startDate = UtilCommonTemplate.toDate(monthDate);
+                    break;
+                default:
+                    startDate = UtilCommonTemplate.toDate(firstDateYear);
+                    break;
+            }
 
             const query: string = `
                 select top 30 ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
-                and t.[Date Time] = m.date_time ${ex} ${group} 
+                and t.[Date Time] = m.date_time 
+                where t.[Date Time] >= @0 and t.[Date Time] <=@1  ${ex} ${group} 
                 order by totalValueMil desc
             `;
 
-            const data = await this.db.query(query);
+            const data = await this.db.query(query, [startDate, UtilCommonTemplate.toDate(latestDate)]);
             const exchangesVolume: any = await this.getExchangesVolume();
             const mappedData = new LiquidContributeResponse().mapToList(data, exchangesVolume[exchange.toUpperCase()])
             await this.redis.set(`${RedisKeys.LiquidityContribute}:${type}:${order}:${exchange}`, mappedData)

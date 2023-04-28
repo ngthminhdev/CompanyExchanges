@@ -26,7 +26,7 @@ export class UtilCommonTemplate {
     if (!value) {
       return 0;
     }
-    return moment(value).utc().valueOf();
+    return moment(value).utc().add(1, 'day').valueOf();
   }
 
   static toDate(value: any): any {
