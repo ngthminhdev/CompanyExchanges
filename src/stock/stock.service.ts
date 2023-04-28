@@ -818,8 +818,10 @@ export class StockService {
                 await this.redis.get<MarketMapResponse[]>(`${RedisKeys.MarketMap}:${exchange}:${order}`);
             if (redisData) return redisData;
 
-            const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
+            let {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
+            let date = latestDate;
             if (+order === MarketMapEnum.Foreign) {
+             date = (await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]')).latestDate;
                 const query: string = `
                 SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
                 c.ticker, n.net_value_foreign AS value
@@ -829,7 +831,7 @@ export class StockService {
                 WHERE date_time = @0
             `;
                 const mappedData =
-                    new MarketMapResponse().mapToList((await this.db.query(query,[latestDate, ex])));
+                    new MarketMapResponse().mapToList((await this.db.query(query,[date, ex])));
                 await this.redis.set(`${RedisKeys.MarketMap}:${exchange}:${order}`, mappedData);
                 return mappedData;
             }
@@ -856,7 +858,7 @@ export class StockService {
             `;
 
             const mappedData =
-                new MarketMapResponse().mapToList((await this.db.query(query,[latestDate, ex])));
+                new MarketMapResponse().mapToList((await this.db.query(query,[date, ex])));
             await this.redis.set(`${RedisKeys.MarketMap}:${exchange}:${order}`, mappedData);
 
             return mappedData;
