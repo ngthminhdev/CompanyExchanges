@@ -159,12 +159,11 @@ export class KafkaConsumer {
 
   @MessagePattern(Topics.ChiSoTrongNuoc2)
   handleDomesticIndex2(
-      @Payload() payload: any[],
+      @Payload() payload: LineChartInterface[],
       @Ctx() context: KafkaContext,
   ) {
     try {
-      // this.kafkaService.handleDomesticIndex2(payload);
-      console.log("🚀 ~ file: kafka.consumer.ts:155 ~ KafkaConsumer ~ payload:", payload)
+      this.kafkaService.handleDomesticIndex2(payload);
     } catch (error) {
       this.logger.error(error);
     }

@@ -100,6 +100,10 @@ export class KafkaService {
             .mapToList(payload)].sort((a,b) => a.ticker > b.ticker ? -1 : 1))
     }
 
+    handleDomesticIndex2(payload: LineChartInterface[]): void {
+        this.send(SocketEmit.ChiSoTrongNuoc2, payload.sort((a,b) => a.comGroupCode > b.comGroupCode ? -1 : 1))
+    }
+
     handleMarketVolatility(payload: any): void {
         this.send(SocketEmit.BienDongThiTruong, [...new MarketVolatilityKafkaResponse()
             .mapToList(payload)].sort((a,b) => a.ticker > b.ticker ? -1 : 1))
