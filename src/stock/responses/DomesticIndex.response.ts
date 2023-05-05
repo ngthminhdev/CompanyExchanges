@@ -1,7 +1,6 @@
-import {ApiProperty, PartialType} from "@nestjs/swagger";
-import {DomesticIndexInterface} from "../interfaces/domestic-index.interface";
-import {BaseResponse} from "../../utils/utils.response";
-import {UtilCommonTemplate} from "../../utils/utils.common";
+import { ApiProperty, PartialType } from "@nestjs/swagger";
+import { LineChartInterface } from "../../kafka/interfaces/line-chart.interface";
+import { BaseResponse } from "../../utils/utils.response";
 
 
 export class DomesticIndexResponse {
@@ -52,18 +51,17 @@ export class DomesticIndexResponse {
     })
     lastUpdated: Date | string;
 
-    constructor(data?: DomesticIndexInterface) {
-        this.comGroupCode = data?.ticker || "";
-        this.indexValue = data?.close_price || 0;
-        this.indexChange = data?.change_price|| 0;
-        this.totalMatchVolume = data?.volume || 0;
-        this.totalMatchValue = data?.value || 0;
-        this.net_value_foreign = data?.net_value_foreign || 0;
-        this.percentIndexChange = +data?.percent_d || 0;
-        this.lastUpdated = UtilCommonTemplate.toDateTime(data?.date_time) || "";
+    constructor(data?: LineChartInterface) {
+        this.comGroupCode = data?.comGroupCode || "";
+        this.indexValue = data?.indexValue || 0;
+        this.indexChange = data?.indexChange|| 0;
+        this.totalMatchVolume = data?.totalMatchVolume || 0;
+        this.totalMatchValue = data?.totalMatchValue || 0;
+        this.percentIndexChange = +data?.percentIndexChange || 0;
+        // this.lastUpdated = UtilCommonTemplate.toDateTime(data?.) || "";
     }
 
-    public mapToList(data?: DomesticIndexInterface[] | any[]) {
+    public mapToList(data?: LineChartInterface[] | any[]) {
         return data.map(i => new DomesticIndexResponse(i))
     }
 }

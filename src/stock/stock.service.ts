@@ -45,6 +45,7 @@ import {ChildProcess, fork} from "child_process";
 import {UtilCommonTemplate} from "../utils/utils.common";
 import {LiquidContributeResponse} from "./responses/LiquidityContribute.response";
 import {GetLiquidityQueryDto} from "./dto/getLiquidityQuery.dto";
+import { LineChartInterface } from '../kafka/interfaces/line-chart.interface';
 
 @Injectable()
 export class StockService {
@@ -415,33 +416,25 @@ export class StockService {
     //Chỉ số trong nước
     async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
         try {
-            const redisData: DomesticIndexResponse[] = await this.redis.get(RedisKeys.DomesticIndex);
-            if (redisData) return redisData
+            // const redisData: DomesticIndexResponse[] = await this.redis.get(RedisKeys.DomesticIndex);
+            // if (redisData) return redisData
 
             // If data is not available in Redis, retrieve the latest and previous dates for the index data
             // using a custom method getSessionDate() that queries a SQL database
-            const {latestDate, previousDate} = await this.getSessionDate('[PHANTICH].[dbo].[database_chisotoday]');
 
             // Construct a SQL query that selects the ticker symbol, date time, close price, change in price,
             // and percent change for all ticker symbols with data for the latest date and the previous date
             const query: string = `
-                SELECT t1.ticker, t1.date_time, t1.close_price,
-                    (t1.close_price - t2.close_price) AS change_price,
-                    (((t1.close_price - t2.close_price) / t2.close_price) * 100) AS percent_d,
-                    t1.net_value_foreign
-                FROM [PHANTICH].[dbo].[database_chisotoday] t1
-                JOIN [PHANTICH].[dbo].[database_chisotoday] t2
-                ON t1.ticker = t2.ticker AND t2.date_time = @1
-                WHERE t1.date_time = @0 ORDER BY t1.ticker DESC
+                SELECT *
+                FROM [WEBSITE_SERVER].[dbo].[index_table]
             `;
             // Execute the SQL query using a database object and pass the latest and previous dates as parameters
-            const dataToday: DomesticIndexInterface[] = await this.db.query(query, [latestDate, previousDate]);
+            const dataToday: LineChartInterface[] = await this.db.query(query);
 
             // Map the retrieved data to a list of DomesticIndexResponse objects using the mapToList() method of the DomesticIndexResponse class
             const mappedData: DomesticIndexResponse[] = new DomesticIndexResponse().mapToList(dataToday);
 
             // Cache the mapped data in Redis for faster retrieval in the future, using the same key as used earlier
-            await this.redis.set(RedisKeys.DomesticIndex, mappedData);
             return mappedData;
         } catch (e) {
             throw new CatchException(e)
