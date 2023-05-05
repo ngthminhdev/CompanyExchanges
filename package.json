@@ -1,6 +1,6 @@
 {
   "name": "b-info-backend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "author": "Minh Nguyen",
   "private": true,
@@ -46,6 +46,7 @@
     "getmac": "^5.20.0",
     "jsonwebtoken": "^9.0.0",
     "kafkajs": "^2.2.3",
+    "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "mssql": "^7.3.5",
     "ngthminhdev-nestjs-kafka": "^0.0.0",

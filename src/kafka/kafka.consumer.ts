@@ -10,6 +10,7 @@ import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.int
 import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
 import {LineChartInterface} from "./interfaces/line-chart.interface";
 import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
+import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
 
 @Controller()
 export class KafkaConsumer {
@@ -137,9 +138,36 @@ export class KafkaConsumer {
         this.kafkaService.handleTopRocHNX(payload),
         this.kafkaService.handleTopRocHSX(payload),
         this.kafkaService.handleTopRocUPCOM(payload),
+        this.kafkaService.handleTickerContribute(payload)
       ])
     } catch (error) {
       this.logger.error(error);
     }
   }
+
+  @MessagePattern(Topics.Foreign)
+  handleForeign(
+      @Payload() payload: ForeignKafkaInterface[],
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleForeign(payload);
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.ChiSoTrongNuoc2)
+  handleDomesticIndex2(
+      @Payload() payload: any[],
+      @Ctx() context: KafkaContext,
+  ) {
+    try {
+      // this.kafkaService.handleDomesticIndex2(payload);
+      console.log("🚀 ~ file: kafka.consumer.ts:155 ~ KafkaConsumer ~ payload:", payload)
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
 }

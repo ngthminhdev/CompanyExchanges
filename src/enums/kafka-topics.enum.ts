@@ -8,6 +8,8 @@ export enum Topics {
   ChiSoVNIndex = 'kafka-chi-so-vnindex-topic',
   LineChart = 'kafka-index-line-chart-topic',
   StockValue = 'kafka-stock-value-topic',
+  Foreign = 'kafka-foreign-topic',
+  ChiSoTrongNuoc2 = 'kafka-domestic-index-topic'
 }
 
 export const requestPatterns: string[] = [

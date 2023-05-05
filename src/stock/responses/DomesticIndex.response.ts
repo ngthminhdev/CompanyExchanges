@@ -9,13 +9,13 @@ export class DomesticIndexResponse {
         type: String,
         example: 'VNIndex'
     })
-    ticker: string;
+    comGroupCode: string;
 
     @ApiProperty({
         type: Number,
         example: 1502.9
     })
-    price: number;
+    indexValue: number;
 
     @ApiProperty({
         type: Number,
@@ -27,25 +27,25 @@ export class DomesticIndexResponse {
         type: Number,
         example: 502.9
     })
-    volume: number;
+    totalMatchVolume: number;
 
     @ApiProperty({
         type: Number,
         example: 502.9
     })
-    value: number;
+    totalMatchValue: number;
 
     @ApiProperty({
         type: Number,
         example: 5.2
     })
-    change_price: number;
+    indexChange: number;
 
     @ApiProperty({
         type: Number,
         example: 0.9
     })
-    percent_d: number;
+    percentIndexChange: number;
 
     @ApiProperty({
         type: Date,
@@ -53,13 +53,13 @@ export class DomesticIndexResponse {
     lastUpdated: Date | string;
 
     constructor(data?: DomesticIndexInterface) {
-        this.ticker = data?.ticker || "";
-        this.price = data?.close_price || 0;
-        this.change_price = data?.change_price|| 0;
-        this.volume = data?.volume || 0;
-        this.value = data?.value || 0;
+        this.comGroupCode = data?.ticker || "";
+        this.indexValue = data?.close_price || 0;
+        this.indexChange = data?.change_price|| 0;
+        this.totalMatchVolume = data?.volume || 0;
+        this.totalMatchValue = data?.value || 0;
         this.net_value_foreign = data?.net_value_foreign || 0;
-        this.percent_d = +data?.percent_d || 0;
+        this.percentIndexChange = +data?.percent_d || 0;
         this.lastUpdated = UtilCommonTemplate.toDateTime(data?.date_time) || "";
     }
 
