@@ -247,14 +247,14 @@ export class KafkaService {
 
     async handleForeign(payload: ForeignKafkaInterface[]) {
         const tickerIndustry = await this.getTickerInIndustry();
+        
+        const tickerBuyHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal > 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
+        const tickerBuyHNX = payload.filter(item => item.floor === 'HNX' && item.netVal > 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
+        const tickerBuyUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal > 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
 
-        const tickerBuyHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
-        const tickerBuyHNX = payload.filter(item => item.floor === 'HNX' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
-        const tickerBuyUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
-
-        const tickerSellHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
-        const tickerSellHNX = payload.filter(item => item.floor === 'HNX' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
-        const tickerSellUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+        const tickerSellHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal < 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
+        const tickerSellHNX = payload.filter(item => item.floor === 'HNX' && item.netVal < 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
+        const tickerSellUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal < 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
 
         this.send(SocketEmit.ForeignBuyHSX, new ForeignKafkaResponse().mapToList(tickerBuyHSX));
         this.send(SocketEmit.ForeignBuyHNX, new ForeignKafkaResponse().mapToList(tickerBuyHNX));
