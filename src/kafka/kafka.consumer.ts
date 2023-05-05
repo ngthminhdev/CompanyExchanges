@@ -152,6 +152,7 @@ export class KafkaConsumer {
   ) {
     try {
       this.kafkaService.handleForeign(payload);
+      this.kafkaService.handleTopForeign(payload)
     } catch (error) {
       this.logger.error(error);
     }

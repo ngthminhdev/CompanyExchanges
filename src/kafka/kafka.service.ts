@@ -24,6 +24,7 @@ import { IndustryKafkaResponse } from "./responses/IndustryKafka.response";
 import { LineChartResponse } from "./responses/LineChart.response";
 import { MarketCashFlowResponse } from "./responses/MarketCashFlow.response";
 import { MarketVolatilityKafkaResponse } from "./responses/MarketVolatilityKafka.response";
+import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
 
 @Injectable()
 export class KafkaService {
@@ -263,6 +264,10 @@ export class KafkaService {
         this.send(SocketEmit.ForeignSellHSX, new ForeignKafkaResponse().mapToList(tickerSellHSX));
         this.send(SocketEmit.ForeignSellHNX, new ForeignKafkaResponse().mapToList(tickerSellHNX));
         this.send(SocketEmit.ForeignSellUPCOM, new ForeignKafkaResponse().mapToList(tickerSellUPCOM));
+    }
 
+    async handleTopForeign(payload: ForeignKafkaInterface[]) {
+        const data = this.getTop10HighestAndLowestData(payload, 'netVal');
+        this.send(SocketEmit.TopForeign, new TopNetForeignKafkaResponse().mapToList(data));
     }
 }
