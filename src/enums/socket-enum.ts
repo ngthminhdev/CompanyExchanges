@@ -28,8 +28,12 @@ export enum SocketEmit {
     HnxTickerContribute5 = 'listen-hnx-ticker-contribute-5',
     UpTickerContribute5 = 'listen-up-ticker-contribute-5',
 
-    ForeignHSX = 'listen-foreign-hsx',
-    ForeignHNX = 'listen-foreign-hnx',
-    ForeignUPCOM = 'listen-foreign-upcom',
+    ForeignBuyHSX = 'listen-foreign-buy-hsx',
+    ForeignBuyHNX = 'listen-foreign-buy-hnx',
+    ForeignBuyUPCOM = 'listen-foreign-buy-upcom',
+
+    ForeignSellHSX = 'listen-foreign-sell-hsx',
+    ForeignSellHNX = 'listen-foreign-sell-hnx',
+    ForeignSellUPCOM = 'listen-foreign-sell-upcom',
 
 }

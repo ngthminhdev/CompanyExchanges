@@ -1,30 +1,29 @@
-import {CACHE_MANAGER, Inject, Injectable, Logger} from '@nestjs/common';
-import {Server} from "socket.io";
-import {SocketEmit} from "../enums/socket-enum";
-import {MarketBreadthKafkaInterface} from "./interfaces/market-breadth-kafka.interface";
-import {MarketLiquidityKafkaInterface} from "./interfaces/market-liquidity-kakfa.interface";
-import {CatchSocketException} from "../exceptions/socket.exception";
-import {IndustryKafkaInterface} from "./interfaces/industry-kafka.interface";
-import {IndustryKafkaResponse} from "./responses/IndustryKafka.response";
-import {DomesticIndexKafkaInterface} from "./interfaces/domestic-index-kafka.interface";
-import {DomesticIndexKafkaResponse} from "./responses/DomesticIndexKafka.response";
-import {MarketVolatilityKafkaResponse} from "./responses/MarketVolatilityKafka.response";
-import {TickerChangeInterface} from "./interfaces/ticker-change.interface";
-import {DataSource} from "typeorm";
-import {Cache} from "cache-manager";
-import {InjectDataSource} from "@nestjs/typeorm";
-import {RedisKeys} from "../enums/redis-keys.enum";
-import {TimeToLive} from "../enums/common.enum";
-import {LineChartInterface} from "./interfaces/line-chart.interface";
-import {MarketBreadthResponse} from '../stock/responses/MarketBreadth.response';
-import {LineChartResponse} from "./responses/LineChart.response";
-import {MarketCashFlowInterface} from "./interfaces/market-cash-flow.interface";
-import {MarketCashFlowResponse} from "./responses/MarketCashFlow.response";
+import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectDataSource } from "@nestjs/typeorm";
+import { Cache } from "cache-manager";
 import * as _ from 'lodash';
+import { Server } from "socket.io";
+import { DataSource } from "typeorm";
+import { TimeToLive } from "../enums/common.enum";
+import { RedisKeys } from "../enums/redis-keys.enum";
+import { SocketEmit } from "../enums/socket-enum";
+import { CatchSocketException } from "../exceptions/socket.exception";
+import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import { DomesticIndexKafkaInterface } from "./interfaces/domestic-index-kafka.interface";
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
-import { log } from 'console';
+import { IndustryKafkaInterface } from "./interfaces/industry-kafka.interface";
+import { LineChartInterface } from "./interfaces/line-chart.interface";
+import { MarketBreadthKafkaInterface } from "./interfaces/market-breadth-kafka.interface";
+import { MarketCashFlowInterface } from "./interfaces/market-cash-flow.interface";
+import { MarketLiquidityKafkaInterface } from "./interfaces/market-liquidity-kakfa.interface";
+import { TickerChangeInterface } from "./interfaces/ticker-change.interface";
 import { TickerIndustryInterface } from './interfaces/ticker-industry.interface';
+import { DomesticIndexKafkaResponse } from "./responses/DomesticIndexKafka.response";
 import { ForeignKafkaResponse } from './responses/ForeignResponseKafka.response';
+import { IndustryKafkaResponse } from "./responses/IndustryKafka.response";
+import { LineChartResponse } from "./responses/LineChart.response";
+import { MarketCashFlowResponse } from "./responses/MarketCashFlow.response";
+import { MarketVolatilityKafkaResponse } from "./responses/MarketVolatilityKafka.response";
 
 @Injectable()
 export class KafkaService {
@@ -152,8 +151,8 @@ export class KafkaService {
             const upcomTickerArr: string[] = await this.getTickerArrFromRedis(RedisKeys.UPCoM);
 
             const HSXTicker = payload.filter(ticker => hsxTickerArr.includes(ticker.ticker));
-            const HNXTicker = payload.filter(ticker => hsxTickerArr.includes(ticker.ticker));
-            const UPTicker = payload.filter(ticker => hsxTickerArr.includes(ticker.ticker));
+            const HNXTicker = payload.filter(ticker => hnxTickerArr.includes(ticker.ticker));
+            const UPTicker = payload.filter(ticker => upcomTickerArr.includes(ticker.ticker));
 
             //1d
             const hsx1dData = this.getTop10HighestAndLowestData(HSXTicker, '1D')
@@ -245,14 +244,21 @@ export class KafkaService {
     async handleForeign(payload: ForeignKafkaInterface[]) {
         const tickerIndustry = await this.getTickerInIndustry();
 
-        const tickerHSX = payload.filter(item => item.floor === 'HOSE').map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}));
-        const tickerHNX = payload.filter(item => item.floor === 'HNX').map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}));
-        const tickerUPCOM = payload.filter(item => item.floor === 'UPCOM').map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}));
+        const tickerBuyHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+        const tickerBuyHNX = payload.filter(item => item.floor === 'HNX' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+        const tickerBuyUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal > 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
 
-        
-        this.send(SocketEmit.ForeignHSX, new ForeignKafkaResponse().mapToList(tickerHSX));
-        this.send(SocketEmit.ForeignHNX, new ForeignKafkaResponse().mapToList(tickerHNX));
-        this.send(SocketEmit.ForeignUPCOM, new ForeignKafkaResponse().mapToList(tickerUPCOM));
+        const tickerSellHSX = payload.filter(item => item.floor === 'HOSE' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+        const tickerSellHNX = payload.filter(item => item.floor === 'HNX' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+        const tickerSellUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal < 0).map(item => ({...item, industy: tickerIndustry.find(i => i.ticker === item.code)}).industy);
+
+        this.send(SocketEmit.ForeignBuyHSX, new ForeignKafkaResponse().mapToList(tickerBuyHSX));
+        this.send(SocketEmit.ForeignBuyHNX, new ForeignKafkaResponse().mapToList(tickerBuyHNX));
+        this.send(SocketEmit.ForeignBuyUPCOM, new ForeignKafkaResponse().mapToList(tickerBuyUPCOM));
+
+        this.send(SocketEmit.ForeignSellHSX, new ForeignKafkaResponse().mapToList(tickerSellHSX));
+        this.send(SocketEmit.ForeignSellHNX, new ForeignKafkaResponse().mapToList(tickerSellHNX));
+        this.send(SocketEmit.ForeignSellUPCOM, new ForeignKafkaResponse().mapToList(tickerSellUPCOM));
 
     }
 }
