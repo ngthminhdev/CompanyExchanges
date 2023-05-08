@@ -14,6 +14,7 @@ import { StockService } from './stock.service';
 import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { CashFlowValueResponse } from './responses/CashFlowValue.response';
+import { UtilCommonTemplate } from '../utils/utils.common';
 
 @Injectable()
 export class CashFlowService {
@@ -66,13 +67,6 @@ export class CashFlowService {
         (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
         new Date(),
     };
-  }
-
-  getTop10HighestAndLowestData(data: any[], field: string) {
-    const sortedData = _.sortBy(data, field);
-    const top10Highest = _.takeRight(sortedData, 10);
-    const top10Lowest = _.take(sortedData, 10).reverse();
-    return [...top10Highest, ...top10Lowest];
   }
 
   //Diễn biến giao dịch đầu tư
@@ -190,7 +184,7 @@ export class CashFlowService {
     });
 
     const mappedData = new CashFlowValueResponse().mapToList(
-      this.getTop10HighestAndLowestData(data, 'cashFlowValue'),
+      UtilCommonTemplate.getTop10HighestAndLowestData(data, 'cashFlowValue'),
     );
     await this.redis.set(`${RedisKeys.CashFlowValue}:${type}`, mappedData);
     return mappedData;

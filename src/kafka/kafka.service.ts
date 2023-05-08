@@ -25,6 +25,7 @@ import { LineChartResponse } from './responses/LineChart.response';
 import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
 import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
+import { UtilCommonTemplate } from '../utils/utils.common';
 
 @Injectable()
 export class KafkaService {
@@ -66,13 +67,6 @@ export class KafkaService {
       (i) => i.ticker,
     );
     return tickerArr;
-  }
-
-  getTop10HighestAndLowestData(data: any[], field: string) {
-    const sortedData = _.sortBy(data, field);
-    const top10Highest = _.takeRight(sortedData, 10);
-    const top10Lowest = _.take(sortedData, 10).reverse();
-    return [...top10Highest, ...top10Lowest];
   }
 
   getTickerInEx = async (ex: string): Promise<any> => {
@@ -202,14 +196,32 @@ export class KafkaService {
       );
 
       //1d
-      const hsx1dData = this.getTop10HighestAndLowestData(HSXTicker, '1D');
-      const hnx1dData = this.getTop10HighestAndLowestData(HNXTicker, '1D');
-      const up1dData = this.getTop10HighestAndLowestData(UPTicker, '1D');
+      const hsx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        HSXTicker,
+        '1D',
+      );
+      const hnx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        HNXTicker,
+        '1D',
+      );
+      const up1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        UPTicker,
+        '1D',
+      );
 
       //5d
-      const hsx5dData = this.getTop10HighestAndLowestData(HSXTicker, '5D');
-      const hnx5dData = this.getTop10HighestAndLowestData(HNXTicker, '5D');
-      const up5dData = this.getTop10HighestAndLowestData(UPTicker, '5D');
+      const hsx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        HSXTicker,
+        '5D',
+      );
+      const hnx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        HNXTicker,
+        '5D',
+      );
+      const up5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        UPTicker,
+        '5D',
+      );
 
       //sent
       this.send(SocketEmit.HsxTickerContribute1, hsx1dData);
@@ -359,7 +371,10 @@ export class KafkaService {
   }
 
   async handleTopForeign(payload: ForeignKafkaInterface[]) {
-    const data = this.getTop10HighestAndLowestData(payload, 'netVal');
+    const data = UtilCommonTemplate.getTop10HighestAndLowestData(
+      payload,
+      'netVal',
+    );
     this.send(
       SocketEmit.TopForeign,
       new TopNetForeignKafkaResponse().mapToList(data),

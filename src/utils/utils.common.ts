@@ -1,5 +1,6 @@
 import { ValidationError } from '@nestjs/common';
 import * as moment from 'moment';
+import * as _ from 'lodash';
 export class UtilCommonTemplate {
   static toDateTime(value?: any): any | string {
     if (!value) {
@@ -47,16 +48,19 @@ export class UtilCommonTemplate {
   }
 
   static uuid(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      },
+    );
   }
 
   static generateDeviceId(mac: string, userAgent: string) {
     // Chuyển đổi chuỗi thành mảng byte
-    const arr1 = mac.split(':').map(x => parseInt(x, 16));
+    const arr1 = mac.split(':').map((x) => parseInt(x, 16));
     const arr2 = new TextEncoder().encode(userAgent);
 
     // Tạo một ArrayBuffer có kích thước đủ để chứa cả hai mảng byte
@@ -69,25 +73,39 @@ export class UtilCommonTemplate {
 
     // Tạo UUID từ ArrayBuffer
     const uuidBytes = new Uint8Array(buffer);
-    uuidBytes[6] = (uuidBytes[6] & 0x0f) | 0x40;  // version 4
-    uuidBytes[8] = (uuidBytes[8] & 0x3f) | 0x80;  // variant 1
-    const uuid = Array.from(uuidBytes).map(x => x.toString(16).padStart(2, '0')).join('');
-    return uuid.slice(0, 25)
+    uuidBytes[6] = (uuidBytes[6] & 0x0f) | 0x40; // version 4
+    uuidBytes[8] = (uuidBytes[8] & 0x3f) | 0x80; // variant 1
+    const uuid = Array.from(uuidBytes)
+      .map((x) => x.toString(16).padStart(2, '0'))
+      .join('');
+    return uuid.slice(0, 25);
   }
 
-
   static fileNameRegex(fileName: string): string {
-    return fileName.slice(0, fileName.lastIndexOf(".")).toLowerCase().normalize("NFD")
-        .replace(/[\u0300-\u036f\s]/g, "")
-        .replace(/\s+/g, "-") + this.uuid();
+    return (
+      fileName
+        .slice(0, fileName.lastIndexOf('.'))
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f\s]/g, '')
+        .replace(/\s+/g, '-') + this.uuid()
+    );
   }
 
   static getFileExt(fileName: string): string {
-    return fileName.slice(fileName.lastIndexOf(".") + 1, fileName.length)
+    return fileName.slice(fileName.lastIndexOf('.') + 1, fileName.length);
   }
 
   static generateOTP(): string {
-    return Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    return Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, '0');
   }
 
+  static getTop10HighestAndLowestData(data: any[], field: string) {
+    const sortedData = _.orderBy(data, field, 'desc');
+    const top10Highest = _.take(sortedData, 10);
+    const top10Lowest = _.take(_.reverse(sortedData), 10);
+    return [...top10Highest, ...top10Lowest];
+  }
 }
