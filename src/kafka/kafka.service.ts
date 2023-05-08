@@ -257,13 +257,13 @@ export class KafkaService {
         const tickerSellHNX = payload.filter(item => item.floor === 'HNX' && item.netVal < 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
         const tickerSellUPCOM = payload.filter(item => item.floor === 'UPCOM' && item.netVal < 0).map(item => ({...item, industry: tickerIndustry.find(i => i.ticker === item.code)?.industry}));
 
-        this.send(SocketEmit.ForeignBuyHSX, new ForeignKafkaResponse().mapToList(tickerBuyHSX));
-        this.send(SocketEmit.ForeignBuyHNX, new ForeignKafkaResponse().mapToList(tickerBuyHNX));
-        this.send(SocketEmit.ForeignBuyUPCOM, new ForeignKafkaResponse().mapToList(tickerBuyUPCOM));
+        this.send(SocketEmit.ForeignBuyHSX, new ForeignKafkaResponse().mapToList([...tickerBuyHSX.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
+        this.send(SocketEmit.ForeignBuyHNX, new ForeignKafkaResponse().mapToList([...tickerBuyHNX.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
+        this.send(SocketEmit.ForeignBuyUPCOM, new ForeignKafkaResponse().mapToList([...tickerBuyUPCOM.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
 
-        this.send(SocketEmit.ForeignSellHSX, new ForeignKafkaResponse().mapToList(tickerSellHSX));
-        this.send(SocketEmit.ForeignSellHNX, new ForeignKafkaResponse().mapToList(tickerSellHNX));
-        this.send(SocketEmit.ForeignSellUPCOM, new ForeignKafkaResponse().mapToList(tickerSellUPCOM));
+        this.send(SocketEmit.ForeignSellHSX, new ForeignKafkaResponse().mapToList([...tickerSellHSX.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
+        this.send(SocketEmit.ForeignSellHNX, new ForeignKafkaResponse().mapToList([...tickerSellHNX.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
+        this.send(SocketEmit.ForeignSellUPCOM, new ForeignKafkaResponse().mapToList([...tickerSellUPCOM.sort((a, b) => a.netVal - b.netVal ? 1 : -1)]));
     }
 
     async handleTopForeign(payload: ForeignKafkaInterface[]) {

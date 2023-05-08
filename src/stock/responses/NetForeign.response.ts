@@ -35,7 +35,7 @@ export class NetForeignResponse {
     total_value_sell?: number;
 
     constructor(data?: NetForeignInterface) {
-        this.EXCHANGE = data?.EXCHANGE || '';
+        this.EXCHANGE = data?.EXCHANGE && data?.EXCHANGE == 'HSX' ? 'HOSE' : data?.EXCHANGE || '';
         this.LV2 = data?.LV2 || '';
         this.ticker = data?.ticker || '';
         data?.total_value_buy != undefined && (this.total_value_buy = data?.total_value_buy);
