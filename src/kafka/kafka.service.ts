@@ -323,28 +323,31 @@ export class KafkaService {
   ) {
     const tickerIndustry = await this.getTickerInIndustry();
 
-    const filteredPayload = payload.filter(
-      (item) => item.floor === floor && item.netVal === netVal,
-    );
-    const tickerList = filteredPayload
+    const tickerList = _(payload)
+      .filter((item) => item.floor === floor && item.netVal * netVal > 0)
       .map((item) => ({
         ...item,
         industry: tickerIndustry.find((i) => i.ticker === item.code)?.industry,
       }))
-      .filter((i) => !!i.industry);
-    return new ForeignKafkaResponse().mapToList([
-      ...tickerList.sort((a, b) => (a.netVal - b.netVal ? 1 : -1)),
-    ]);
+      .filter((i) => i.industry !== undefined)
+      .sortBy('netVal')
+      .value();
+
+    return new ForeignKafkaResponse().mapToList([...tickerList]);
   }
 
   async handleForeign(payload: ForeignKafkaInterface[]) {
-    const tickerBuyHSX = this.filterAndSortPayload(payload, 'HOSE', 1);
-    const tickerBuyHNX = this.filterAndSortPayload(payload, 'HNX', 1);
-    const tickerBuyUPCOM = this.filterAndSortPayload(payload, 'UPCOM', 1);
+    const tickerBuyHSX = await this.filterAndSortPayload(payload, 'HOSE', 1);
+    const tickerBuyHNX = await this.filterAndSortPayload(payload, 'HNX', 1);
+    const tickerBuyUPCOM = await this.filterAndSortPayload(payload, 'UPCOM', 1);
 
-    const tickerSellHSX = this.filterAndSortPayload(payload, 'HOSE', -1);
-    const tickerSellHNX = this.filterAndSortPayload(payload, 'HNX', -1);
-    const tickerSellUPCOM = this.filterAndSortPayload(payload, 'UPCOM', -1);
+    const tickerSellHSX = await this.filterAndSortPayload(payload, 'HOSE', -1);
+    const tickerSellHNX = await this.filterAndSortPayload(payload, 'HNX', -1);
+    const tickerSellUPCOM = await this.filterAndSortPayload(
+      payload,
+      'UPCOM',
+      -1,
+    );
 
     this.send(SocketEmit.ForeignBuyHSX, tickerBuyHSX);
     this.send(SocketEmit.ForeignBuyHNX, tickerBuyHNX);
