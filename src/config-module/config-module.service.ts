@@ -35,7 +35,7 @@ export class  ConfigServiceProvider {
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
       synchronize: false,
-      logging: true,
+      // logging: true,
       options: { encrypt: false },
     };
   }

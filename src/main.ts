@@ -1,15 +1,15 @@
-import {NestFactory} from '@nestjs/core';
-import {AppModule} from './app.module';
-import {HttpStatus, ValidationError, ValidationPipe,} from '@nestjs/common';
-import {NestExpressApplication} from '@nestjs/platform-express';
-import {join} from 'path';
-import {DocumentBuilder, SwaggerModule} from '@nestjs/swagger';
-import {ExceptionResponse} from './exceptions/common.exception';
-import {UtilCommonTemplate} from './utils/utils.common';
-import {ValidationFilter} from './filters/validation.filter';
-import {HttpLoggerInterceptor} from './interceptors/http-logger.interceptor';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { HttpStatus, ValidationError, ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ExceptionResponse } from './exceptions/common.exception';
+import { UtilCommonTemplate } from './utils/utils.common';
+import { ValidationFilter } from './filters/validation.filter';
+import { HttpLoggerInterceptor } from './interceptors/http-logger.interceptor';
 import * as cookieParser from 'cookie-parser';
-import {CONFIG_SERVICE} from './constants';
+import { CONFIG_SERVICE } from './constants';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

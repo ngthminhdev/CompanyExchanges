@@ -1,22 +1,22 @@
-import {CACHE_MANAGER, Inject, Injectable} from '@nestjs/common';
-import {MarketLiquidityChartResponse} from './responses/MarketLiquidityChart.response';
-import {CatchException} from '../exceptions/common.exception';
-import {Cache} from 'cache-manager';
-import {InjectDataSource} from '@nestjs/typeorm';
-import {DataSource} from 'typeorm';
-import {MarketBreadthResponse} from './responses/MarketBreadth.response';
-import {VnIndexResponse} from './responses/Vnindex.response';
-import {TransactionTimeTypeEnum} from '../enums/common.enum';
-import {StockService} from './stock.service';
-import {SessionDatesInterface} from './interfaces/session-dates.interface';
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { MarketLiquidityChartResponse } from './responses/MarketLiquidityChart.response';
+import { CatchException } from '../exceptions/common.exception';
+import { Cache } from 'cache-manager';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { MarketBreadthResponse } from './responses/MarketBreadth.response';
+import { VnIndexResponse } from './responses/Vnindex.response';
+import { TransactionTimeTypeEnum } from '../enums/common.enum';
+import { StockService } from './stock.service';
+import { SessionDatesInterface } from './interfaces/session-dates.interface';
 import * as moment from 'moment';
-import {RedisKeys} from '../enums/redis-keys.enum';
-import {UtilCommonTemplate} from '../utils/utils.common';
-import {LineChartResponse} from '../kafka/responses/LineChart.response';
-import {GetLiquidityQueryDto} from './dto/getLiquidityQuery.dto';
-import {TickerContributeResponse} from './responses/TickerContribute.response';
-import {SelectorTypeEnum} from '../enums/exchange.enum';
-import {MarketCashFlowResponse} from "../kafka/responses/MarketCashFlow.response";
+import { RedisKeys } from '../enums/redis-keys.enum';
+import { UtilCommonTemplate } from '../utils/utils.common';
+import { LineChartResponse } from '../kafka/responses/LineChart.response';
+import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
+import { TickerContributeResponse } from './responses/TickerContribute.response';
+import { SelectorTypeEnum } from '../enums/exchange.enum';
+import { MarketCashFlowResponse } from '../kafka/responses/MarketCashFlow.response';
 
 @Injectable()
 export class ChartService {
@@ -27,9 +27,37 @@ export class ChartService {
     private readonly stockService: StockService,
   ) {}
 
+  timeCheck(): boolean {
+    const now = new Date();
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+    );
+    const end = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      9,
+      15,
+      0,
+    );
+
+    if (now > start && now < end) {
+      return false;
+    }
+    return true;
+  }
+
   // Thanh khoản phiên trước
   async getMarketLiquidityYesterday() {
     try {
+      const timeCheck = this.timeCheck();
+      if (!timeCheck) return [];
+
       return new MarketLiquidityChartResponse().mapToList(
         await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
@@ -44,6 +72,9 @@ export class ChartService {
   //Thanh khoản phiên hiện tại
   async getMarketLiquidityToday() {
     try {
+      const timeCheck = this.timeCheck();
+      if (!timeCheck) return [];
+
       return new MarketLiquidityChartResponse().mapToList(
         await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
@@ -58,6 +89,9 @@ export class ChartService {
   // Độ rộng ngành
   async getMarketBreadth() {
     try {
+      const timeCheck = this.timeCheck();
+      if (!timeCheck) return [];
+
       return new MarketBreadthResponse().mapToList(
         await this.db.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
@@ -111,7 +145,7 @@ export class ChartService {
           startDate = latestDate;
       }
 
-      console.log({startDate, latestDate})
+      console.log({ startDate, latestDate });
 
       const query: string = `
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
@@ -124,7 +158,10 @@ export class ChartService {
         await this.db.query(query, [startDate, latestDate]),
         type,
       );
-      await this.redis.set(`${RedisKeys.LineChart}:${type}:${index}`, mappedData);
+      await this.redis.set(
+        `${RedisKeys.LineChart}:${type}:${index}`,
+        mappedData,
+      );
       return { lineChartData: mappedData, industryFull };
     } catch (e) {
       throw new CatchException(e);
@@ -157,7 +194,8 @@ export class ChartService {
 
       const { latestDate, weekDate, monthDate, firstDateYear } =
         await this.stockService.getSessionDate(
-          `[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date'
+          `[COPHIEUANHHUONG].[dbo].[${ex}]`,
+          'date',
         );
       let endDate: Date | string;
 
@@ -249,10 +287,9 @@ export class ChartService {
         [WEBSITE_SERVER].[dbo].[stock_value]
         WHERE [index] != 'VN30' AND [index] != 'HNX30';
       `;
-      return new MarketCashFlowResponse((await this.db.query(query))![0])
+      return new MarketCashFlowResponse((await this.db.query(query))![0]);
     } catch (e) {
-      throw new CatchException(e)
+      throw new CatchException(e);
     }
   }
-
 }
