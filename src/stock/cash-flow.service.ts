@@ -2,8 +2,8 @@ import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
-import { DataSource } from 'typeorm';
 import * as _ from 'lodash';
+import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
 import {
   InvestorTypeEnum,
@@ -189,4 +189,6 @@ export class CashFlowService {
     await this.redis.set(`${RedisKeys.CashFlowValue}:${type}`, mappedData);
     return mappedData;
   }
+
+  async getLiquidityGrowth(type: number) {}
 }

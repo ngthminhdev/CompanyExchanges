@@ -40,4 +40,19 @@ export class CashFlowController {
     const data = await this.cashFlowService.getCashFlowValue(parseInt(q.type));
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('liquidity-growth')
+  @ApiOperation({
+    summary: 'Mức tăng trưởng thanh khoản',
+  })
+  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  async getLiquidityGrowth(
+    @Query() q: TimestampQueryOnlyDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getLiquidityGrowth(
+      parseInt(q.type),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

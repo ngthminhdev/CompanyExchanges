@@ -48,6 +48,8 @@ import { TopNetForeignResponse } from './responses/TopNetForeign.response';
 import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.response';
 import { TopRocResponse } from './responses/TopRoc.response';
 import { MarketMapResponse } from './responses/market-map.response';
+import { DB_SERVER } from '../constants';
+import { CashFlowService } from './cash-flow.service';
 
 @Injectable()
 export class StockService {
@@ -55,6 +57,7 @@ export class StockService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     @InjectDataSource() private readonly db: DataSource,
+    @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
   ) {}
 
   public async getExchangesVolume(): Promise<any> {
@@ -127,6 +130,7 @@ export class StockService {
   public async getSessionDate(
     table: string,
     column: string = 'date_time',
+    instance: any = this.db,
   ): Promise<SessionDatesInterface> {
     let dateColumn = column;
     if (column.startsWith('[')) {
@@ -138,7 +142,7 @@ export class StockService {
     const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
 
-    const dates = await this.db.query(`
+    const dates = await instance.query(`
             SELECT DISTINCT TOP 2 ${column} FROM ${table}
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `);
@@ -153,14 +157,16 @@ export class StockService {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate:
-        (await this.db.query(query, [lastWeek]))[0]?.[dateColumn] || new Date(),
+        (await instance.query(query, [lastWeek]))[0]?.[dateColumn] ||
+        new Date(),
       monthDate:
-        (await this.db.query(query, [lastMonth]))[0]?.[dateColumn] ||
+        (await instance.query(query, [lastMonth]))[0]?.[dateColumn] ||
         new Date(),
       yearDate:
-        (await this.db.query(query, [lastYear]))[0]?.[dateColumn] || new Date(),
+        (await instance.query(query, [lastYear]))[0]?.[dateColumn] ||
+        new Date(),
       firstDateYear:
-        (await this.db.query(query, [firstDateYear]))[0]?.[dateColumn] ||
+        (await instance.query(query, [firstDateYear]))[0]?.[dateColumn] ||
         new Date(),
     };
   }
@@ -637,20 +643,24 @@ export class StockService {
       if (redisData) return redisData;
 
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        '[PHANTICH].[dbo].[BCN_netvalue]',
+        '[marketTrade].[dbo].[foreign]',
+        'date',
+        this.dbServer,
       );
-      const query = (transaction: number): string => `
-                SELECT TOP 20 c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign AS total_value_${
-                  +transaction ? 'sell' : 'buy'
-                }
-                FROM [PHANTICH].[dbo].[BCN_netvalue] n
-                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
-                ON c.TICKER = n.ticker AND c.EXCHANGE = @1
-                WHERE date_time = @0
-                ORDER BY net_value_foreign ${+transaction ? 'ASC' : 'DESC'}
-            `;
 
-      const data: NetForeignInterface[] = await this.db.query(
+      const query = (transaction: number): string => `
+        SELECT c.floor as EXCHANGE, c.LV2, c.code as ticker, n.netVal AS total_value_${
+          +transaction ? 'sell' : 'buy'
+        }
+        FROM [marketTrade].[dbo].[foreign] n
+        JOIN [marketInfor].[dbo].[info] c
+        ON c.code = n.code AND c.floor = @1
+        WHERE date = @0 and n.netVal ${+transaction ? ' < 0 ' : ' > 0 '}
+        ORDER BY netVal ${+transaction ? 'ASC' : 'DESC'}
+    `;
+      console.log(query(transaction), [latestDate, exchange]);
+
+      const data: NetForeignInterface[] = await this.dbServer.query(
         query(transaction),
         [latestDate, exchange],
       );
