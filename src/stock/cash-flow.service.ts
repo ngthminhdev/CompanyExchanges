@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import { DataSource } from 'typeorm';
+import * as _ from 'lodash';
 import { DB_SERVER } from '../constants';
 import {
   InvestorTypeEnum,
@@ -12,6 +13,7 @@ import { SessionDatesInterface } from './interfaces/session-dates.interface';
 import { StockService } from './stock.service';
 import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
 import { RedisKeys } from '../enums/redis-keys.enum';
+import { CashFlowValueResponse } from './responses/CashFlowValue.response';
 
 @Injectable()
 export class CashFlowService {
@@ -64,6 +66,13 @@ export class CashFlowService {
         (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
         new Date(),
     };
+  }
+
+  getTop10HighestAndLowestData(data: any[], field: string) {
+    const sortedData = _.sortBy(data, field);
+    const top10Highest = _.takeRight(sortedData, 10);
+    const top10Lowest = _.take(sortedData, 10).reverse();
+    return [...top10Highest, ...top10Lowest];
   }
 
   //Diễn biến giao dịch đầu tư
@@ -124,7 +133,7 @@ export class CashFlowService {
       latestDate,
     ]);
 
-    await data.forEach((item) => {
+    await data.forEach((item: Record<string, number>) => {
       item.price = tickerPrice[item.code] || 0;
     });
 
@@ -135,6 +144,55 @@ export class CashFlowService {
       mappedData,
     );
 
+    return mappedData;
+  }
+
+  async getCashFlowValue(type: number): Promise<CashFlowValueResponse[]> {
+    const redisData = await this.redis.get<CashFlowValueResponse[]>(
+      `${RedisKeys.CashFlowValue}:${type}`,
+    );
+
+    if (redisData) return redisData;
+
+    const tickerPrice = await this.stockService.getTickerPrice();
+    const { latestDate, weekDate, monthDate, firstDateYear } =
+      await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
+
+    let startDate!: Date | string;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = latestDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      default:
+        startDate = firstDateYear;
+        break;
+    }
+    const query: string = `
+    select ticker as code,
+       sum(om_value * (close_price + high + low) / 3)
+    as cashFlowValue
+    from [PHANTICH].[dbo].[database_mkt]
+    where date_time >= @0 and date_time <= @1
+    group by ticker
+    order by cashFlowValue desc
+    `;
+
+    const data = await this.db.query(query, [startDate, latestDate]);
+
+    await data.forEach((item: Record<string, number>) => {
+      item.price = tickerPrice[item.code] || 0;
+    });
+
+    const mappedData = new CashFlowValueResponse().mapToList(
+      this.getTop10HighestAndLowestData(data, 'cashFlowValue'),
+    );
+    await this.redis.set(`${RedisKeys.CashFlowValue}:${type}`, mappedData);
     return mappedData;
   }
 }

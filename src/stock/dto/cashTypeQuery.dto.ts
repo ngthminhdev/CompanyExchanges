@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TimestampQueryDto } from './timestampQuery.dto';
 import { IsEnum } from 'class-validator';
+import { TimestampQueryOnlyDto } from './timestampOnlyQuery.dto';
 
-export class CashTypeQueryDto {
+export class CashTypeQueryDto extends TimestampQueryOnlyDto {
   @ApiProperty({
     type: Number,
     example: 0,
@@ -13,12 +13,4 @@ export class CashTypeQueryDto {
         </p>`,
   })
   investorType: string;
-
-  @IsEnum(['0', '1', '2', '3'], { message: 'type not found' })
-  @ApiProperty({
-    type: Number,
-    description:
-      '0 - phiên hiện tại/ gần nhất, 1 - 5 phiên, 2 - 1 tháng, 3 - YtD',
-  })
-  type: string;
 }

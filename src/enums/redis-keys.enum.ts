@@ -29,4 +29,5 @@ export enum RedisKeys {
   TickerPrice = 'ticker-price',
 
   InvestorTransaction = 'investor-transaction',
+  CashFlowValue = 'cash-flow-value',
 }

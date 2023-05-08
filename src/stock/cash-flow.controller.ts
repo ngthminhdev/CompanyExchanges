@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { BaseResponse } from '../utils/utils.response';
 import { CashFlowService } from './cash-flow.service';
 import { CashTypeQueryDto } from './dto/cashTypeQuery.dto';
-import { TickerContributeSwagger } from './responses/TickerContribute.response';
+import { TimestampQueryOnlyDto } from './dto/timestampOnlyQuery.dto';
 import { InvestorTransactionSwagger } from './responses/InvestorTransaction.response';
 
 @Controller('cash-flow')
@@ -25,6 +25,19 @@ export class CashFlowController {
       parseInt(q.investorType),
       parseInt(q.type),
     );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('value')
+  @ApiOperation({
+    summary: 'Giá trị dòng tiền',
+  })
+  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  async getCashFlowValue(
+    @Query() q: TimestampQueryOnlyDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getCashFlowValue(parseInt(q.type));
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
