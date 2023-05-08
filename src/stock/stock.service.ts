@@ -488,7 +488,7 @@ export class StockService {
 
             const {latestDate}: SessionDatesInterface = await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]');
             const query = (transaction: number): string => `
-                SELECT TOP 20 c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign AS total_value_${+transaction ? 'sell' : 'buy'}
+                SELECT c.EXCHANGE, c.LV2, c.ticker, n.net_value_foreign AS total_value_${+transaction ? 'sell' : 'buy'}
                 FROM [PHANTICH].[dbo].[BCN_netvalue] n
                 JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
                 ON c.TICKER = n.ticker AND c.EXCHANGE = @1
