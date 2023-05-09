@@ -17,6 +17,8 @@ import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
 import { TickerContributeResponse } from './responses/TickerContribute.response';
 import { SelectorTypeEnum } from '../enums/exchange.enum';
 import { MarketCashFlowResponse } from '../kafka/responses/MarketCashFlow.response';
+import { DB_SERVER } from '../constants';
+import { MarketBreadthByExResponse } from './responses/MarketBreadthByEx.response';
 
 @Injectable()
 export class ChartService {
@@ -24,6 +26,7 @@ export class ChartService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     @InjectDataSource() private readonly db: DataSource,
+    @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly stockService: StockService,
   ) {}
 
@@ -87,7 +90,7 @@ export class ChartService {
   }
 
   // Độ rộng ngành
-  async getMarketBreadth() {
+  async getMarketBreadthNow() {
     try {
       const timeCheck = this.timeCheck();
       if (!timeCheck) return [];
@@ -133,7 +136,7 @@ export class ChartService {
       let startDate: Date | string;
       switch (type) {
         case TransactionTimeTypeEnum.OneWeek:
-          startDate = weekDate;
+          startDate = UtilCommonTemplate.toDate('2023/04/27');
           break;
         case TransactionTimeTypeEnum.OneMonth:
           startDate = monthDate;
@@ -144,8 +147,6 @@ export class ChartService {
         default:
           startDate = latestDate;
       }
-
-      console.log({ startDate, latestDate });
 
       const query: string = `
                 select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
@@ -288,6 +289,63 @@ export class ChartService {
         WHERE [index] != 'VN30' AND [index] != 'HNX30';
       `;
       return new MarketCashFlowResponse((await this.db.query(query))![0]);
+    } catch (e) {
+      throw new CatchException(e);
+    }
+  }
+
+  async getMarketBreadth(exchange: string, type: number) {
+    try {
+      const redisData = await this.redis.get(
+        `${RedisKeys.MarketBreadth}:${exchange}:${type}`,
+      );
+      if (redisData) return redisData;
+
+      const { latestDate, monthDate, firstDateYear }: SessionDatesInterface =
+        await this.stockService.getSessionDate(
+          '[marketTrade].[dbo].[tickerTrade]',
+          'date',
+          this.dbServer,
+        );
+      let startDate: Date | string;
+      switch (type) {
+        case 1: //1 month
+          startDate = monthDate;
+          break;
+        case 2: // 3 thang (quy')
+          startDate = UtilCommonTemplate.toDate(moment().subtract(3, 'month'));
+          break;
+        case TransactionTimeTypeEnum.YearToDate:
+          startDate = firstDateYear;
+          break;
+        default:
+          startDate = latestDate;
+      }
+
+      const query: string = `
+        select t.date as time, i.floor as [index], 
+          sum(case when t.perChange > 0 then 1 else 0 end) as advance,
+          sum(case when t.perChange < 0 then 1 else 0 end) as decline,
+          sum(case when t.perChange = 0 then 1 else 0 end) as noChange
+        from [marketTrade].[dbo].[tickerTrade] t
+        left join [marketInfor].[dbo].[info] i on
+            i.code = t.code
+        where i.floor = @0 and i.type = 'STOCK'
+          and (t.date >= @1 and t.date <= @2)
+        group by t.date, i.floor
+        order by t.date;
+      `;
+      const data = await this.dbServer.query(query, [
+        exchange,
+        startDate,
+        latestDate,
+      ]);
+      const mappedData = new MarketBreadthByExResponse().mapToList(data);
+      await this.redis.set(
+        `${RedisKeys.MarketBreadth}:${exchange}:${type}`,
+        mappedData,
+      );
+      return mappedData;
     } catch (e) {
       throw new CatchException(e);
     }
