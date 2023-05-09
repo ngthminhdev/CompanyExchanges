@@ -50,6 +50,7 @@ import { TopRocResponse } from './responses/TopRoc.response';
 import { MarketMapResponse } from './responses/market-map.response';
 import { DB_SERVER } from '../constants';
 import { CashFlowService } from './cash-flow.service';
+import { IndustryFullInterface } from './interfaces/industry-full.interface';
 
 @Injectable()
 export class StockService {
@@ -1125,6 +1126,49 @@ export class StockService {
       );
 
       return mappedData;
+    } catch (e) {
+      throw new CatchException(e);
+    }
+  }
+
+  async getUpDownTicker(exchange: string): Promise<IndustryFullInterface> {
+    try {
+      const redisData = await this.redis.get<IndustryFullInterface>(
+        `${RedisKeys.BienDongThiTruong}:${exchange}`,
+      );
+      if (redisData) return redisData;
+
+      const { latestDate, previousDate } = await this.getSessionDate(
+        '[marketTrade].[dbo].[tickerTrade]',
+        'date',
+        this.dbServer,
+      );
+
+      const query: string = `
+      select
+        sum(case when now.closePrice = prev.closePrice then 1 else 0 end) as [equal],
+        sum(case when now.closePrice >= prev.closePrice * 1.07 then 1 else 0 end) as [high],
+        sum(case when now.closePrice <= prev.closePrice * 0.93 then 1 else 0 end) as [low],
+        sum(case when now.closePrice > prev.closePrice and now.closePrice < prev.closePrice * 1.07  then 1 else 0 end) as [increase],
+        sum(case when now.closePrice < prev.closePrice and now.closePrice >= prev.closePrice * 0.93 then 1 else 0 end) as [decrease]
+      from (
+          select code, closePrice from [marketTrade].[dbo].[tickerTrade] where [date] = @0
+      ) now inner join (
+          select code, closePrice from [marketTrade].[dbo].[tickerTrade] where [date] = @1
+      ) prev on now.code = prev.code
+      join [marketInfor].[dbo].[info] i on i.code = now.code
+      where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' and i.floor = @2;
+      `;
+
+      const data: IndustryFullInterface = await this.dbServer.query(query, [
+        latestDate,
+        previousDate,
+        exchange,
+      ]);
+
+      await this.redis.set(`${RedisKeys.BienDongThiTruong}:${exchange}`, data);
+
+      return data;
     } catch (e) {
       throw new CatchException(e);
     }

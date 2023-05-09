@@ -31,4 +31,6 @@ export enum RedisKeys {
 
   InvestorTransaction = 'investor-transaction',
   CashFlowValue = 'cash-flow-value',
+
+  BienDongThiTruong = 'bien-dong-thi-truong',
 }
