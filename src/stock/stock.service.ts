@@ -657,7 +657,7 @@ export class StockService {
         ON c.code = n.code AND c.floor = @1
         WHERE date = @0 and n.netVal ${
           +transaction ? ' < 0 ' : ' > 0 '
-        } and type = 'STOCK'
+        } and c.[type] = 'STOCK'
         ORDER BY netVal ${+transaction ? 'ASC' : 'DESC'}
     `;
 
