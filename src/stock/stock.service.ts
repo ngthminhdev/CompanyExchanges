@@ -637,10 +637,10 @@ export class StockService {
   async getNetForeign(q: NetForeignQueryDto): Promise<NetForeignResponse[]> {
     try {
       const { exchange, transaction } = q;
-      const redisData: NetForeignResponse[] = await this.redis.get(
-        `${RedisKeys.NetForeign}:${exchange}:${transaction}`,
-      );
-      if (redisData) return redisData;
+      // const redisData: NetForeignResponse[] = await this.redis.get(
+      //   `${RedisKeys.NetForeign}:${exchange}:${transaction}`,
+      // );
+      // if (redisData) return redisData;
 
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[foreign]',
@@ -655,20 +655,21 @@ export class StockService {
         FROM [marketTrade].[dbo].[foreign] n
         JOIN [marketInfor].[dbo].[info] c
         ON c.code = n.code AND c.floor = @1
-        WHERE date = @0 and n.netVal ${+transaction ? ' < 0 ' : ' > 0 '}
+        WHERE date = @0 and n.netVal ${
+          +transaction ? ' < 0 ' : ' > 0 '
+        } and type = 'STOCK'
         ORDER BY netVal ${+transaction ? 'ASC' : 'DESC'}
     `;
-      console.log(query(transaction), [latestDate, exchange]);
 
       const data: NetForeignInterface[] = await this.dbServer.query(
         query(transaction),
         [latestDate, exchange],
       );
       const mappedData = new NetForeignResponse().mapToList(data);
-      await this.redis.set(
-        `${RedisKeys.NetForeign}:${exchange}:${transaction}`,
-        mappedData,
-      );
+      // await this.redis.set(
+      //   `${RedisKeys.NetForeign}:${exchange}:${transaction}`,
+      //   mappedData,
+      // );
       return mappedData;
     } catch (e) {
       throw new CatchException(e);

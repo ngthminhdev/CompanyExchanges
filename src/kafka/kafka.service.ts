@@ -236,13 +236,6 @@ export class KafkaService {
     }
   }
 
-  handleVNIndex(payload: LineChartInterface[]) {
-    this.send(
-      SocketEmit.ChiSoVnIndex,
-      new LineChartResponse().mapToList(payload),
-    );
-  }
-
   handleLineChart(payload: LineChartInterface[]) {
     payload.forEach((item) => {
       switch (item.comGroupCode) {
