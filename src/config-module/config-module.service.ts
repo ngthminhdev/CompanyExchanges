@@ -1,14 +1,14 @@
-import {Injectable} from '@nestjs/common';
-import {JwtModuleOptions} from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
-import {TypeOrmModuleOptions} from '@nestjs/typeorm';
-import {redisStore} from 'cache-manager-redis-store';
-import {KafkaOptions, Transport} from '@nestjs/microservices';
-import {Partitioners} from 'kafkajs';
-import {TimeToLive} from "../enums/common.enum";
-import {BullModuleOptions} from "@nestjs/bull";
+import { Injectable } from '@nestjs/common';
+import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { redisStore } from 'cache-manager-redis-store';
+import { KafkaOptions, Transport } from '@nestjs/microservices';
+import { Partitioners } from 'kafkajs';
+import { TimeToLive } from '../enums/common.enum';
+import { BullModuleOptions } from '@nestjs/bull';
 
 @Injectable()
-export class  ConfigServiceProvider {
+export class ConfigServiceProvider {
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'mssql',
@@ -27,10 +27,10 @@ export class  ConfigServiceProvider {
   createMssqlOptions(): TypeOrmModuleOptions {
     return {
       type: 'mssql',
-      host: process.env.MSSQL_HOST2,
-      port: parseInt(process.env.MSSQL_PORT2),
-      username: process.env.MSSQL_USERNAME2,
-      password: process.env.MSSQL_PASSWORD2,
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
       schema: 'dbo',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
@@ -41,8 +41,7 @@ export class  ConfigServiceProvider {
   }
 
   createJwtOptions(): JwtModuleOptions {
-    return {
-    };
+    return {};
   }
 
   createBullOptions(): BullModuleOptions {
@@ -57,7 +56,7 @@ export class  ConfigServiceProvider {
         removeOnComplete: true,
         removeOnFail: true,
       },
-    }
+    };
   }
 
   async createRedisOptions(): Promise<any> {
