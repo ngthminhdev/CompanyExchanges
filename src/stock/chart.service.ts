@@ -136,7 +136,7 @@ export class ChartService {
       let startDate: Date | string;
       switch (type) {
         case TransactionTimeTypeEnum.OneWeek:
-          startDate = UtilCommonTemplate.toDate('2023/04/27');
+          startDate = weekDate;
           break;
         case TransactionTimeTypeEnum.OneMonth:
           startDate = monthDate;
