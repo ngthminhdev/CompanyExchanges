@@ -1,7 +1,6 @@
-import {ApiProperty, PartialType} from "@nestjs/swagger";
-import {DomesticIndexInterface} from "../interfaces/domestic-index.interface";
-import {BaseResponse} from "../../utils/utils.response";
-import {UtilCommonTemplate} from "../../utils/utils.common";
+import { ApiProperty, PartialType } from "@nestjs/swagger";
+import { LineChartInterface } from "../../kafka/interfaces/line-chart.interface";
+import { BaseResponse } from "../../utils/utils.response";
 
 
 export class DomesticIndexResponse {
@@ -9,13 +8,13 @@ export class DomesticIndexResponse {
         type: String,
         example: 'VNIndex'
     })
-    ticker: string;
+    comGroupCode: string;
 
     @ApiProperty({
         type: Number,
         example: 1502.9
     })
-    price: number;
+    indexValue: number;
 
     @ApiProperty({
         type: Number,
@@ -27,43 +26,42 @@ export class DomesticIndexResponse {
         type: Number,
         example: 502.9
     })
-    volume: number;
+    totalMatchVolume: number;
 
     @ApiProperty({
         type: Number,
         example: 502.9
     })
-    value: number;
+    totalMatchValue: number;
 
     @ApiProperty({
         type: Number,
         example: 5.2
     })
-    change_price: number;
+    indexChange: number;
 
     @ApiProperty({
         type: Number,
         example: 0.9
     })
-    percent_d: number;
+    percentIndexChange: number;
 
     @ApiProperty({
         type: Date,
     })
     lastUpdated: Date | string;
 
-    constructor(data?: DomesticIndexInterface) {
-        this.ticker = data?.ticker || "";
-        this.price = data?.close_price || 0;
-        this.change_price = data?.change_price|| 0;
-        this.volume = data?.volume || 0;
-        this.value = data?.value || 0;
-        this.net_value_foreign = data?.net_value_foreign || 0;
-        this.percent_d = +data?.percent_d || 0;
-        this.lastUpdated = UtilCommonTemplate.toDateTime(data?.date_time) || "";
+    constructor(data?: LineChartInterface) {
+        this.comGroupCode = data?.comGroupCode || "";
+        this.indexValue = data?.indexValue || 0;
+        this.indexChange = data?.indexChange|| 0;
+        this.totalMatchVolume = data?.totalMatchVolume || 0;
+        this.totalMatchValue = data?.totalMatchValue || 0;
+        this.percentIndexChange = +data?.percentIndexChange || 0;
+        // this.lastUpdated = UtilCommonTemplate.toDateTime(data?.) || "";
     }
 
-    public mapToList(data?: DomesticIndexInterface[] | any[]) {
+    public mapToList(data?: LineChartInterface[] | any[]) {
         return data.map(i => new DomesticIndexResponse(i))
     }
 }

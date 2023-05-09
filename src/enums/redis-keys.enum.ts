@@ -25,4 +25,9 @@ export enum RedisKeys {
   MarketMap = 'market-map',
   LiquidityContribute = 'liquidity-contribute',
   TickerContribute = 'ticker-contribute',
+  TickerIndustry = 'ticker-industry',
+  TickerPrice = 'ticker-price',
+
+  InvestorTransaction = 'investor-transaction',
+  CashFlowValue = 'cash-flow-value',
 }

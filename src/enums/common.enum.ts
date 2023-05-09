@@ -10,7 +10,7 @@ export enum TimeToLive {
     FiveMinutes = 300,
     HaftHour = 1800,
     FiveMinutesMilliSeconds = 300000,
-    OneHour = 360,
+    OneHour = 3600,
     OneDay = 86400,
     OneDayMilliSeconds = 86400000,
     OneWeek = 604800,
@@ -29,4 +29,10 @@ export enum TransactionTimeTypeEnum {
 export enum TransactionEnum {
     Buy,
     Sell
+}
+
+export enum InvestorTypeEnum {
+    Foreign,
+    Retail,
+    Proprietary
 }
