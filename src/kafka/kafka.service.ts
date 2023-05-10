@@ -364,13 +364,57 @@ export class KafkaService {
   }
 
   async handleTopForeign(payload: ForeignKafkaInterface[]) {
-    const data = UtilCommonTemplate.getTop10HighestAndLowestData(
-      payload,
+    //get ticker andd filter by ex
+    const hsxTickerArr: string[] = await this.getTickerArrFromRedis(
+      RedisKeys.HOSE,
+    );
+    const hnxTickerArr: string[] = await this.getTickerArrFromRedis(
+      RedisKeys.HNX,
+    );
+    const upcomTickerArr: string[] = await this.getTickerArrFromRedis(
+      RedisKeys.UPCoM,
+    );
+
+    const HSXTicker = payload.filter((ticker) =>
+      hsxTickerArr.includes(ticker.code),
+    );
+    const HNXTicker = payload.filter((ticker) =>
+      hnxTickerArr.includes(ticker.code),
+    );
+    const UPTicker = payload.filter((ticker) =>
+      upcomTickerArr.includes(ticker.code),
+    );
+
+    //send
+
+    const HSXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      HSXTicker,
       'netVal',
     );
+
+    const HNXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      HNXTicker,
+      'netVal',
+    );
+
+    const UPData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      UPTicker,
+      'netVal',
+    );
+
     this.send(
-      SocketEmit.TopForeign,
-      new TopNetForeignKafkaResponse().mapToList(data),
+      SocketEmit.TopForeignHOSE,
+      new TopNetForeignKafkaResponse().mapToList(HSXData),
+    );
+
+    this.send(
+      SocketEmit.TopForeignHNX,
+      new TopNetForeignKafkaResponse().mapToList(HNXData),
+    );
+
+    this.send(
+      SocketEmit.TopForeignUPCOM,
+      new TopNetForeignKafkaResponse().mapToList(UPData),
     );
   }
 }
