@@ -601,25 +601,29 @@ export class StockService {
   }
 
   //Top giá trị ròng khối ngoại
-  async getTopNetForeign(): Promise<TopNetForeignResponse[]> {
+  async getTopNetForeign(exchange): Promise<TopNetForeignResponse[]> {
     try {
-      const redisData: TopNetForeignResponse[] = await this.redis.get(
-        RedisKeys.TopNetForeign,
-      );
-      if (redisData) return redisData;
+      // const redisData: TopNetForeignResponse[] = await this.redis.get(
+      //   RedisKeys.TopNetForeign,
+      // );
+      // if (redisData) return redisData;
 
       const { latestDate } = await this.getSessionDate(
-        '[PHANTICH].[dbo].[BCN_netvalue]',
+        '[marketTrade].[dbo].[foreign]',
+        'date',
+        this.dbServer,
       );
 
       // Define a function query() that takes an argument order and returns a
       // SQL query string that selects the top 10 tickers
       // with the highest or lowest net value foreign for the latest date, depending on the order argument
       const query = (order: string): string => `
-                SELECT TOP 10 ticker, net_value_foreign
-                FROM [PHANTICH].[dbo].[BCN_netvalue] t1
-                WHERE t1.date_time = @0
-                ORDER BY net_value_foreign ${order}
+                SELECT TOP 10 f.code as ticker, f.netVal as net_value_foreign
+                FROM [marketTrade].[dbo].[foreign] f
+                JOIN [marketInfor].[dbo].[info] i
+                on f.code = i.code
+                WHERE f.date = @0 and i.floor = @1 and i.[type] = 'STOCK'
+                ORDER BY netVal ${order}
             `;
       // Execute two SQL queries using the database object to retrieve the top 10 tickers
       // with the highest and lowest net value foreign
@@ -628,8 +632,8 @@ export class StockService {
         TopNetForeignInterface[],
         TopNetForeignInterface[],
       ] = await Promise.all([
-        this.db.query(query('DESC'), [latestDate]),
-        this.db.query(query('ASC'), [latestDate]),
+        this.dbServer.query(query('DESC'), [latestDate, exchange]),
+        this.dbServer.query(query('ASC'), [latestDate, exchange]),
       ]);
 
       // Concatenate the results of the two queries into a single array, and reverse the order of the bottom 10 tickers
@@ -638,7 +642,8 @@ export class StockService {
         ...dataTop,
         ...[...dataBot].reverse(),
       ]);
-      await this.redis.set(RedisKeys.TopNetForeign, mappedData);
+      // await this.redis.set(RedisKeys.TopNetForeign, mappedData);
+
       return mappedData;
     } catch (e) {
       throw new CatchException(e);

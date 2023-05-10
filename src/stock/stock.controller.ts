@@ -107,10 +107,15 @@ export class StockController {
   }
 
   @Get('top-net-foreign')
-  @ApiOperation({ summary: 'Top mua bán ròng ngoại khối' })
+  @ApiOperation({
+    summary: 'Top mua bán ròng ngoại khối',
+    description: 'HOSE, HNX,, UPCOM',
+  })
   @ApiOkResponse({ type: TopNetForeignSwagger })
-  async getTopNetForeign(@Res() res: Response) {
-    const data = await this.stockService.getTopNetForeign();
+  async getTopNetForeign(@Query() q: GetExchangeQuery, @Res() res: Response) {
+    const data = await this.stockService.getTopNetForeign(
+      q.exchange.toUpperCase(),
+    );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
