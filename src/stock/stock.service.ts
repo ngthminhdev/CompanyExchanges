@@ -1028,7 +1028,7 @@ export class StockService {
       const { latestDate, weekDate, monthDate, firstDateYear } =
         await this.getSessionDate(
           `[PHANTICH].[dbo].[TICKER_AC_CC]`,
-          '[Date Time]',
+          '[DateTime]',
         );
 
       let startDate: Date | string;
@@ -1052,8 +1052,8 @@ export class StockService {
                 select top 30 ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
-                and t.[Date Time] = m.date_time 
-                where t.[Date Time] >= @0 and t.[Date Time] <= @1  ${ex} ${group} 
+                and t.[DateTime] = m.date_time 
+                where t.[DateTime] >= @0 and t.[DateTime] <= @1  ${ex} ${group} 
                 order by totalValueMil desc
             `;
 
