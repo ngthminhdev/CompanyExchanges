@@ -61,14 +61,20 @@ export class StockService {
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
   ) {}
 
-  public async getExchangesVolume(): Promise<any> {
+  public async getExchangesVolume(
+    startDate: Date | string,
+    endDate: Date | string = startDate,
+  ): Promise<any> {
     try {
+      let exchange: any = await this.redis.get(
+        `${RedisKeys.ExchangeVolume}:${startDate}:${endDate}`,
+      );
+      if (exchange) return exchange;
+
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
         'PHANTICH.dbo.database_mkt',
       );
       //Calculate exchange volume
-      let exchange: any = await this.redis.get(RedisKeys.ExchangeVolume);
-      if (exchange) return exchange;
 
       if (!exchange) {
         exchange = (
@@ -77,18 +83,21 @@ export class StockService {
                     SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
                     FROM PHANTICH.dbo.database_mkt t
                     JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                    WHERE date_time = @0
+                    WHERE date_time >= @0 and date_time <= @1
                     GROUP BY exchange
                 `,
-            [latestDate],
+            [startDate || latestDate, endDate || latestDate],
           )
         ).reduce((prev, curr) => {
           return { ...prev, [curr.exchange]: curr.value };
         }, {});
-        await this.redis.set(RedisKeys.ExchangeVolume, {
-          ...exchange,
-          ALL: exchange?.['HSX'] + exchange?.['HNX'] + exchange?.['UPCOM'],
-        });
+        await this.redis.set(
+          `${RedisKeys.ExchangeVolume}:${startDate}:${endDate}`,
+          {
+            ...exchange,
+            ALL: exchange?.['HSX'] + exchange?.['HNX'] + exchange?.['UPCOM'],
+          },
+        );
         return {
           ...exchange,
           ALL: exchange?.['HSX'] + exchange?.['HNX'] + exchange?.['UPCOM'],
@@ -263,7 +272,9 @@ export class StockService {
         await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
 
       //Calculate exchange volume
-      let exchange: ExchangeValueInterface[] = await this.getExchangesVolume();
+      let exchange: ExchangeValueInterface[] = await this.getExchangesVolume(
+        latestDate,
+      );
 
       const query: string = `
                 SELECT t.total_value_mil AS value, t.ticker, c.LV2 AS industry, c.EXCHANGE AS exchange,
@@ -976,7 +987,7 @@ export class StockService {
       const redisData = await this.redis.get(
         `${RedisKeys.LiquidityContribute}:${type}:${order}:${exchange}`,
       );
-      // if (redisData) return redisData;
+      if (redisData) return redisData;
 
       let group: string = ` `;
       let select: string = ` t.Ticker as symbol, `;
@@ -1037,7 +1048,7 @@ export class StockService {
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
                 and t.[Date Time] = m.date_time 
-                where t.[Date Time] >= @0 and t.[Date Time] <=@1  ${ex} ${group} 
+                where t.[Date Time] >= @0 and t.[Date Time] <= @1  ${ex} ${group} 
                 order by totalValueMil desc
             `;
 
@@ -1045,7 +1056,10 @@ export class StockService {
         startDate,
         UtilCommonTemplate.toDate(latestDate),
       ]);
-      const exchangesVolume: any = await this.getExchangesVolume();
+      const exchangesVolume: any = await this.getExchangesVolume(
+        startDate,
+        UtilCommonTemplate.toDate(latestDate),
+      );
       const mappedData = new LiquidContributeResponse().mapToList(
         data,
         exchangesVolume[exchange.toUpperCase()],
