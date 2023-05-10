@@ -1084,61 +1084,73 @@ export class StockService {
     try {
       const { exchange, order } = q;
       const ex = exchange.toUpperCase();
-      const byExchange = ex === 'ALL' ? ' ' : ' AND c.EXCHANGE = @1 ';
-      const redisData = await this.redis.get<MarketMapResponse[]>(
-        `${RedisKeys.MarketMap}:${exchange}:${order}`,
-      );
-      if (redisData) return redisData;
+      const byExchange = ex === 'ALL' ? ' ' : ' AND c.floor = @1 ';
+      // const redisData = await this.redis.get<MarketMapResponse[]>(
+      //   `${RedisKeys.MarketMap}:${exchange}:${order}`,
+      // );
+      // if (redisData) return redisData;
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        '[PHANTICH].[dbo].[database_mkt]',
+        '[marketTrade].[dbo].[tickerTrade]',
+        'date',
+        this.dbServer,
       );
       let date = latestDate;
       if (+order === MarketMapEnum.Foreign) {
-        date = (await this.getSessionDate('[PHANTICH].[dbo].[BCN_netvalue]'))
-          .latestDate;
+        date = (
+          await this.getSessionDate(
+            '[marketTrade].[dbo].[foreign]',
+            'date',
+            this.dbServer,
+          )
+        ).latestDate;
         const query: string = `
-                SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
-                c.ticker, n.net_value_foreign AS value
-                FROM [PHANTICH].[dbo].[BCN_netvalue] n
-                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
-                ON c.TICKER = n.ticker ${byExchange}
-                WHERE date_time = @0
+                SELECT c.floor AS global, c.LV2 AS industry, 
+                c.code as ticker, n.netVal AS value
+                FROM [marketTrade].[dbo].[foreign] n
+                JOIN [marketInfor].[dbo].[info] c
+                ON c.code = n.code ${byExchange}
+                WHERE n.date = @0 and c.[type] = 'STOCK'
+                AND c.LV2 != ''
             `;
         const mappedData = new MarketMapResponse().mapToList(
-          await this.db.query(query, [date, ex]),
+          await this.dbServer.query(query, [date, ex]),
         );
+
         await this.redis.set(
           `${RedisKeys.MarketMap}:${exchange}:${order}`,
           mappedData,
         );
+
         return mappedData;
       }
 
       let field: string;
       switch (parseInt(order)) {
         case MarketMapEnum.MarketCap:
-          field = 'mkt_cap';
+          field = 'marketCap';
           break;
         case MarketMapEnum.Value:
-          field = 'total_value_mil';
+          field = 'totalVal';
           break;
         default:
-          field = 'total_vol';
+          field = 'totalVol';
       }
 
       const query: string = `
-                SELECT c.EXCHANGE AS global, c.LV2 AS industry, 
-                c.ticker, n.${field} AS value 
-                FROM [PHANTICH].[dbo].[database_mkt] n
-                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
-                ON c.TICKER = n.ticker ${byExchange}
-                WHERE date_time = @0
+                SELECT c.floor AS global, c.LV2 AS industry, 
+                c.code as ticker, n.${field} AS value 
+                FROM [marketTrade].[dbo].[tickerTrade] n
+                JOIN [marketInfor].[dbo].[info] c
+                ON c.code = n.code ${byExchange}
+                WHERE n.date = @0 and c.[type] = 'STOCK'
+                AND c.LV2 != ''   
             `;
 
       const mappedData = new MarketMapResponse().mapToList(
-        await this.db.query(query, [date, ex]),
+        await this.dbServer.query(query, [date, ex]),
       );
+
       await this.redis.set(
         `${RedisKeys.MarketMap}:${exchange}:${order}`,
         mappedData,
