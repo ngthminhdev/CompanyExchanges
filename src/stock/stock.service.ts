@@ -833,7 +833,6 @@ export class StockService {
           ...data,
           ...data2,
           ...data3,
-          ``,
         ]);
       await this.redis.set(RedisKeys.InternationalIndex, mappedData);
       return mappedData;
