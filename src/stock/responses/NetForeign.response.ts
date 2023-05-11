@@ -63,7 +63,7 @@ export class NetForeignResponse {
         this.color = '#FFE0B2';
         break;
       case 'Dịch vụ tiện ích':
-        this.color = '#9E9E9E';
+        this.color = '#2b908f';
         break;
       case 'Đồ dùng cá nhân và đồ gia dụng':
         this.color = '#AFB42B';
@@ -75,10 +75,10 @@ export class NetForeignResponse {
         this.color = '#795548';
         break;
       case 'Hóa chất':
-        this.color = '#607D8B';
+        this.color = '#f7a35c';
         break;
       case 'Ngân hàng':
-        this.color = '#757575';
+        this.color = '#f45b5b';
         break;
       case 'Ôtô & linh kiện phụ tùng ':
         this.color = '#00BCD4';
@@ -99,7 +99,7 @@ export class NetForeignResponse {
         this.color = '#BDBDBD';
         break;
       default:
-        this.color = '##CDDC39';
+        this.color = '#90ed7d';
         break;
     }
     this.ticker = data?.ticker || '';

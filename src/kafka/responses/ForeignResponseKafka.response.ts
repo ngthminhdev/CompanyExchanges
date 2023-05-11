@@ -138,7 +138,7 @@ export class ForeignKafkaResponse {
     this.ticker = data?.code || '';
     data?.netVal > 0
       ? (this.total_value_buy = data?.netVal || 0)
-      : (this.total_value_sell = data?.netVal || 0);
+      : (this.total_value_sell = -data?.netVal || 0);
   }
 
   public mapToList(data?: ForeignKafkaInterface[] | any[]) {

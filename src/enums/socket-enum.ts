@@ -23,11 +23,11 @@ export enum SocketEmit {
 
   HsxTickerContribute0 = 'listen-hose-ticker-contribute-0',
   HnxTickerContribute0 = 'listen-hnx-ticker-contribute-0',
-  UpTickerContribute0 = 'listen-up-ticker-contribute-0',
+  UpTickerContribute0 = 'listen-upcom-ticker-contribute-0',
 
   HsxTickerContribute1 = 'listen-hose-ticker-contribute-1',
   HnxTickerContribute1 = 'listen-hnx-ticker-contribute-1',
-  UpTickerContribute1 = 'listen-up-ticker-contribute-1',
+  UpTickerContribute1 = 'listen-upcom-ticker-contribute-1',
 
   ForeignBuyHSX = 'listen-foreign-buy-hose',
   ForeignBuyHNX = 'listen-foreign-buy-hnx',
