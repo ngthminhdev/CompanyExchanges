@@ -27,6 +27,7 @@ import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
 import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
 import { industries } from './chores';
+import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
 
 @Injectable()
 export class KafkaService {
@@ -209,56 +210,64 @@ export class KafkaService {
     }
   }
 
+  async getDataTickerContribute(payload: any, exchange: string, field: string) {
+    const tickerArr = await this.getTickerArrayByEx();
+    const data = payload.filter((item) =>
+      tickerArr?.[exchange].includes(item.ticker),
+    );
+    const result = new TickerContributeKafkaResponse().mapToList(
+      [...UtilCommonTemplate.getTop10HighestAndLowestData(data, field)],
+      field,
+    );
+    console.log(result);
+    return result;
+  }
+
   async handleTickerContribute(payload: TickerChangeInterface[]) {
     try {
-      const { hose, hnx, upcom } = await this.getTickerArrayByEx();
-
-      const HSXTicker = payload.filter((ticker) =>
-        hose?.includes(ticker.ticker),
-      );
-      const HNXTicker = payload.filter((ticker) =>
-        hnx?.includes(ticker.ticker),
-      );
-      const UPTicker = payload.filter((ticker) =>
-        upcom?.includes(ticker.ticker),
-      );
-
       //1d
-      const hsx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HSXTicker,
-        '1D',
+      const hsx1dData = await this.getDataTickerContribute(
+        payload,
+        'hose',
+        '%1D',
       );
-      const hnx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HNXTicker,
-        '1D',
+
+      const hnx1dData = await this.getDataTickerContribute(
+        payload,
+        'hnx',
+        '%1D',
       );
-      const up1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        UPTicker,
-        '1D',
+      const up1dData = await this.getDataTickerContribute(
+        payload,
+        'upcom',
+        '%1D',
       );
 
       //5d
-      const hsx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HSXTicker,
-        '5D',
+      const hsx5dData = await this.getDataTickerContribute(
+        payload,
+        'hose',
+        '%5D',
       );
-      const hnx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HNXTicker,
-        '5D',
+      const hnx5dData = await this.getDataTickerContribute(
+        payload,
+        'hnx',
+        '%5D',
       );
-      const up5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        UPTicker,
-        '5D',
+      const up5dData = await this.getDataTickerContribute(
+        payload,
+        'upcom',
+        '%5D',
       );
 
       //sent
-      this.send(SocketEmit.HsxTickerContribute1, hsx1dData);
-      this.send(SocketEmit.HnxTickerContribute1, hnx1dData);
-      this.send(SocketEmit.UpTickerContribute1, up1dData);
+      this.send(SocketEmit.HsxTickerContribute0, hsx1dData);
+      this.send(SocketEmit.HnxTickerContribute0, hnx1dData);
+      this.send(SocketEmit.UpTickerContribute0, up1dData);
 
-      this.send(SocketEmit.HsxTickerContribute5, hsx5dData);
-      this.send(SocketEmit.HnxTickerContribute5, hnx5dData);
-      this.send(SocketEmit.UpTickerContribute5, up5dData);
+      this.send(SocketEmit.HsxTickerContribute1, hsx5dData);
+      this.send(SocketEmit.HnxTickerContribute1, hnx5dData);
+      this.send(SocketEmit.UpTickerContribute1, up5dData);
     } catch (e) {
       throw new CatchSocketException(e);
     }

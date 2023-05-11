@@ -144,7 +144,7 @@ export class KafkaConsumer {
         this.kafkaService.handleTopRocHNX(payload),
         this.kafkaService.handleTopRocHSX(payload),
         this.kafkaService.handleTopRocUPCOM(payload),
-        // this.kafkaService.handleTickerContribute(payload),
+        this.kafkaService.handleTickerContribute(payload),
         // this.kafkaService.handleIndustryByEx(payload),
       ]);
     } catch (error) {

@@ -72,13 +72,8 @@ export class ForeignKafkaResponse {
       case 'Du lịch và giải trí':
         this.LV2 = 'Du lịch & Giải trí';
         break;
-      case 'asdasdasd':
-        this.LV2 = 'asdasdasd';
-        break;
-      case 'asdasdasd':
-        this.LV2 = 'asdasdasd';
-        break;
       default:
+        this.LV2 = data?.industry;
         break;
     }
     switch (this.LV2) {
