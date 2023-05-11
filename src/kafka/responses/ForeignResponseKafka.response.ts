@@ -42,38 +42,44 @@ export class ForeignKafkaResponse {
   constructor(data?: any) {
     this.EXCHANGE = data?.floor || '';
     switch (data?.industry) {
-      case 'Tài nguyên':
-        this.LV2 = 'Tài nguyên cơ bản';
+      case 'Hàng tiêu dùng cá nhân và gia đình':
+        this.LV2 = 'Đồ dùng cá nhân và đồ gia dụng';
         break;
-      case 'Xây dựng & Vật liệu':
-        this.LV2 = 'Xây dựng và vật liệu xây dựng';
+      case 'Xây dựng và vật liệu xây dựng':
+        this.LV2 = 'Xây dựng & Vật liệu';
         break;
-      case 'Hàng hóa và dịch vụ công nghiệp':
-        this.LV2 = 'Các sản phẩm dịch và dịch vụ công nghiệp';
+      case 'Bán lẻ':
+        this.LV2 = 'Dịch vụ bán lẻ';
         break;
-      case 'Ôtô & linh kiện phụ tùng ':
-        this.LV2 = 'Ôtô và linh kiện ôtô';
+      case 'Các sản phẩm và dịch vụ công nghiệp':
+        this.LV2 = 'Hàng hóa và dịch vụ công nghiệp';
         break;
-      case 'Thực phẩm & Đồ uống':
-        this.LV2 = 'Thực phẩm và đồ uống';
+      case 'Ôtô và linh kiện ôtô':
+        this.LV2 = 'Ôtô & linh kiện phụ tùng ';
         break;
-      case 'Dịch vụ bán lẻ':
-        this.LV2 = 'Bán lẻ';
+      case 'Truyền thông':
+        this.LV2 = 'Phương tiện truyền thông';
         break;
-      case 'Phương tiện truyền thông':
-        this.LV2 = 'Truyền thông';
+      case 'Thực phẩm và đồ uống':
+        this.LV2 = 'Thực phẩm & Đồ uống';
         break;
-      case 'Du lịch & Giải trí':
-        this.LV2 = 'Du lịch và giải trí';
+      case 'Tài nguyên cơ bản':
+        this.LV2 = 'Tài nguyên';
         break;
-      case 'Đồ dùng cá nhân và đồ gia dụng':
-        this.LV2 = 'Hàng tiêu dùng cá nhân và gia đình';
+      case 'Quỹ mở & Quỹ đóng':
+        this.LV2 = 'Dịch vụ tiện ích';
         break;
-      case 'Dịch vụ tiện ích':
-        this.LV2 = 'Quỹ mở & Quỹ đóng';
+      case 'Du lịch và giải trí':
+        this.LV2 = 'Du lịch & Giải trí';
+        break;
+      case 'asdasdasd':
+        this.LV2 = 'asdasdasd';
+        break;
+      case 'asdasdasd':
+        this.LV2 = 'asdasdasd';
         break;
       default:
-        this.LV2 = data?.industry || '';
+        break;
     }
     switch (this.LV2) {
       case 'Bảo hiểm':
