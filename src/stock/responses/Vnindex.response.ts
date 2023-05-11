@@ -118,9 +118,7 @@ export class VnIndexResponse {
         ...lastTemp,
         indexChange: lastTemp.indexValue - firstTemp.indexValue,
         percentIndexChange:
-          ((lastTemp.indexValue - firstTemp.indexValue) /
-            firstTemp.indexValue) *
-          100,
+          (lastTemp.indexValue - firstTemp.indexValue) / firstTemp.indexValue,
       };
       data.pop();
       data.push(latestData);

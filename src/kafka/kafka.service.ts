@@ -9,6 +9,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { SocketEmit } from '../enums/socket-enum';
 import { CatchSocketException } from '../exceptions/socket.exception';
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import { UtilCommonTemplate } from '../utils/utils.common';
 import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
 import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
@@ -25,7 +26,7 @@ import { LineChartResponse } from './responses/LineChart.response';
 import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
 import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
-import { UtilCommonTemplate } from '../utils/utils.common';
+import { industries } from './chores';
 
 @Injectable()
 export class KafkaService {
@@ -63,10 +64,18 @@ export class KafkaService {
   }
 
   async getTickerArrFromRedis(key: string) {
-    const tickerArr: string[] = (await this.redis.get<any>(key)).map(
+    const tickerArr: string[] = (await this.redis.get<any>(key))?.map(
       (i) => i.ticker,
     );
     return tickerArr;
+  }
+
+  async getTickerArrayByEx() {
+    const hose: string[] = await this.getTickerArrFromRedis(RedisKeys.HOSE);
+    const hnx: string[] = await this.getTickerArrFromRedis(RedisKeys.HNX);
+    const upcom: string[] = await this.getTickerArrFromRedis(RedisKeys.UPCoM);
+
+    return { hose, hnx, upcom };
   }
 
   getTickerInEx = async (ex: string): Promise<any> => {
@@ -80,9 +89,36 @@ export class KafkaService {
     return data;
   };
 
+  private async filterAndSortPayload(
+    payload: ForeignKafkaInterface[],
+    floor: string,
+    netVal: number,
+  ) {
+    const tickerIndustry = await this.getTickerInIndustry();
+
+    const tickerList = _(payload)
+      .filter((item) => item.floor === floor && item.netVal * netVal > 0)
+      .map((item) => ({
+        ...item,
+        industry: tickerIndustry.find((i) => i.ticker === item.code)?.industry,
+      }))
+      .filter((i) => i.industry !== undefined)
+      .sortBy('netVal')
+      .value();
+
+    return new ForeignKafkaResponse().mapToList([...tickerList]);
+  }
+
   handleMarketBreadth(payload: MarketBreadthKafkaInterface[]): void {
     this.send(
       SocketEmit.DoRongThiTruong,
+      new MarketBreadthResponse().mapToList(payload),
+    );
+  }
+
+  handleMarketBreadthHNX(payload: MarketBreadthKafkaInterface[]): void {
+    this.send(
+      SocketEmit.DoRongThiTruongHNX,
       new MarketBreadthResponse().mapToList(payload),
     );
   }
@@ -175,24 +211,16 @@ export class KafkaService {
 
   async handleTickerContribute(payload: TickerChangeInterface[]) {
     try {
-      const hsxTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.HOSE,
-      );
-      const hnxTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.HNX,
-      );
-      const upcomTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.UPCoM,
-      );
+      const { hose, hnx, upcom } = await this.getTickerArrayByEx();
 
       const HSXTicker = payload.filter((ticker) =>
-        hsxTickerArr.includes(ticker.ticker),
+        hose?.includes(ticker.ticker),
       );
       const HNXTicker = payload.filter((ticker) =>
-        hnxTickerArr.includes(ticker.ticker),
+        hnx?.includes(ticker.ticker),
       );
       const UPTicker = payload.filter((ticker) =>
-        upcomTickerArr.includes(ticker.ticker),
+        upcom?.includes(ticker.ticker),
       );
 
       //1d
@@ -321,26 +349,6 @@ export class KafkaService {
     );
   }
 
-  private async filterAndSortPayload(
-    payload: ForeignKafkaInterface[],
-    floor: string,
-    netVal: number,
-  ) {
-    const tickerIndustry = await this.getTickerInIndustry();
-
-    const tickerList = _(payload)
-      .filter((item) => item.floor === floor && item.netVal * netVal > 0)
-      .map((item) => ({
-        ...item,
-        industry: tickerIndustry.find((i) => i.ticker === item.code)?.industry,
-      }))
-      .filter((i) => i.industry !== undefined)
-      .sortBy('netVal')
-      .value();
-
-    return new ForeignKafkaResponse().mapToList([...tickerList]);
-  }
-
   async handleForeign(payload: ForeignKafkaInterface[]) {
     const tickerBuyHSX = await this.filterAndSortPayload(payload, 'HOSE', 1);
     const tickerBuyHNX = await this.filterAndSortPayload(payload, 'HNX', 1);
@@ -365,25 +373,11 @@ export class KafkaService {
 
   async handleTopForeign(payload: ForeignKafkaInterface[]) {
     //get ticker andd filter by ex
-    const hsxTickerArr: string[] = await this.getTickerArrFromRedis(
-      RedisKeys.HOSE,
-    );
-    const hnxTickerArr: string[] = await this.getTickerArrFromRedis(
-      RedisKeys.HNX,
-    );
-    const upcomTickerArr: string[] = await this.getTickerArrFromRedis(
-      RedisKeys.UPCoM,
-    );
+    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
 
-    const HSXTicker = payload.filter((ticker) =>
-      hsxTickerArr.includes(ticker.code),
-    );
-    const HNXTicker = payload.filter((ticker) =>
-      hnxTickerArr.includes(ticker.code),
-    );
-    const UPTicker = payload.filter((ticker) =>
-      upcomTickerArr.includes(ticker.code),
-    );
+    const HSXTicker = payload.filter((ticker) => hose?.includes(ticker.code));
+    const HNXTicker = payload.filter((ticker) => hnx?.includes(ticker.code));
+    const UPTicker = payload.filter((ticker) => upcom?.includes(ticker.code));
 
     //send
 
@@ -416,5 +410,41 @@ export class KafkaService {
       SocketEmit.TopForeignUPCOM,
       new TopNetForeignKafkaResponse().mapToList(UPData),
     );
+  }
+
+  async getTickerAndIndustry(data) {
+    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
+    const tickerIndustry = await this.getTickerInIndustry();
+
+    return data
+      .filter((ticker) => hose?.includes(ticker.ticker))
+      .map((item) => {
+        const industry = tickerIndustry.find(
+          (i) => i.ticker == item.ticker,
+        )?.industry;
+        return {
+          ...item,
+          industry: industry || '',
+        };
+      });
+  }
+
+  async handleIndustryByEx(payload: TickerChangeInterface[]) {
+    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
+    const tickerIndustry = await this.getTickerInIndustry();
+
+    const HOSETicker = payload
+      // .filter((ticker) => hose?.includes(ticker.ticker))
+      .map((item) => {
+        const industry = tickerIndustry.find(
+          (i) => i.ticker == item.ticker,
+        )?.industry;
+        return {
+          ...item,
+          vietnameseName: industry || '',
+        };
+      });
+    const HNXTicker = payload.filter((ticker) => hnx?.includes(ticker.ticker));
+    const UPTicker = payload.filter((ticker) => upcom?.includes(ticker.ticker));
   }
 }

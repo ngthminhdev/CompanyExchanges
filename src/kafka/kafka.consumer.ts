@@ -61,6 +61,18 @@ export class KafkaConsumer {
     }
   }
 
+  @MessagePattern(Topics.DoRongThiTruongHNX)
+  handleMarketBreadthHNX(
+    @Payload() payload: MarketBreadthKafkaInterface[],
+    @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleMarketBreadthHNX(payload);
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
   @MessagePattern(Topics.ThanhKhoanPhienHienTai)
   handleMarketLiquidityNow(
     @Payload() payload: MarketLiquidityKafkaInterface,
@@ -133,6 +145,7 @@ export class KafkaConsumer {
         this.kafkaService.handleTopRocHSX(payload),
         this.kafkaService.handleTopRocUPCOM(payload),
         // this.kafkaService.handleTickerContribute(payload),
+        // this.kafkaService.handleIndustryByEx(payload),
       ]);
     } catch (error) {
       this.logger.error(error);

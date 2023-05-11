@@ -2,9 +2,9 @@ export enum SocketOn {}
 
 export enum SocketEmit {
   DoRongThiTruong = 'listen-do-rong-thi-truong',
+  DoRongThiTruongHNX = 'listen-do-rong-thi-truong-hnx',
   ThanhKhoanPhienHienTai = 'listen-thanh-khoan-phien-hien-tai',
   ThanhKhoanPhienTruoc = 'listen-thanh-khoan-phien-truoc',
-  PhanNganh = 'listen-phan-nganh',
   ChiSoTrongNuoc = 'listen-chi-so-trong-nuoc',
   ChiSoTrongNuoc2 = 'listen-domestic-index',
   BienDongThiTruong = 'listen-bien-dong-thi-truong',
@@ -40,4 +40,7 @@ export enum SocketEmit {
   TopForeignHOSE = 'listen-top-foreign-hose',
   TopForeignHNX = 'listen-top-foreign-hnx',
   TopForeignUPCOM = 'listen-top-foreign-upcom',
+
+  PhanNganh = 'listen-phan-nganh',
+  PhanNganhHOSE = 'listen-phan-nganh-hose',
 }

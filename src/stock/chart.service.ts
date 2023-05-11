@@ -294,6 +294,20 @@ export class ChartService {
 
   async getMarketBreadth(exchange: string, type: number) {
     try {
+      //phien hien tai
+      if (type === 0) {
+        const timeCheck = this.timeCheck();
+        if (!timeCheck) return [];
+        let ex = exchange == 'HOSE' ? 'MarketBreadth' : 'MarketBreadthHNX';
+
+        return new MarketBreadthResponse().mapToList(
+          await this.db.query(`
+                SELECT * FROM [WEBSITE_SERVER].[dbo].[${ex}]
+                ORDER BY time ASC
+            `),
+        );
+      }
+
       const redisData = await this.redis.get(
         `${RedisKeys.MarketBreadth}:${exchange}:${type}`,
       );

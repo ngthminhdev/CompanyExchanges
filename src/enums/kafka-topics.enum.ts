@@ -1,5 +1,7 @@
+//receive
 export enum Topics {
   DoRongThiTruong = 'kafka-do-rong-thi-truong-topic',
+  DoRongThiTruongHNX = 'kafka-do-rong-thi-truong-hnx-topic',
   ThanhKhoanPhienHienTai = 'kafka-thanh-khoan-phien-hien-tai-topic',
   PhanNganh = 'kafka-phan-nganh-topic',
   ChiSoTrongNuoc = 'kakfa-chi-so-trong-nuoc-topic',
@@ -9,13 +11,8 @@ export enum Topics {
   LineChart = 'kafka-index-line-chart-topic',
   StockValue = 'kafka-stock-value-topic',
   Foreign = 'kafka-foreign-topic',
-  ChiSoTrongNuoc2 = 'kafka-domestic-index-topic'
+  ChiSoTrongNuoc2 = 'kafka-domestic-index-topic',
 }
 
-export const requestPatterns: string[] = [
-    // Topics.DoRongThiTruong,
-    // Topics.ThanhKhoanPhienHienTai,
-    // Topics.PhanNganh,
-    // Topics.ChiSoTrongNuoc,
-    // Topics.BienDongThiTruong
-];
+//send
+export const requestPatterns: string[] = [];

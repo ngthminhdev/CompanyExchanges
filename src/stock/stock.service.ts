@@ -802,6 +802,12 @@ export class StockService {
         'lastUpdated',
       );
 
+      const data3 = await this.db.query(`
+        select top 3 ticker, close_price as diemso, p_change as percent_d
+        from [PHANTICH].[dbo].[database_mkt]
+        order by date_time desc, p_change desc
+      `);
+
       const query: string = `
                 SELECT name AS ticker,lastUpdated AS date_time, price AS diemso, unit, 
                 change1D AS percent_d,
@@ -823,7 +829,12 @@ export class StockService {
       );
 
       const mappedData: InternationalIndexResponse[] =
-        new InternationalIndexResponse().mapToList([...data, ...data2]);
+        new InternationalIndexResponse().mapToList([
+          ...data,
+          ...data2,
+          ...data3,
+          ``,
+        ]);
       await this.redis.set(RedisKeys.InternationalIndex, mappedData);
       return mappedData;
     } catch (e) {
