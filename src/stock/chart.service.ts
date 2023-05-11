@@ -109,7 +109,6 @@ export class ChartService {
   // Chỉ số các index
   async getLineChart(type: number, index: string): Promise<any> {
     try {
-      const industryFull = await this.redis.get(RedisKeys.IndustryFull);
       if (type === TransactionTimeTypeEnum.Latest) {
         const data = await this.db.query(`
                     SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange,
@@ -119,19 +118,18 @@ export class ChartService {
                     ORDER BY tradingDate ASC
                 `);
 
-        return {
-          lineChartData: new LineChartResponse().mapToList(data),
-          industryFull,
-        };
+        return new LineChartResponse().mapToList(data);
       }
       const redisData: VnIndexResponse[] = await this.redis.get(
         `${RedisKeys.LineChart}:${type}:${index}`,
       );
-      if (redisData) return { lineChartData: redisData, industryFull };
+      // if (redisData) return { lineChartData: redisData, industryFull };
 
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[PHANTICH].[dbo].[database_chisotoday]',
+          '[marketTrade].[dbo].[indexTrade]',
+          'date',
+          this.dbServer,
         );
       let startDate: Date | string;
       switch (type) {
@@ -149,21 +147,21 @@ export class ChartService {
       }
 
       const query: string = `
-                select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
-                from [PHANTICH].[dbo].[database_chisotoday]
-                where ticker = '${index}' and date_time >= @0 and date_time <= @1
-                ORDER BY date_time
+                select code as comGroupCode, closePrice as indexValue, date as tradingDate
+                from [marketTrade].[dbo].[indexTrade]
+                where code = '${index}' and date >= @0 and date <= @1
+                ORDER BY date
             `;
 
       const mappedData = new VnIndexResponse().mapToList(
-        await this.db.query(query, [startDate, latestDate]),
+        await this.dbServer.query(query, [startDate, latestDate]),
         type,
       );
-      await this.redis.set(
-        `${RedisKeys.LineChart}:${type}:${index}`,
-        mappedData,
-      );
-      return { lineChartData: mappedData, industryFull };
+      // await this.redis.set(
+      //   `${RedisKeys.LineChart}:${type}:${index}`,
+      //   mappedData,
+      // );
+      return mappedData;
     } catch (e) {
       throw new CatchException(e);
     }
