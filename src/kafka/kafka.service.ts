@@ -219,7 +219,6 @@ export class KafkaService {
       [...UtilCommonTemplate.getTop10HighestAndLowestData(data, field)],
       field,
     );
-    console.log(result);
     return result;
   }
 
