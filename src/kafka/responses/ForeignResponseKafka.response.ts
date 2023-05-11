@@ -41,7 +41,40 @@ export class ForeignKafkaResponse {
 
   constructor(data?: any) {
     this.EXCHANGE = data?.floor || '';
-    this.LV2 = data?.industry || '';
+    switch (data?.industry) {
+      case 'Tài nguyên':
+        this.LV2 = 'Tài nguyên cơ bản';
+        break;
+      case 'Xây dựng & Vật liệu':
+        this.LV2 = 'Xây dựng và vật liệu xây dựng';
+        break;
+      case 'Hàng hóa và dịch vụ công nghiệp':
+        this.LV2 = 'Các sản phẩm dịch và dịch vụ công nghiệp';
+        break;
+      case 'Ôtô & linh kiện phụ tùng ':
+        this.LV2 = 'Ôtô và linh kiện ôtô';
+        break;
+      case 'Thực phẩm & Đồ uống':
+        this.LV2 = 'Thực phẩm và đồ uống';
+        break;
+      case 'Dịch vụ bán lẻ':
+        this.LV2 = 'Bán lẻ';
+        break;
+      case 'Phương tiện truyền thông':
+        this.LV2 = 'Truyền thông';
+        break;
+      case 'Du lịch & Giải trí':
+        this.LV2 = 'Du lịch và giải trí';
+        break;
+      case 'Đồ dùng cá nhân và đồ gia dụng':
+        this.LV2 = 'Hàng tiêu dùng cá nhân và gia đình';
+        break;
+      case 'Dịch vụ tiện ích':
+        this.LV2 = 'Quỹ mở & Quỹ đóng';
+        break;
+      default:
+        this.LV2 = data?.industry || '';
+    }
     switch (this.LV2) {
       case 'Bảo hiểm':
         this.color = '#512DA8';
@@ -62,7 +95,7 @@ export class ForeignKafkaResponse {
         this.color = '#FFE0B2';
         break;
       case 'Dịch vụ tiện ích':
-        this.color = '#9E9E9E';
+        this.color = '#2b908f';
         break;
       case 'Đồ dùng cá nhân và đồ gia dụng':
         this.color = '#AFB42B';
@@ -74,10 +107,10 @@ export class ForeignKafkaResponse {
         this.color = '#795548';
         break;
       case 'Hóa chất':
-        this.color = '#607D8B';
+        this.color = '#f7a35c';
         break;
       case 'Ngân hàng':
-        this.color = '#757575';
+        this.color = '#f45b5b';
         break;
       case 'Ôtô & linh kiện phụ tùng ':
         this.color = '#00BCD4';
@@ -98,7 +131,7 @@ export class ForeignKafkaResponse {
         this.color = '#BDBDBD';
         break;
       default:
-        this.color = '##CDDC39';
+        this.color = '#90ed7d';
         break;
     }
     this.ticker = data?.code || '';
