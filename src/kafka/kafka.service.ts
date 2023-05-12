@@ -28,6 +28,7 @@ import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka
 import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
 import { industries } from './chores';
 import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
+import { DB_SERVER } from '../constants';
 
 @Injectable()
 export class KafkaService {
@@ -38,6 +39,7 @@ export class KafkaService {
     private readonly db: DataSource,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
+    @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
   ) {}
 
   send<T>(event: string, message: T): void {
@@ -55,10 +57,10 @@ export class KafkaService {
     );
     if (redisData) return redisData;
 
-    const data = await this.db.query(`
-            select distinct t.ticker, c.LV2 as industry from [PHANTICH].[dbo].[database_mkt] t
-            inner join [PHANTICH].[dbo].[ICBID] c
-            on c.ticker = t.ticker
+    const data = await this.dbServer.query(`
+            select distinct t.code as ticker, c.LV2 as industry from [marketTrade].[dbo].[tickerTrade] t
+            inner join [marketInfor].[dbo].[info] c
+            on c.code = t.code
         `);
     await this.redis.set(RedisKeys.TickerIndustry, data);
     return data;
@@ -420,12 +422,13 @@ export class KafkaService {
     );
   }
 
-  async getTickerAndIndustry(data) {
-    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
+  async getTickerAndIndustry(data, name: string) {
+    // const { hose, hnx, upcom } = await this.getTickerArrayByEx();
+    const ex = await this.getTickerArrayByEx();
     const tickerIndustry = await this.getTickerInIndustry();
 
     return data
-      .filter((ticker) => hose?.includes(ticker.ticker))
+      .filter((ticker) => ex?.[name]?.includes(ticker.ticker))
       .map((item) => {
         const industry = tickerIndustry.find(
           (i) => i.ticker == item.ticker,
@@ -437,22 +440,137 @@ export class KafkaService {
       });
   }
 
-  async handleIndustryByEx(payload: TickerChangeInterface[]) {
-    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
-    const tickerIndustry = await this.getTickerInIndustry();
+  async getKLCPLHbyEx(exchange: string) {
+    const redisData = await this.redis.get(`${RedisKeys.KLCPLH}:${exchange}`);
+    if (redisData) return redisData;
 
-    const HOSETicker = payload
-      // .filter((ticker) => hose?.includes(ticker.ticker))
-      .map((item) => {
-        const industry = tickerIndustry.find(
-          (i) => i.ticker == item.ticker,
-        )?.industry;
+    const data = await this.db.query(`
+      select ticker, KLCPLH from [COPHIEUANHHUONG].[dbo].[${exchange}]
+      where [date] = (select max(date) from [COPHIEUANHHUONG].[dbo].[${exchange}])
+    `);
+
+    await this.redis.set(`${RedisKeys.KLCPLH}:${exchange}`, data);
+
+    return data;
+  }
+
+  async getMarketCapByEx(exchange: string) {
+    const redisData = await this.redis.get(
+      `${RedisKeys.MarketCap}:${exchange}`,
+    );
+    if (redisData) return redisData;
+
+    const data = await this.dbServer.query(`
+      select i.LV2 as industry, sum(t.marketCap) as totalMarketCap from
+      [marketTrade].[dbo].[tickerTrade] t join [marketInfor].[dbo].[info] i
+      on t.code = i.code
+      where t.[date] = '2023-05-11' 
+      and i.floor= '${exchange}' and i.[type] = 'STOCK'
+      group by i.LV2;
+    `);
+    const result = data.reduce((acc, obj) => {
+      const floor = obj.industry;
+      const value = obj.totalMarketCap;
+
+      acc[floor] = value;
+      return acc;
+    }, {});
+
+    await this.redis.set(`${RedisKeys.MarketCap}:${exchange}`, result);
+
+    return result;
+  }
+
+  async handleIndustryByEx(payload: TickerChangeInterface[]) {
+    const HOSEData = await this.getTickerAndIndustry(payload, 'hose');
+    const HOSEcplh = await this.getKLCPLHbyEx('HOSE');
+    const HOSEindusMkt = await this.getMarketCapByEx('HOSE');
+
+    const HOSEMarketCap = HOSEData.map((item) => {
+      const ticker = HOSEcplh.find((i) => i.ticker == item.ticker);
+      const marketCap = ticker?.KLCPLH * item.price * 1000 || 0;
+      return {
+        ...item,
+        marketCap,
+      };
+    });
+
+    const HOSEresult = _(HOSEMarketCap)
+      .groupBy('industry')
+      .map((objs, key) => {
+        const marketCap = HOSEindusMkt[key];
+        const changePercent =
+          ((marketCap - _.sumBy(objs, 'marketCap')) / marketCap) * 100;
         return {
-          ...item,
-          vietnameseName: industry || '',
+          industry: key,
+          day_change_percent: +changePercent.toFixed(2),
+          week_change_percent: 0,
+          month_change_percent: 0,
+          ytd: 0,
         };
-      });
-    const HNXTicker = payload.filter((ticker) => hnx?.includes(ticker.ticker));
-    const UPTicker = payload.filter((ticker) => upcom?.includes(ticker.ticker));
+      })
+      .value();
+
+    const HNXData = await this.getTickerAndIndustry(payload, 'hnx');
+    const HNXcplh = await this.getKLCPLHbyEx('HNX');
+    const HNXindusMkt = await this.getMarketCapByEx('HNX');
+
+    const HNXMarketCap = HNXData.map((item) => {
+      const ticker = HNXcplh.find((i) => i.ticker == item.ticker);
+      const marketCap = ticker?.KLCPLH * item.price * 1000 || 0;
+      return {
+        ...item,
+        marketCap,
+      };
+    });
+
+    const HNXresult = _(HNXMarketCap)
+      .groupBy('industry')
+      .map((objs, key) => {
+        const marketCap = HNXindusMkt[key];
+        const changePercent =
+          ((marketCap - _.sumBy(objs, 'marketCap')) / marketCap) * 100;
+        return {
+          industry: key,
+          day_change_percent: +changePercent.toFixed(2),
+          week_change_percent: 0,
+          month_change_percent: 0,
+          ytd: 0,
+        };
+      })
+      .value();
+
+    const UPData = await this.getTickerAndIndustry(payload, 'upcom');
+    const UPcplh = await this.getKLCPLHbyEx('UPCoM');
+    const UPindusMkt = await this.getMarketCapByEx('UPCOM');
+
+    const UPMarketCap = UPData.map((item) => {
+      const ticker = UPcplh.find((i) => i.ticker == item.ticker);
+      const marketCap = ticker?.KLCPLH * item.price * 1000 || 0;
+      return {
+        ...item,
+        marketCap,
+      };
+    });
+
+    const UPresult = _(UPMarketCap)
+      .groupBy('industry')
+      .map((objs, key) => {
+        const marketCap = UPindusMkt[key];
+        const changePercent =
+          ((marketCap - _.sumBy(objs, 'marketCap')) / marketCap) * 100;
+        return {
+          industry: key,
+          day_change_percent: +changePercent.toFixed(2),
+          week_change_percent: 0,
+          month_change_percent: 0,
+          ytd: 0,
+        };
+      })
+      .value();
+
+    this.send(SocketEmit.PhanNganhHOSE, HOSEresult);
+    this.send(SocketEmit.PhanNganhHNX, HNXresult);
+    this.send(SocketEmit.PhanNganhUPCOM, UPresult);
   }
 }
