@@ -1246,8 +1246,6 @@ export class StockService {
       where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' ${indexCode};
       `;
 
-      console.log({ query, latestDate, previousDate });
-
       const data: IndustryFullInterface = await this.dbServer.query(query, [
         latestDate,
         previousDate,
