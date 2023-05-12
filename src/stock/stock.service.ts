@@ -1,13 +1,17 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { ChildProcess, fork } from 'child_process';
 import * as moment from 'moment';
 import { DataSource } from 'typeorm';
+import { DB_SERVER } from '../constants';
 import { TimeToLive, TransactionTimeTypeEnum } from '../enums/common.enum';
 import { MarketMapEnum, SelectorTypeEnum } from '../enums/exchange.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
-import { CatchException } from '../exceptions/common.exception';
+import {
+  CatchException,
+  ExceptionResponse,
+} from '../exceptions/common.exception';
 import { LineChartInterface } from '../kafka/interfaces/line-chart.interface';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { GetExchangeQuery } from './dto/getExchangeQuery.dto';
@@ -20,6 +24,7 @@ import {
   ExchangeValueInterface,
   TickerByExchangeInterface,
 } from './interfaces/exchange-value.interface';
+import { IndustryFullInterface } from './interfaces/industry-full.interface';
 import { InternationalIndexInterface } from './interfaces/international-index.interface';
 import { MarketVolatilityRawInterface } from './interfaces/market-volatility.interface';
 import { MerchandisePriceInterface } from './interfaces/merchandise-price.interface';
@@ -47,10 +52,8 @@ import { StockNewsResponse } from './responses/StockNews.response';
 import { TopNetForeignResponse } from './responses/TopNetForeign.response';
 import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.response';
 import { TopRocResponse } from './responses/TopRoc.response';
+import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 import { MarketMapResponse } from './responses/market-map.response';
-import { DB_SERVER } from '../constants';
-import { CashFlowService } from './cash-flow.service';
-import { IndustryFullInterface } from './interfaces/industry-full.interface';
 
 @Injectable()
 export class StockService {
@@ -1101,7 +1104,7 @@ export class StockService {
       // if (redisData) return redisData;
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        '[marketTrade].[dbo].[tickerTrade]',
+        '[marketTrade].[dbo].[tickerTradeVND]',
         'date',
         this.dbServer,
       );
@@ -1150,7 +1153,7 @@ export class StockService {
       const query: string = `
                 SELECT c.floor AS global, c.LV2 AS industry, 
                 c.code as ticker, n.${field} AS value 
-                FROM [marketTrade].[dbo].[tickerTrade] n
+                FROM [marketTrade].[dbo].[tickerTradeVND] n
                 JOIN [marketInfor].[dbo].[info] c
                 ON c.code = n.code ${byExchange}
                 WHERE n.date = @0 and c.[type] = 'STOCK'
@@ -1172,44 +1175,92 @@ export class StockService {
     }
   }
 
-  async getUpDownTicker(exchange: string): Promise<IndustryFullInterface> {
+  async getUpDownTicker(index: string): Promise<IndustryFullInterface> {
     try {
       const redisData = await this.redis.get<IndustryFullInterface>(
-        `${RedisKeys.BienDongThiTruong}:${exchange}`,
+        `${RedisKeys.BienDongThiTruong}:${index}`,
       );
       if (redisData) return redisData;
 
       const { latestDate, previousDate } = await this.getSessionDate(
-        '[marketTrade].[dbo].[tickerTrade]',
+        '[marketTrade].[dbo].[tickerTradeVND]',
         'date',
         this.dbServer,
       );
+      let high!: string;
+      let low!: string;
+      let indexCode!: string;
+
+      switch (index) {
+        case 'VNINDEX':
+          high = '1.065';
+          low = '0.935';
+          indexCode = " and i.floor = 'HOSE'";
+          break;
+        case 'VN30':
+          high = '1.065';
+          low = '0.935';
+          indexCode = " and i.floor = 'HOSE' and i.[indexCode] = 'VN30'";
+          break;
+        case 'VNXALL':
+          high = '1.065';
+          low = '0.935';
+          indexCode = " and i.floor = 'HOSE' or i.floor = 'HNX'";
+          break;
+        case 'HNXINDEX':
+          high = '1.062';
+          low = '0.938';
+          indexCode = " and i.floor = 'HNX'";
+          break;
+        case 'HNX30':
+          high = '1.062';
+          low = '0.938';
+          indexCode = " and i.floor = 'HNX' and i.[indexCode] = 'HNX30'";
+          break;
+        case 'UPINDEX':
+          high = '1.12';
+          low = '0.88';
+          indexCode = " and i.floor = 'UPCOM'";
+          break;
+        default:
+          throw new ExceptionResponse(
+            HttpStatus.BAD_REQUEST,
+            'Index not found',
+          );
+          break;
+      }
 
       const query: string = `
       select
         sum(case when now.closePrice = prev.closePrice then 1 else 0 end) as [equal],
-        sum(case when now.closePrice >= prev.closePrice * 1.07 then 1 else 0 end) as [high],
-        sum(case when now.closePrice <= prev.closePrice * 0.93 then 1 else 0 end) as [low],
-        sum(case when now.closePrice > prev.closePrice and now.closePrice < prev.closePrice * 1.07  then 1 else 0 end) as [increase],
-        sum(case when now.closePrice < prev.closePrice and now.closePrice >= prev.closePrice * 0.93 then 1 else 0 end) as [decrease]
+        sum(case when now.closePrice >= prev.closePrice * ${high} then 1 else 0 end) as [high],
+        sum(case when now.closePrice <= prev.closePrice * ${low} then 1 else 0 end) as [low],
+        sum(case when now.closePrice > prev.closePrice and now.closePrice < prev.closePrice * ${high}  then 1 else 0 end) as [increase],
+        sum(case when now.closePrice < prev.closePrice and now.closePrice > prev.closePrice * ${low} then 1 else 0 end) as [decrease]
       from (
-          select code, closePrice from [marketTrade].[dbo].[tickerTrade] where [date] = @0
-      ) now inner join (
-          select code, closePrice from [marketTrade].[dbo].[tickerTrade] where [date] = @1
+          select code, closePrice from [marketTrade].[dbo].[tickerTradeVND] where [date] = @0
+      ) now right join (
+          select code, closePrice from [marketTrade].[dbo].[tickerTradeVND] where [date] = @1
       ) prev on now.code = prev.code
       join [marketInfor].[dbo].[info] i on i.code = now.code
-      where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' and i.floor = @2;
+      where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' ${indexCode};
       `;
+
+      console.log({ query, latestDate, previousDate });
 
       const data: IndustryFullInterface = await this.dbServer.query(query, [
         latestDate,
         previousDate,
-        exchange,
       ]);
 
-      await this.redis.set(`${RedisKeys.BienDongThiTruong}:${exchange}`, data);
+      const mappedData = new UpDownTickerResponse(data![0]);
 
-      return data;
+      await this.redis.set(
+        `${RedisKeys.BienDongThiTruong}:${index}`,
+        mappedData,
+      );
+
+      return mappedData;
     } catch (e) {
       throw new CatchException(e);
     }

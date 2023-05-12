@@ -27,6 +27,8 @@ import { GetMarketMapQueryDto } from './dto/getMarketMapQuery.dto';
 import { MarketMapSwagger } from './responses/market-map.response';
 import { LiquidContributeSwagger } from './responses/LiquidityContribute.response';
 import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
+import { IndexQueryDto } from './dto/indexQuery.dto';
+import { UpDownTickerSwagger } from './responses/UpDownTicker.response';
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -230,13 +232,11 @@ export class StockController {
     summary: 'Biến động thị trường (tăng, giảm, trần, sàn)',
   })
   @ApiOkResponse({
-    type: MarketMapSwagger,
-    description: 'HOSE, HNX, UPCOM',
+    type: UpDownTickerSwagger,
+    description: 'VNINDEX, VN30, VNXALL, HNXINDEX, HNX30 , UPINDEX',
   })
-  async getUpDownTicker(@Query() q: GetExchangeQuery, @Res() res: Response) {
-    const data = await this.stockService.getUpDownTicker(
-      q.exchange.toUpperCase(),
-    );
+  async getUpDownTicker(@Query() q: IndexQueryDto, @Res() res: Response) {
+    const data = await this.stockService.getUpDownTicker(q.index.toUpperCase());
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
