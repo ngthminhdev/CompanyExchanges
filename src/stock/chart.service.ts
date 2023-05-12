@@ -315,7 +315,7 @@ export class ChartService {
 
       const { latestDate, monthDate, firstDateYear }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[marketTrade].[dbo].[tickerTrade]',
+          '[marketTrade].[dbo].[tickerTradeVND]',
           'date',
           this.dbServer,
         );
@@ -339,7 +339,7 @@ export class ChartService {
           sum(case when t.perChange > 0 then 1 else 0 end) as advance,
           sum(case when t.perChange < 0 then 1 else 0 end) as decline,
           sum(case when t.perChange = 0 then 1 else 0 end) as noChange
-        from [marketTrade].[dbo].[tickerTrade] t
+        from [marketTrade].[dbo].[tickerTradeVND] t
         left join [marketInfor].[dbo].[info] i on
             i.code = t.code
         where i.floor = @0 and i.type = 'STOCK'
