@@ -156,7 +156,7 @@ export class StockService {
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
 
     const dates = await instance.query(`
-            SELECT DISTINCT TOP 2 ${column} FROM ${table}
+            SELECT DISTINCT TOP 20 ${column} FROM ${table}
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `);
 
@@ -169,12 +169,8 @@ export class StockService {
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate:
-        (await instance.query(query, [lastWeek]))[0]?.[dateColumn] ||
-        new Date(),
-      monthDate:
-        (await instance.query(query, [lastMonth]))[0]?.[dateColumn] ||
-        new Date(),
+      weekDate: dates[4]?.[dateColumn] || new Date(),
+      monthDate: dates[dates.length]?.[dateColumn] || new Date(),
       yearDate:
         (await instance.query(query, [lastYear]))[0]?.[dateColumn] ||
         new Date(),
