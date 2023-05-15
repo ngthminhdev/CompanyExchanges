@@ -2,21 +2,21 @@ import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
-import * as _ from 'lodash';
 import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
 import {
   InvestorTypeEnum,
   TransactionTimeTypeEnum,
 } from '../enums/common.enum';
-import { SessionDatesInterface } from './interfaces/session-dates.interface';
-import { StockService } from './stock.service';
-import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
 import { RedisKeys } from '../enums/redis-keys.enum';
-import { CashFlowValueResponse } from './responses/CashFlowValue.response';
-import { UtilCommonTemplate } from '../utils/utils.common';
 import { ExceptionResponse } from '../exceptions/common.exception';
-import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
+import { UtilCommonTemplate } from '../utils/utils.common';
+import { InvestorTransactionValueInterface } from './interfaces/investor-transaction-value.interface';
+import { SessionDatesInterface } from './interfaces/session-dates.interface';
+import { CashFlowValueResponse } from './responses/CashFlowValue.response';
+import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
+import { StockService } from './stock.service';
+import { InvestorTransactionValueResponse } from './responses/InvestorTransactionValue.response';
 
 @Injectable()
 export class CashFlowService {
@@ -56,8 +56,8 @@ export class CashFlowService {
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate: dates[4][0]?.[dateColumn] || new Date(),
-      monthDate: dates[dates.length - 1][0]?.[dateColumn] || new Date(),
+      weekDate: dates[4]?.[dateColumn] || new Date(),
+      monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
       yearDate:
         (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
         new Date(),
@@ -188,43 +188,22 @@ export class CashFlowService {
     return mappedData;
   }
 
-  async getLiquidityGrowth(type: number) {
-    const { latestDate, weekDate, monthDate, firstDateYear } =
-      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
-
+  async getInvestorTransactionsValue(): Promise<
+    InvestorTransactionValueInterface[]
+  > {
     const query: string = `
-      select [floor], [date], sum([totalVal]) as totalVal 
-      from [marketTrade].[dbo].[tickerTradeVND]
-      where [date] >= @0 and [date] <= @1
-      group by [floor], [date]
-      order by [date]
+      select top 20 [code] as floor, [date], totalVal 
+      from [marketTrade].[dbo].[indexTrade]
+      where [code] in('VNINDEX', 'HNXINDEX', 'UPINDEX')
+      order by [date] desc
     `;
-    let startDate!: any;
-    switch (type) {
-      case TransactionTimeTypeEnum.Latest:
-        startDate = latestDate;
-        break;
-      case TransactionTimeTypeEnum.OneWeek:
-        startDate = weekDate;
-        break;
-      case TransactionTimeTypeEnum.OneMonth:
-        startDate = monthDate;
-        break;
-      case TransactionTimeTypeEnum.YearToDate:
-        startDate = firstDateYear;
-        break;
-      default:
-        throw new ExceptionResponse(
-          HttpStatus.BAD_REQUEST,
-          'Invalid Transaction',
-        );
-    }
 
-    const data: LiquidityGrowthInterface[] = await this.dbServer.query(query, [
-      startDate,
-      latestDate,
-    ]);
+    const data: InvestorTransactionValueInterface[] = await this.dbServer.query(
+      query,
+    );
 
-    return data;
+    return new InvestorTransactionValueResponse().mapToList(data);
   }
+
+  async getLiquidityGrowth(type: number) {}
 }

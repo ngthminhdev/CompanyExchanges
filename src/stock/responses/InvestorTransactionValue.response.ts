@@ -1,9 +1,9 @@
 import { ApiProperty, ApiResponseProperty, PartialType } from '@nestjs/swagger';
 import { UtilCommonTemplate } from '../../utils/utils.common';
 import { BaseResponse } from '../../utils/utils.response';
-import { LiquidityGrowthInterface } from '../interfaces/liquidity-growth.interface';
+import { InvestorTransactionValueInterface } from '../interfaces/investor-transaction-value.interface';
 
-export class LiquidityGrowthResponse {
+export class InvestorTransactionValueResponse {
   @ApiResponseProperty({
     type: String,
   })
@@ -19,32 +19,21 @@ export class LiquidityGrowthResponse {
   })
   date: Date | string;
 
-  @ApiResponseProperty({
-    type: Number,
-  })
-  roc: number;
-
-  constructor(data?: LiquidityGrowthInterface, roc?: number) {
+  constructor(data?: InvestorTransactionValueInterface, roc?: number) {
     this.floor = data?.floor || '';
     this.totalVal = data?.totalVal || 0;
     this.date = UtilCommonTemplate.toDate(data?.date || new Date());
-    this.roc = roc || 0;
   }
 
-  public mapToList(data?: LiquidityGrowthInterface[]) {
-    let firstTemp = data![0];
-    let lastTemp = data![data.length - 1];
-    const roc =
-      ((firstTemp.totalVal - lastTemp.totalVal) / lastTemp.totalVal) * 100;
-
-    return data.map((i) => new LiquidityGrowthResponse(i, roc));
+  public mapToList(data?: InvestorTransactionValueInterface[]) {
+    return data.map((i) => new InvestorTransactionValueResponse(i));
   }
 }
 
 export class VnIndexSwagger extends PartialType(BaseResponse) {
   @ApiProperty({
-    type: LiquidityGrowthResponse,
+    type: InvestorTransactionValueResponse,
     isArray: true,
   })
-  data: LiquidityGrowthResponse[];
+  data: InvestorTransactionValueResponse[];
 }

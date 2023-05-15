@@ -41,6 +41,16 @@ export class CashFlowController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
+  @Get('investor-transaction-value')
+  @ApiOperation({
+    summary: 'Mức tăng trưởng thanh khoản',
+  })
+  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  async getInvestorTransactionsValue(@Res() res: Response) {
+    const data = await this.cashFlowService.getInvestorTransactionsValue();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
   @Get('liquidity-growth')
   @ApiOperation({
     summary: 'Mức tăng trưởng thanh khoản',
