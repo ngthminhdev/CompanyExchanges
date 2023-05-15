@@ -357,14 +357,6 @@ export class StockService {
         '[PHANTICH].[dbo].[database_mkt]',
       );
 
-      console.log({
-        latestDate,
-        previousDate,
-        weekDate,
-        monthDate,
-        firstDateYear,
-      });
-
       const byExchange: string =
         exchange == 'ALL' ? ' ' : ` AND c.EXCHANGE = '${exchange}' `;
       const groupBy: string = exchange == 'ALL' ? ' ' : ', c.EXCHANGE ';
@@ -924,7 +916,6 @@ export class StockService {
             `;
 
       const data: RsiInterface[] = await this.db.query(query(session));
-      console.log(data);
 
       // This function calculates the relative strength index (RSI) of cash gains and losses by industry.
       // It takes in an array of transaction data and returns an object with the RSI for each industry.
