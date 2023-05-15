@@ -1,10 +1,10 @@
-import {Request} from 'express';
+import { Request } from 'express';
 
 export type MRequest = Request & {
-  mac: string;
-  realIP: any,
+  realIP: any;
   deviceId: string;
   headers: {
+    mac: string;
     sign: string;
   };
 };
