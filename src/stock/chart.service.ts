@@ -183,17 +183,14 @@ export class ChartService {
   async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
     try {
       const { exchange, order, type } = q;
-      const redisData = await this.redis.get(
-        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-      );
-      if (redisData) return redisData;
-
-      const ex: string =
-        exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+      // const redisData = await this.redis.get(
+      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+      // );
+      // if (redisData) return redisData;
 
       const { latestDate, weekDate, monthDate, firstDateYear } =
         await this.stockService.getSessionDate(
-          `[COPHIEUANHHUONG].[dbo].[${ex}]`,
+          `[WEBSITE_SERVER].[dbo].[CPAH]`,
           'date',
         );
       let endDate: Date | string;
@@ -225,9 +222,9 @@ export class ChartService {
       )}' `;
       let query: string = `
                WITH temp AS (
-                  SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
-                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
-                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.ticker
+                  SELECT ${industry} as symbol, sum(t.point) as contribute_price
+                  FROM [WEBSITE_SERVER].[dbo].[CPAH] t
+                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.symbol
                   WHERE ${dateRangeFilter} and ${industry} != '#N/A'
                   GROUP BY ${industry}
                 )
@@ -239,16 +236,16 @@ export class ChartService {
       if (+type == SelectorTypeEnum.Ticker) {
         query = `
                     WITH temp AS (
-                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
-                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                      WHERE ${dateRangeFilter}
-                      GROUP BY ticker
+                      SELECT TOP 10 symbol, sum(point) as contribute_price
+                      FROM [WEBSITE_SERVER].[dbo].[CPAH] 
+                      WHERE ${dateRangeFilter} AND floor = '${exchange.toUpperCase()}'
+                      GROUP BY symbol
                       ORDER BY contribute_price DESC
                       UNION ALL
-                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
-                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                      WHERE ${dateRangeFilter}
-                      GROUP BY ticker
+                      SELECT TOP 10 symbol, sum(point) as contribute_price
+                      FROM [WEBSITE_SERVER].[dbo].[CPAH] 
+                      WHERE ${dateRangeFilter} AND floor = '${exchange.toUpperCase()}'
+                      GROUP BY symbol
                       ORDER BY contribute_price ASC
                     )
                     SELECT *
@@ -265,10 +262,10 @@ export class ChartService {
 
       const data = await this.db.query(query);
       const mappedData = new TickerContributeResponse().mapToList(data);
-      await this.redis.set(
-        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-        mappedData,
-      );
+      // await this.redis.set(
+      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+      //   mappedData,
+      // );
       return mappedData;
     } catch (e) {
       throw new CatchException(e);

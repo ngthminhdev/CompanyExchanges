@@ -12,6 +12,7 @@ export enum Topics {
   StockValue = 'kafka-stock-value-topic',
   Foreign = 'kafka-foreign-topic',
   ChiSoTrongNuoc2 = 'kafka-domestic-index-topic',
+  CoPhieuAnhHuong = 'kafka-co-phieu-anh-huong-topic',
 }
 
 //send

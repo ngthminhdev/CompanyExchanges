@@ -29,6 +29,7 @@ import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.respo
 import { industries } from './chores';
 import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
 import { DB_SERVER } from '../constants';
+import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
 
 @Injectable()
 export class KafkaService {
@@ -212,63 +213,35 @@ export class KafkaService {
     }
   }
 
-  async getDataTickerContribute(payload: any, exchange: string, field: string) {
-    const tickerArr = await this.getTickerArrayByEx();
-    const data = payload.filter((item) =>
-      tickerArr?.[exchange].includes(item.ticker),
-    );
-    const result = new TickerContributeKafkaResponse().mapToList(
-      [...UtilCommonTemplate.getTop10HighestAndLowestData(data, field)],
-      field,
-    );
-    return result;
-  }
-
-  async handleTickerContribute(payload: TickerChangeInterface[]) {
+  async handleTickerContribute(payload: TickerContributeKafkaInterface[]) {
     try {
       //1d
-      const hsx1dData = await this.getDataTickerContribute(
-        payload,
-        'hose',
-        '%1D',
+      const HSXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'HSX'),
+        'point',
       );
-
-      const hnx1dData = await this.getDataTickerContribute(
-        payload,
-        'hnx',
-        '%1D',
+      const HNXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'HNX'),
+        'point',
       );
-      const up1dData = await this.getDataTickerContribute(
-        payload,
-        'upcom',
-        '%1D',
-      );
-
-      //5d
-      const hsx5dData = await this.getDataTickerContribute(
-        payload,
-        'hose',
-        '%5D',
-      );
-      const hnx5dData = await this.getDataTickerContribute(
-        payload,
-        'hnx',
-        '%5D',
-      );
-      const up5dData = await this.getDataTickerContribute(
-        payload,
-        'upcom',
-        '%5D',
+      const VN30Data = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'VN30'),
+        'point',
       );
 
       //sent
-      this.send(SocketEmit.HsxTickerContribute0, hsx1dData);
-      this.send(SocketEmit.HnxTickerContribute0, hnx1dData);
-      this.send(SocketEmit.UpTickerContribute0, up1dData);
-
-      this.send(SocketEmit.HsxTickerContribute1, hsx5dData);
-      this.send(SocketEmit.HnxTickerContribute1, hnx5dData);
-      this.send(SocketEmit.UpTickerContribute1, up5dData);
+      this.send(
+        SocketEmit.HsxTickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(HSXData, 'point'),
+      );
+      this.send(
+        SocketEmit.HnxTickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(HNXData, 'point'),
+      );
+      this.send(
+        SocketEmit.VN30TickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(VN30Data, 'point'),
+      );
     } catch (e) {
       throw new CatchSocketException(e);
     }
