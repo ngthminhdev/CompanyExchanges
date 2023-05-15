@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
@@ -15,6 +15,8 @@ import { InvestorTransactionResponse } from './responses/InvestorTransaction.res
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { CashFlowValueResponse } from './responses/CashFlowValue.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { ExceptionResponse } from '../exceptions/common.exception';
+import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
 
 @Injectable()
 export class CashFlowService {
@@ -28,7 +30,7 @@ export class CashFlowService {
 
   public async getSessionDate(
     table: string,
-    column: string = 'date_time',
+    column: string = 'date',
   ): Promise<SessionDatesInterface> {
     let dateColumn = column;
     if (column.startsWith('[')) {
@@ -41,7 +43,7 @@ export class CashFlowService {
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
 
     const dates = await this.dbServer.query(`
-            SELECT DISTINCT TOP 2 ${column} FROM ${table}
+            SELECT DISTINCT TOP 20 ${column} FROM ${table}
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `);
 
@@ -54,12 +56,8 @@ export class CashFlowService {
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate:
-        (await this.dbServer.query(query, [lastWeek]))[0]?.[dateColumn] ||
-        new Date(),
-      monthDate:
-        (await this.dbServer.query(query, [lastMonth]))[0]?.[dateColumn] ||
-        new Date(),
+      weekDate: dates[4][0]?.[dateColumn] || new Date(),
+      monthDate: dates[dates.length - 1][0]?.[dateColumn] || new Date(),
       yearDate:
         (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
         new Date(),
@@ -190,5 +188,43 @@ export class CashFlowService {
     return mappedData;
   }
 
-  async getLiquidityGrowth(type: number) {}
+  async getLiquidityGrowth(type: number) {
+    const { latestDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
+
+    const query: string = `
+      select [floor], [date], sum([totalVal]) as totalVal 
+      from [marketTrade].[dbo].[tickerTradeVND]
+      where [date] >= @0 and [date] <= @1
+      group by [floor], [date]
+      order by [date]
+    `;
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = latestDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.YearToDate:
+        startDate = firstDateYear;
+        break;
+      default:
+        throw new ExceptionResponse(
+          HttpStatus.BAD_REQUEST,
+          'Invalid Transaction',
+        );
+    }
+
+    const data: LiquidityGrowthInterface[] = await this.dbServer.query(query, [
+      startDate,
+      latestDate,
+    ]);
+
+    return data;
+  }
 }
