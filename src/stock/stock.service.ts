@@ -170,7 +170,7 @@ export class StockService {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate: dates[4]?.[dateColumn] || new Date(),
-      monthDate: dates[dates.length]?.[dateColumn] || new Date(),
+      monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
       yearDate:
         (await instance.query(query, [lastYear]))[0]?.[dateColumn] ||
         new Date(),
@@ -357,6 +357,14 @@ export class StockService {
         '[PHANTICH].[dbo].[database_mkt]',
       );
 
+      console.log({
+        latestDate,
+        previousDate,
+        weekDate,
+        monthDate,
+        firstDateYear,
+      });
+
       const byExchange: string =
         exchange == 'ALL' ? ' ' : ` AND c.EXCHANGE = '${exchange}' `;
       const groupBy: string = exchange == 'ALL' ? ' ' : ', c.EXCHANGE ';
@@ -490,6 +498,7 @@ export class StockService {
         data: mappedData,
         buySellData: buySellData?.[0],
       });
+
       return { data: mappedData, buySellData: buySellData?.[0] };
     } catch (error) {
       throw new CatchException(error);
