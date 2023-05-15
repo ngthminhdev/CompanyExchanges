@@ -6,6 +6,11 @@ import { CashFlowService } from './cash-flow.service';
 import { CashTypeQueryDto } from './dto/cashTypeQuery.dto';
 import { TimestampQueryOnlyDto } from './dto/timestampOnlyQuery.dto';
 import { InvestorTransactionSwagger } from './responses/InvestorTransaction.response';
+import {
+  LiquidityGrowthResponse,
+  LiquidityGrowthSwagger,
+} from './responses/LiquidityGrowth.response';
+import { InvestorTransactionValueSwagger } from './responses/InvestorTransactionValue.response';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -45,7 +50,7 @@ export class CashFlowController {
   @ApiOperation({
     summary: 'Mức tăng trưởng thanh khoản',
   })
-  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  @ApiOkResponse({ type: InvestorTransactionValueSwagger })
   async getInvestorTransactionsValue(@Res() res: Response) {
     const data = await this.cashFlowService.getInvestorTransactionsValue();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
@@ -55,7 +60,7 @@ export class CashFlowController {
   @ApiOperation({
     summary: 'Mức tăng trưởng thanh khoản',
   })
-  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  @ApiOkResponse({ type: LiquidityGrowthSwagger })
   async getLiquidityGrowth(
     @Query() q: TimestampQueryOnlyDto,
     @Res() res: Response,

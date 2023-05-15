@@ -17,6 +17,8 @@ import { CashFlowValueResponse } from './responses/CashFlowValue.response';
 import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
 import { StockService } from './stock.service';
 import { InvestorTransactionValueResponse } from './responses/InvestorTransactionValue.response';
+import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
+import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
 
 @Injectable()
 export class CashFlowService {
@@ -205,5 +207,63 @@ export class CashFlowService {
     return new InvestorTransactionValueResponse().mapToList(data);
   }
 
-  async getLiquidityGrowth(type: number) {}
+  async getLiquidityGrowth(type: number) {
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = previousDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.YearToDate:
+        startDate = firstDateYear;
+        break;
+      default:
+        throw new ExceptionResponse(
+          HttpStatus.BAD_REQUEST,
+          'Invalid Transaction',
+        );
+    }
+    const query: string = `
+      SELECT
+        now.date, now.code as floor,
+        ((now.totalVal - prev.totalVal) / NULLIF(prev.totalVal, 0)) * 100 AS perChange
+      FROM
+        (
+          SELECT
+            [date],
+            code,
+            totalVal
+          FROM [marketTrade].[dbo].[indexTrade]
+          WHERE [date] >= @0
+          AND [date] <= @1
+        ) AS now
+      INNER JOIN
+        (
+          SELECT
+            [date],
+            code,
+            totalVal
+          FROM [marketTrade].[dbo].[indexTrade]
+          WHERE [date] = @0
+        ) AS prev
+      ON now.[date] > prev.[date] and now.code = prev.code
+      GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
+      ORDER BY now.[date] ASC;
+    `;
+
+    const data: LiquidityGrowthInterface[] = await this.dbServer.query(query, [
+      startDate,
+      latestDate,
+    ]);
+
+    return new LiquidityGrowthResponse().mapToList(data);
+  }
 }

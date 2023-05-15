@@ -12,7 +12,7 @@ export class LiquidityGrowthResponse {
   @ApiResponseProperty({
     type: Number,
   })
-  totalVal: number;
+  perChange: number;
 
   @ApiResponseProperty({
     type: Date,
@@ -24,24 +24,30 @@ export class LiquidityGrowthResponse {
   })
   roc: number;
 
-  constructor(data?: LiquidityGrowthInterface, roc?: number) {
-    this.floor = data?.floor || '';
-    this.totalVal = data?.totalVal || 0;
+  constructor(data?: LiquidityGrowthInterface) {
+    switch (data?.floor) {
+      case 'VNINDEX':
+        this.floor = 'HOSE';
+        break;
+      case 'HNINDEX':
+        this.floor = 'HNX';
+        break;
+      case 'UPINDEX':
+        this.floor = 'UPCOM';
+        break;
+      default:
+        this.floor = data?.floor;
+    }
+    this.perChange = data?.perChange || 0;
     this.date = UtilCommonTemplate.toDate(data?.date || new Date());
-    this.roc = roc || 0;
   }
 
   public mapToList(data?: LiquidityGrowthInterface[]) {
-    let firstTemp = data![0];
-    let lastTemp = data![data.length - 1];
-    const roc =
-      ((firstTemp.totalVal - lastTemp.totalVal) / lastTemp.totalVal) * 100;
-
-    return data.map((i) => new LiquidityGrowthResponse(i, roc));
+    return data.map((i) => new LiquidityGrowthResponse(i));
   }
 }
 
-export class VnIndexSwagger extends PartialType(BaseResponse) {
+export class LiquidityGrowthSwagger extends PartialType(BaseResponse) {
   @ApiProperty({
     type: LiquidityGrowthResponse,
     isArray: true,

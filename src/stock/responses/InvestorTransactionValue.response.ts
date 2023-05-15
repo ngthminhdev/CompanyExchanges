@@ -39,7 +39,7 @@ export class InvestorTransactionValueResponse {
   }
 }
 
-export class VnIndexSwagger extends PartialType(BaseResponse) {
+export class InvestorTransactionValueSwagger extends PartialType(BaseResponse) {
   @ApiProperty({
     type: InvestorTransactionValueResponse,
     isArray: true,
