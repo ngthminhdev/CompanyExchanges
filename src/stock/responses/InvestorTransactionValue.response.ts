@@ -19,8 +19,17 @@ export class InvestorTransactionValueResponse {
   })
   date: Date | string;
 
-  constructor(data?: InvestorTransactionValueInterface, roc?: number) {
-    this.floor = data?.floor || '';
+  constructor(data?: InvestorTransactionValueInterface) {
+    switch (data?.floor) {
+      case 'VNINDEX':
+        this.floor = 'HOSE';
+        break;
+      case 'HNINDEX':
+        this.floor = 'HNX';
+        break;
+      default:
+        this.floor = 'UPCOM';
+    }
     this.totalVal = data?.totalVal || 0;
     this.date = UtilCommonTemplate.toDate(data?.date || new Date());
   }
