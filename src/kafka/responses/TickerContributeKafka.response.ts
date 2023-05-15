@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TickerChangeInterface } from '../interfaces/ticker-change.interface';
+import { TickerContributeKafkaInterface } from '../interfaces/ticker-contribute-kafka.interface';
 
 export class TickerContributeKafkaResponse {
   @ApiProperty({
@@ -14,12 +14,12 @@ export class TickerContributeKafkaResponse {
   })
   contribute_price: number;
 
-  constructor(data?: TickerChangeInterface, field?: string) {
-    this.symbol = data?.ticker || '';
+  constructor(data?: TickerContributeKafkaInterface, field?: string) {
+    this.symbol = data?.symbol || '';
     this.contribute_price = data?.[field] || 0;
   }
 
-  public mapToList(data: TickerChangeInterface[], field: string) {
+  public mapToList(data: TickerContributeKafkaInterface[], field: string) {
     return data.map((i) => new TickerContributeKafkaResponse(i, field));
   }
 }

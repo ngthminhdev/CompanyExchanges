@@ -100,7 +100,7 @@ export class ChartController {
     summary: 'Top cổ phiếu đóng góp',
     description: `<h3>
             <font color="#228b22">Các sàn có dữ liệu: </font>
-            <font color="#ff4500">HNX, HNX30, HOSE, VN30, UPCOM</font>
+            <font color="#ff4500">HNX, HSX, VN30</font>
             </h3>`,
   })
   @ApiOkResponse({ type: TickerContributeSwagger })

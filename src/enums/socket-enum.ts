@@ -21,9 +21,9 @@ export enum SocketEmit {
   ChiSoUPCOM = 'listen-chi-so-UPINDEX',
   PhanBoDongTien = 'listen-phan-bo-dong-tien',
 
-  HsxTickerContribute0 = 'listen-hose-ticker-contribute-0',
+  HsxTickerContribute0 = 'listen-hsx-ticker-contribute-0',
   HnxTickerContribute0 = 'listen-hnx-ticker-contribute-0',
-  UpTickerContribute0 = 'listen-upcom-ticker-contribute-0',
+  VN30TickerContribute0 = 'listen-vn30-ticker-contribute-0',
 
   HsxTickerContribute1 = 'listen-hose-ticker-contribute-1',
   HnxTickerContribute1 = 'listen-hnx-ticker-contribute-1',
