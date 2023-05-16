@@ -371,14 +371,10 @@ export class CashFlowService {
     const redisData = await this.redis.get(
       `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-    console.log(
-      '🚀 ~ file: cash-flow.service.ts:378 ~ CashFlowService ~ getInvestorTransactionCashFlowRatio ~ floor:',
-      floor,
-    );
     const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
       await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
@@ -482,10 +478,10 @@ export class CashFlowService {
 
     const mappedData = new InvestorTransactionRatioResponse().mapToList(data);
 
-    // await this.redis.set(
-    //   `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
-    //   mappedData,
-    // );
+    await this.redis.set(
+      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
+      mappedData,
+    );
 
     return mappedData;
   }
