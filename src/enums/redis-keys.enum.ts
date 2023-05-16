@@ -37,4 +37,5 @@ export enum RedisKeys {
   MarketCap = 'market-cap',
 
   InvestorTransactionRatio = 'investor-transaction-ratio',
+  InvestorTransactionCashFlowRatio = 'investor-transaction-cash-flow-ratio',
 }

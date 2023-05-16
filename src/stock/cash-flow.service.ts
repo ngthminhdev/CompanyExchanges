@@ -41,8 +41,6 @@ export class CashFlowService {
       dateColumn = column.slice(1, column.length - 1);
     }
 
-    const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
-    const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
     const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
 
@@ -51,23 +49,13 @@ export class CashFlowService {
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `);
 
-    const query: string = `
-            SELECT TOP 1 ${column} FROM ${table}
-            WHERE ${column} IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
-            `;
-
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate: dates[4]?.[dateColumn] || new Date(),
       monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
-      yearDate:
-        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
-        new Date(),
-      firstDateYear:
-        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
-        new Date(),
+      yearDate: lastYear,
+      firstDateYear: firstDateYear,
     };
   }
 
@@ -367,6 +355,123 @@ export class CashFlowService {
     const mappedData = new InvestorTransactionRatioResponse().mapToList(data);
 
     await this.redis.set(RedisKeys.InvestorTransactionRatio, mappedData);
+
+    return mappedData;
+  }
+
+  async getInvestorTransactionCashFlowRatio(type: number) {
+    const redisData = await this.redis.get(
+      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = previousDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.YearToDate:
+        startDate = firstDateYear;
+        break;
+      case TransactionTimeTypeEnum.OneQuarter:
+        startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
+        break;
+      default:
+        throw new ExceptionResponse(
+          HttpStatus.BAD_REQUEST,
+          'Invalid Transaction',
+        );
+    }
+
+    const query: string = `
+    WITH market AS (
+        SELECT
+            [date],
+            SUM(totalVal) AS marketTotalVal
+        FROM [marketTrade].[dbo].[tickerTradeVND]
+        WHERE [date] >= @0 and [date] <= @1
+            AND [type] IN ('STOCK', 'ETF')
+        GROUP BY [date]
+    ),
+    data AS (
+        SELECT
+            p.[date],
+            SUM(p.netVal) AS netVal,
+            SUM(p.buyVal) AS buyVal,
+            SUM(p.sellVal) AS sellVal,
+            SUM(p.buyVal) + SUM(p.sellVal) AS totalVal,
+            MAX(m.marketTotalVal) AS marketTotalVal,
+            (SUM(p.buyVal) + SUM(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+            0 AS type
+        FROM [marketTrade].[dbo].[proprietary] AS p
+        INNER JOIN market AS m ON p.[date] = m.[date]
+        WHERE p.[date] >= @0 and p.[date] <= @1
+            AND p.type IN ('STOCK', 'ETF')
+        GROUP BY p.[date]
+        UNION ALL
+        SELECT
+            f.[date],
+            SUM(f.netVal) AS netVal,
+            SUM(f.buyVal) AS buyVal,
+            SUM(f.sellVal) AS sellVal,
+            SUM(f.buyVal) + SUM(f.sellVal) AS totalVal,
+            MAX(m.marketTotalVal) AS marketTotalVal,
+            (SUM(f.buyVal) + SUM(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+            1 AS type
+        FROM [marketTrade].[dbo].[foreign] AS f
+        INNER JOIN market AS m ON f.[date] = m.[date]
+        WHERE f.[date] >= @0 and f.[date] <= @1
+            AND f.type IN ('STOCK', 'ETF')
+        GROUP BY f.[date]
+    )
+    SELECT
+        [date], netVal, buyVal, sellVal,
+        totalVal, marketTotalVal, [percent],
+        0 AS type
+    FROM data
+    WHERE type = 0
+    UNION ALL
+    SELECT
+        [date], netVal, buyVal, sellVal,
+        totalVal, marketTotalVal, [percent],
+        1 AS type
+    FROM data
+    WHERE type = 1
+    UNION ALL
+    SELECT
+      [date],
+      -(-SUM(CASE WHEN type = 0 THEN netVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN netVal ELSE 0 END)) AS netVal,
+      marketTotalVal - (SUM(CASE WHEN type = 0 THEN buyVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN buyVal ELSE 0 END)) AS buyVal,
+      marketTotalVal - (SUM(CASE WHEN type = 0 THEN sellVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN sellVal ELSE 0 END)) AS sellVal,
+      (marketTotalVal * 2) - (SUM(CASE WHEN type = 0 THEN totalVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN totalVal ELSE 0 END)) AS totalVal,
+      marketTotalVal,
+      100 - SUM(CASE WHEN type = 0 THEN [percent] ELSE 0 END) - SUM(CASE WHEN type = 1 THEN [percent] ELSE 0 END) AS [percent],
+      2 AS type
+    FROM data
+    GROUP BY marketTotalVal, [date]
+    ORDER BY [date] ASC
+    `;
+
+    const data: InvestorTransactionRatioInterface[] = await this.dbServer.query(
+      query,
+      [startDate, latestDate],
+    );
+
+    const mappedData = new InvestorTransactionRatioResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}`,
+      mappedData,
+    );
 
     return mappedData;
   }

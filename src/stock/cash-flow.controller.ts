@@ -81,4 +81,19 @@ export class CashFlowController {
     const data = await this.cashFlowService.getInvestorTransactionRatio();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('investor-transaction-cash-flow-ratio')
+  @ApiOperation({
+    summary: 'Tỷ lệ giá trị giao dịch nhà đầu tư trong phiên',
+  })
+  @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
+  async getInvestorTransactionCashFlowRatio(
+    @Query() q: TimestampQueryOnlyDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getInvestorTransactionCashFlowRatio(
+      parseInt(q.type),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
