@@ -24,7 +24,7 @@ export class InvestorTransactionValueResponse {
       case 'VNINDEX':
         this.floor = 'HOSE';
         break;
-      case 'HNINDEX':
+      case 'HNXINDEX':
         this.floor = 'HNX';
         break;
       default:
