@@ -268,7 +268,24 @@ export class CashFlowService {
       latestDate,
     ]);
 
-    return new LiquidityGrowthResponse().mapToList(['', ...data]);
+    return new LiquidityGrowthResponse().mapToList([
+      {
+        floor: 'VNINDEX',
+        perChange: 0,
+        date: startDate,
+      },
+      {
+        floor: 'HNXINDEX',
+        perChange: 0,
+        date: startDate,
+      },
+      {
+        floor: 'UPINDEX',
+        perChange: 0,
+        date: startDate,
+      },
+      ...data,
+    ]);
   }
 
   async getInvestorTransactionRatio() {
