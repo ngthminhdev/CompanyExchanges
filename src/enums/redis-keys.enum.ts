@@ -35,4 +35,6 @@ export enum RedisKeys {
   BienDongThiTruong = 'bien-dong-thi-truong',
   KLCPLH = 'klcplh',
   MarketCap = 'market-cap',
+
+  InvestorTransactionRatio = 'investor-transaction-ratio',
 }

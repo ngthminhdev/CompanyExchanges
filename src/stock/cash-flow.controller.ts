@@ -11,6 +11,7 @@ import {
   LiquidityGrowthSwagger,
 } from './responses/LiquidityGrowth.response';
 import { InvestorTransactionValueSwagger } from './responses/InvestorTransactionValue.response';
+import { InvestorTransactionRatioSwagger } from './responses/InvestorTransactionRatio.response';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -48,7 +49,7 @@ export class CashFlowController {
 
   @Get('investor-transaction-value')
   @ApiOperation({
-    summary: 'Mức tăng trưởng thanh khoản',
+    summary: 'Giá trị giao dịch nhà đầu tư',
   })
   @ApiOkResponse({ type: InvestorTransactionValueSwagger })
   async getInvestorTransactionsValue(@Res() res: Response) {
@@ -68,6 +69,16 @@ export class CashFlowController {
     const data = await this.cashFlowService.getLiquidityGrowth(
       parseInt(q.type),
     );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('investor-transaction-ratio')
+  @ApiOperation({
+    summary: 'Tỷ lệ giá trị giao dịch nhà đầu tư trong phiên',
+  })
+  @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
+  async getInvestorTransactionRatio(@Res() res: Response) {
+    const data = await this.cashFlowService.getInvestorTransactionRatio();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

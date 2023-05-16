@@ -19,6 +19,8 @@ import { StockService } from './stock.service';
 import { InvestorTransactionValueResponse } from './responses/InvestorTransactionValue.response';
 import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
 import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
+import { InvestorTransactionRatioInterface } from './interfaces/investor-transaction-ratio.interface';
+import { InvestorTransactionRatioResponse } from './responses/InvestorTransactionRatio.response';
 
 @Injectable()
 export class CashFlowService {
@@ -194,7 +196,7 @@ export class CashFlowService {
     InvestorTransactionValueInterface[]
   > {
     const query: string = `
-      select top 20 [code] as floor, [date], totalVal 
+      select top 60 [code] as floor, [date], totalVal 
       from [marketTrade].[dbo].[indexTrade]
       where [code] in('VNINDEX', 'HNXINDEX', 'UPINDEX')
       order by [date] desc
@@ -265,5 +267,60 @@ export class CashFlowService {
     ]);
 
     return new LiquidityGrowthResponse().mapToList(data);
+  }
+
+  async getInvestorTransactionRatio() {
+    const redisData = await this.redis.get(RedisKeys.InvestorTransactionRatio);
+    if (redisData) return redisData;
+
+    const query: string = `
+      WITH market AS (
+          SELECT
+              [date],
+              sum(totalVal) AS marketTotalVal
+          FROM [marketTrade].[dbo].[tickerTradeVND]
+          WHERE [date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
+              AND [type] = 'STOCK'
+          GROUP BY [date]
+      )
+      SELECT
+          p.[date],
+          sum(p.netVal) AS netVal,
+          sum(p.buyVal) AS buyVal,
+          sum(p.sellVal) AS sellVal,
+          sum(p.buyVal) + sum(p.sellVal) AS totalVal,
+          (sum(p.buyVal) + sum(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+          0 AS type
+      FROM [marketTrade].[dbo].[proprietary] AS p
+      INNER JOIN market AS m ON p.[date] = m.[date]
+      WHERE p.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
+          AND p.type = 'STOCK'
+      GROUP BY p.[date]
+      UNION ALL
+      SELECT
+          f.[date],
+          sum(f.netVal) AS netVal,
+          sum(f.buyVal) AS buyVal,
+          sum(f.sellVal) AS sellVal,
+          sum(f.buyVal) + sum(f.sellVal) AS totalVal,
+          (sum(f.buyVal) + sum(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+          1 AS type
+      FROM [marketTrade].[dbo].[foreign] AS f
+      INNER JOIN market AS m ON f.[date] = m.[date]
+      WHERE f.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
+          AND f.type = 'STOCK'
+      GROUP BY f.[date];
+
+    `;
+
+    const data: InvestorTransactionRatioInterface[] = await this.dbServer.query(
+      query,
+    );
+
+    const mappedData = new InvestorTransactionRatioResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.InvestorTransactionRatio, mappedData);
+
+    return mappedData;
   }
 }
