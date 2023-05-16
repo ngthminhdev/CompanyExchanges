@@ -24,25 +24,25 @@ export class LiquidityGrowthResponse {
   })
   roc: number;
 
-  constructor(data?: LiquidityGrowthInterface) {
+  constructor(data?: LiquidityGrowthInterface | any) {
     switch (data?.floor) {
       case 'VNINDEX':
         this.floor = 'HOSE';
         break;
-      case 'HNINDEX':
+      case 'HNXINDEX':
         this.floor = 'HNX';
         break;
       case 'UPINDEX':
         this.floor = 'UPCOM';
         break;
       default:
-        this.floor = data?.floor;
+        this.floor = data?.floor || '';
     }
     this.perChange = data?.perChange || 0;
     this.date = UtilCommonTemplate.toDate(data?.date || new Date());
   }
 
-  public mapToList(data?: LiquidityGrowthInterface[]) {
+  public mapToList(data?: LiquidityGrowthInterface[] | any[]) {
     return data.map((i) => new LiquidityGrowthResponse(i));
   }
 }

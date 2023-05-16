@@ -246,6 +246,7 @@ export class CashFlowService {
           FROM [marketTrade].[dbo].[indexTrade]
           WHERE [date] >= @0
           AND [date] <= @1
+          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
         ) AS now
       INNER JOIN
         (
@@ -255,6 +256,7 @@ export class CashFlowService {
             totalVal
           FROM [marketTrade].[dbo].[indexTrade]
           WHERE [date] = @0
+          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
         ) AS prev
       ON now.[date] > prev.[date] and now.code = prev.code
       GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
@@ -266,7 +268,7 @@ export class CashFlowService {
       latestDate,
     ]);
 
-    return new LiquidityGrowthResponse().mapToList(data);
+    return new LiquidityGrowthResponse().mapToList(['', ...data]);
   }
 
   async getInvestorTransactionRatio() {
@@ -280,7 +282,7 @@ export class CashFlowService {
               sum(totalVal) AS marketTotalVal
           FROM [marketTrade].[dbo].[tickerTradeVND]
           WHERE [date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-              AND [type] = 'STOCK'
+              AND [type] IN('STOCK', 'ETF')
           GROUP BY [date]
       )
       SELECT
@@ -294,7 +296,7 @@ export class CashFlowService {
       FROM [marketTrade].[dbo].[proprietary] AS p
       INNER JOIN market AS m ON p.[date] = m.[date]
       WHERE p.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-          AND p.type = 'STOCK'
+          AND p.type IN('STOCK', 'ETF')
       GROUP BY p.[date]
       UNION ALL
       SELECT
@@ -308,7 +310,7 @@ export class CashFlowService {
       FROM [marketTrade].[dbo].[foreign] AS f
       INNER JOIN market AS m ON f.[date] = m.[date]
       WHERE f.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-          AND f.type = 'STOCK'
+          AND f.type IN('STOCK', 'ETF')
       GROUP BY f.[date];
 
     `;
