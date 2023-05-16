@@ -276,43 +276,71 @@ export class CashFlowService {
     if (redisData) return redisData;
 
     const query: string = `
-      WITH market AS (
-          SELECT
-              [date],
-              sum(totalVal) AS marketTotalVal
-          FROM [marketTrade].[dbo].[tickerTradeVND]
-          WHERE [date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-              AND [type] IN('STOCK', 'ETF')
-          GROUP BY [date]
-      )
-      SELECT
-          p.[date],
-          sum(p.netVal) AS netVal,
-          sum(p.buyVal) AS buyVal,
-          sum(p.sellVal) AS sellVal,
-          sum(p.buyVal) + sum(p.sellVal) AS totalVal,
-          (sum(p.buyVal) + sum(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-          0 AS type
-      FROM [marketTrade].[dbo].[proprietary] AS p
-      INNER JOIN market AS m ON p.[date] = m.[date]
-      WHERE p.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-          AND p.type IN('STOCK', 'ETF')
-      GROUP BY p.[date]
-      UNION ALL
-      SELECT
-          f.[date],
-          sum(f.netVal) AS netVal,
-          sum(f.buyVal) AS buyVal,
-          sum(f.sellVal) AS sellVal,
-          sum(f.buyVal) + sum(f.sellVal) AS totalVal,
-          (sum(f.buyVal) + sum(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-          1 AS type
-      FROM [marketTrade].[dbo].[foreign] AS f
-      INNER JOIN market AS m ON f.[date] = m.[date]
-      WHERE f.[date] = (SELECT max([date]) FROM [marketTrade].[dbo].[proprietary])
-          AND f.type IN('STOCK', 'ETF')
-      GROUP BY f.[date];
-
+    WITH market AS (
+        SELECT
+            [date],
+            SUM(totalVal) AS marketTotalVal
+        FROM [marketTrade].[dbo].[tickerTradeVND]
+        WHERE [date] = (SELECT MAX([date]) FROM [marketTrade].[dbo].[proprietary])
+            AND [type] IN ('STOCK', 'ETF')
+        GROUP BY [date]
+    ),
+    data AS (
+        SELECT
+            p.[date],
+            SUM(p.netVal) AS netVal,
+            SUM(p.buyVal) AS buyVal,
+            SUM(p.sellVal) AS sellVal,
+            SUM(p.buyVal) + SUM(p.sellVal) AS totalVal,
+            MAX(m.marketTotalVal) AS marketTotalVal,
+            (SUM(p.buyVal) + SUM(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+            0 AS type
+        FROM [marketTrade].[dbo].[proprietary] AS p
+        INNER JOIN market AS m ON p.[date] = m.[date]
+        WHERE p.[date] = (SELECT MAX([date]) FROM [marketTrade].[dbo].[proprietary])
+            AND p.type IN ('STOCK', 'ETF')
+        GROUP BY p.[date]
+        UNION ALL
+        SELECT
+            f.[date],
+            SUM(f.netVal) AS netVal,
+            SUM(f.buyVal) AS buyVal,
+            SUM(f.sellVal) AS sellVal,
+            SUM(f.buyVal) + SUM(f.sellVal) AS totalVal,
+            MAX(m.marketTotalVal) AS marketTotalVal,
+            (SUM(f.buyVal) + SUM(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+            1 AS type
+        FROM [marketTrade].[dbo].[foreign] AS f
+        INNER JOIN market AS m ON f.[date] = m.[date]
+        WHERE f.[date] = (SELECT MAX([date]) FROM [marketTrade].[dbo].[proprietary])
+            AND f.type IN ('STOCK', 'ETF')
+        GROUP BY f.[date]
+    )
+    SELECT
+        [date], netVal, buyVal, sellVal,
+        totalVal, marketTotalVal, [percent],
+        0 AS type
+    FROM data
+    WHERE type = 0
+    UNION ALL
+    SELECT
+        [date], netVal, buyVal, sellVal,
+        totalVal, marketTotalVal, [percent],
+        1 AS type
+    FROM data
+    WHERE type = 1
+    UNION ALL
+    SELECT
+    [date],
+    -(SUM(CASE WHEN type = 0 THEN netVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN netVal ELSE 0 END)) AS netVal,
+    marketTotalVal - (SUM(CASE WHEN type = 0 THEN buyVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN buyVal ELSE 0 END)) AS buyVal,
+    marketTotalVal - (SUM(CASE WHEN type = 0 THEN sellVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN sellVal ELSE 0 END)) AS sellVal,
+    (marketTotalVal * 2) - (SUM(CASE WHEN type = 0 THEN totalVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN totalVal ELSE 0 END)) AS totalVal,
+    marketTotalVal,
+    100 - SUM(CASE WHEN type = 0 THEN [percent] ELSE 0 END) - SUM(CASE WHEN type = 1 THEN [percent] ELSE 0 END) AS [percent],
+    2 AS type
+    FROM data
+    GROUP BY marketTotalVal, [date];
     `;
 
     const data: InvestorTransactionRatioInterface[] = await this.dbServer.query(
