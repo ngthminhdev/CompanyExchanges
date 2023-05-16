@@ -25,6 +25,7 @@ export enum TransactionTimeTypeEnum {
   OneMonth,
   YearToDate,
   OneQuarter,
+  YearToYear,
 }
 
 export enum TransactionEnum {

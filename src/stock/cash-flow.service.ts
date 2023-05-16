@@ -198,8 +198,14 @@ export class CashFlowService {
   }
 
   async getLiquidityGrowth(type: number) {
-    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
-      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+    const {
+      latestDate,
+      previousDate,
+      weekDate,
+      monthDate,
+      firstDateYear,
+      yearDate,
+    } = await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
 
     let startDate!: any;
     switch (type) {
@@ -214,6 +220,9 @@ export class CashFlowService {
         break;
       case TransactionTimeTypeEnum.YearToDate:
         startDate = firstDateYear;
+        break;
+      case TransactionTimeTypeEnum.YearToYear:
+        startDate = yearDate;
         break;
       default:
         throw new ExceptionResponse(
