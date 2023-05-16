@@ -150,7 +150,7 @@ export class CashFlowService {
 
     const tickerPrice = await this.stockService.getTickerPrice();
     const { latestDate, weekDate, monthDate, firstDateYear } =
-      await this.stockService.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
+      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
 
     let startDate!: Date | string;
     switch (type) {
@@ -168,16 +168,16 @@ export class CashFlowService {
         break;
     }
     const query: string = `
-    select ticker as code,
-       sum(om_value * (close_price + high + low) / 3)
-    as cashFlowValue
-    from [PHANTICH].[dbo].[database_mkt]
-    where date_time >= @0 and date_time <= @1
-    group by ticker
-    order by cashFlowValue desc
+      select code,
+        sum(omVal * (closePrice + highPrice + lowPrice) / 3)
+      as cashFlowValue
+      from [marketTrade].[dbo].[tickerTradeVND]
+      where [date] >= @0 and [date] <= @1
+      group by code
+      order by cashFlowValue desc
     `;
 
-    const data = await this.db.query(query, [startDate, latestDate]);
+    const data = await this.dbServer.query(query, [startDate, latestDate]);
 
     await data.forEach((item: Record<string, number>) => {
       item.price = tickerPrice[item.code] || 0;
@@ -257,7 +257,6 @@ export class CashFlowService {
       GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
       ORDER BY now.[date] ASC;
     `;
-    console.log({ startDate, latestDate });
 
     const data: LiquidityGrowthInterface[] = await this.dbServer.query(query, [
       startDate,
