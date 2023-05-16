@@ -12,6 +12,7 @@ import {
 } from './responses/LiquidityGrowth.response';
 import { InvestorTransactionValueSwagger } from './responses/InvestorTransactionValue.response';
 import { InvestorTransactionRatioSwagger } from './responses/InvestorTransactionRatio.response';
+import { GetExchangeAndTimeQueryDto } from './dto/getExchangeAndTimeQuery.dto';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -88,11 +89,12 @@ export class CashFlowController {
   })
   @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
   async getInvestorTransactionCashFlowRatio(
-    @Query() q: TimestampQueryOnlyDto,
+    @Query() q: GetExchangeAndTimeQueryDto,
     @Res() res: Response,
   ) {
     const data = await this.cashFlowService.getInvestorTransactionCashFlowRatio(
       parseInt(q.type),
+      q.exchange.toUpperCase(),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

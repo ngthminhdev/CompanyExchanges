@@ -49,13 +49,23 @@ export class CashFlowService {
             WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
         `);
 
+    const query: string = `
+            SELECT TOP 1 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL
+            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
+            `;
+
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate: dates[4]?.[dateColumn] || new Date(),
       monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
-      yearDate: lastYear,
-      firstDateYear: firstDateYear,
+      yearDate:
+        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
+        new Date(),
+      firstDateYear:
+        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
+        new Date(),
     };
   }
 
@@ -198,20 +208,11 @@ export class CashFlowService {
   }
 
   async getLiquidityGrowth(type: number) {
-    const {
-      latestDate,
-      previousDate,
-      weekDate,
-      monthDate,
-      firstDateYear,
-      yearDate,
-    } = await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+    const { latestDate, weekDate, monthDate, firstDateYear, yearDate } =
+      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
 
     let startDate!: any;
     switch (type) {
-      case TransactionTimeTypeEnum.Latest:
-        startDate = previousDate;
-        break;
       case TransactionTimeTypeEnum.OneWeek:
         startDate = weekDate;
         break;
@@ -225,10 +226,7 @@ export class CashFlowService {
         startDate = yearDate;
         break;
       default:
-        throw new ExceptionResponse(
-          HttpStatus.BAD_REQUEST,
-          'Invalid Transaction',
-        );
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
     }
     const query: string = `
       SELECT
@@ -259,6 +257,7 @@ export class CashFlowService {
       GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
       ORDER BY now.[date] ASC;
     `;
+    console.log({ startDate, latestDate });
 
     const data: LiquidityGrowthInterface[] = await this.dbServer.query(query, [
       startDate,
@@ -368,14 +367,20 @@ export class CashFlowService {
     return mappedData;
   }
 
-  async getInvestorTransactionCashFlowRatio(type: number) {
+  async getInvestorTransactionCashFlowRatio(type: number, ex: string) {
     const redisData = await this.redis.get(
-      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}`,
+      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+    console.log(
+      '🚀 ~ file: cash-flow.service.ts:378 ~ CashFlowService ~ getInvestorTransactionCashFlowRatio ~ floor:',
+      floor,
+    );
     const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
-      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
+      await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
     let startDate!: any;
     switch (type) {
@@ -395,10 +400,7 @@ export class CashFlowService {
         startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
         break;
       default:
-        throw new ExceptionResponse(
-          HttpStatus.BAD_REQUEST,
-          'Invalid Transaction',
-        );
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
     }
 
     const query: string = `
@@ -409,6 +411,7 @@ export class CashFlowService {
         FROM [marketTrade].[dbo].[tickerTradeVND]
         WHERE [date] >= @0 and [date] <= @1
             AND [type] IN ('STOCK', 'ETF')
+            AND [floor] IN ${floor}  
         GROUP BY [date]
     ),
     data AS (
@@ -425,6 +428,7 @@ export class CashFlowService {
         INNER JOIN market AS m ON p.[date] = m.[date]
         WHERE p.[date] >= @0 and p.[date] <= @1
             AND p.type IN ('STOCK', 'ETF')
+            AND p.[floor] IN ${floor}  
         GROUP BY p.[date]
         UNION ALL
         SELECT
@@ -440,6 +444,7 @@ export class CashFlowService {
         INNER JOIN market AS m ON f.[date] = m.[date]
         WHERE f.[date] >= @0 and f.[date] <= @1
             AND f.type IN ('STOCK', 'ETF')
+            AND f.[floor] IN ${floor}  
         GROUP BY f.[date]
     )
     SELECT
@@ -477,10 +482,10 @@ export class CashFlowService {
 
     const mappedData = new InvestorTransactionRatioResponse().mapToList(data);
 
-    await this.redis.set(
-      `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}`,
-      mappedData,
-    );
+    // await this.redis.set(
+    //   `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
+    //   mappedData,
+    // );
 
     return mappedData;
   }
