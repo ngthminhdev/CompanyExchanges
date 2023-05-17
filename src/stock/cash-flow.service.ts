@@ -23,6 +23,7 @@ import { InvestorTransactionRatioInterface } from './interfaces/investor-transac
 import { InvestorTransactionRatioResponse } from './responses/InvestorTransactionRatio.response';
 import { RsiInterface, TransactionGroup } from './interfaces/rsi.interface';
 import { RsiResponse } from './responses/Rsi.response';
+import { IndustryCashFlowResponse } from './responses/IndustryCashFlow.response';
 
 @Injectable()
 export class CashFlowService {
@@ -542,7 +543,9 @@ export class CashFlowService {
 
     const data = await this.dbServer.query(query, [startDate, latestDate]);
 
-    return data;
+    const mappedData = new IndustryCashFlowResponse().mapToList(data);
+
+    return mappedData;
   }
 
   async getRSI(session: number = 20, ex: string): Promise<RsiResponse[]> {

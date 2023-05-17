@@ -12,6 +12,7 @@ import { InvestorTransactionValueSwagger } from './responses/InvestorTransaction
 import { LiquidityGrowthSwagger } from './responses/LiquidityGrowth.response';
 import { RsiSwagger } from './responses/Rsi.response';
 import { RsiQueryDto } from './dto/rsiQuery.dto';
+import { IndustryCashFlowSwagger } from './responses/IndustryCashFlow.response';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -102,7 +103,7 @@ export class CashFlowController {
   @ApiOperation({
     summary: 'Dòng tiền theo ngành',
   })
-  @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
+  @ApiOkResponse({ type: IndustryCashFlowSwagger })
   async getIndustryCashFlow(
     @Query() q: GetExchangeAndTimeQueryDto,
     @Res() res: Response,
