@@ -492,7 +492,7 @@ export class CashFlowService {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
     const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
-      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
+      await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
     let startDate!: any;
     switch (type) {
@@ -514,22 +514,26 @@ export class CashFlowService {
 
     const query: string = `
       select
-          now.[date], now.[industry],
+          now.[type],
+          now.[date],
+          now.[industry],
           (sum(now.transValue) - sum(prev.transValue)) / NULLIF(SUM(prev.transValue), 0)  * 100 as perChange
       from (
       select
-          sum(totalVal) AS transValue,
-          i.LV2 AS industry, [date] from [marketTrade].[dbo].[tickerTradeVND] t
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 0 as type
+      from [marketTrade].[dbo].[foreign] t
       join [marketInfor].[dbo].[info] i on t.code = i.code
       where [date] = @1
       and i.type in ('STOCK', 'ETF')
       and i.LV2 != ''
       and i.floor in ${floor}
       group by LV2, [date]
-      ) now right join (
+      ) now inner join (
       select
-          sum(totalVal) AS transValue,
-          i.LV2 AS industry, [date] from [marketTrade].[dbo].[tickerTradeVND] t
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 0 as type
+      from [marketTrade].[dbo].[foreign] t
       join [marketInfor].[dbo].[info] i on t.code = i.code
       where [date] = @0
       and i.type in ('STOCK', 'ETF')
@@ -538,12 +542,77 @@ export class CashFlowService {
       group by LV2, [date]
       ) prev
       on now.industry = prev.industry
-      group by now.[date], now.[industry];
+      group by now.[date], now.[industry], now.[type]
+      union all
+      select
+          now.[type],
+          now.[date],
+          now.[industry],
+          (sum(now.transValue) - sum(prev.transValue)) / NULLIF(SUM(prev.transValue), 0)  * 100 as perChange
+      from (
+      select
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 1 as type
+      from [marketTrade].[dbo].[proprietary] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @1
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) now inner join (
+      select
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 1 as type
+      from [marketTrade].[dbo].[proprietary] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @0
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) prev
+      on now.industry = prev.industry
+      group by now.[date], now.[industry], now.[type];
     `;
 
     const data = await this.dbServer.query(query, [startDate, latestDate]);
 
-    const mappedData = new IndustryCashFlowResponse().mapToList(data);
+    const result = data.reduce((acc, curr) => {
+      const existingItem = acc.find((item) => item.industry === curr.industry);
+
+      if (existingItem) {
+        if (curr.type === 0) {
+          existingItem.foreignPerChange = curr.perChange;
+        } else if (curr.type === 1) {
+          existingItem.proprietaryPerChange = curr.perChange;
+        } else if (curr.type === 2) {
+          existingItem.retailPerChange = curr.perChange;
+        }
+      } else {
+        const newItem = {
+          date: curr.date,
+          industry: curr.industry,
+          foreignPerChange: 0,
+          proprietaryPerChange: 0,
+          retailPerChange: 0,
+        };
+
+        if (curr.type === 0) {
+          newItem.foreignPerChange = curr.perChange;
+        } else if (curr.type === 1) {
+          newItem.proprietaryPerChange = curr.perChange;
+        } else if (curr.type === 2) {
+          newItem.retailPerChange = curr.perChange;
+        }
+
+        acc.push(newItem);
+      }
+
+      return acc;
+    }, []);
+
+    const mappedData = new IndustryCashFlowResponse().mapToList(result);
 
     return mappedData;
   }

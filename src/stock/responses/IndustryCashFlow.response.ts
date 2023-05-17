@@ -13,7 +13,19 @@ export class IndustryCashFlowResponse {
     type: Number,
     example: 0.9,
   })
-  perChange: number;
+  foreignPerChange: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 0.9,
+  })
+  proprietaryPerChange: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 0.9,
+  })
+  retailPerChange: number;
 
   @ApiProperty({
     type: Date,
@@ -23,7 +35,9 @@ export class IndustryCashFlowResponse {
 
   constructor(data?: any) {
     this.industry = data?.industry || '';
-    this.perChange = data?.perChange || 0;
+    this.foreignPerChange = data?.foreignPerChange || 0;
+    this.proprietaryPerChange = data?.proprietaryPerChange || 0;
+    this.retailPerChange = data?.retailPerChange || 0;
     this.date = UtilCommonTemplate.toDate(data?.date) || '';
   }
 
