@@ -150,9 +150,15 @@ export class KafkaService {
   }
 
   handleDomesticIndex2(payload: LineChartInterface[]): void {
+    const mappedData = payload.map((item) => ({
+      ...item,
+      percentIndexChange: item.percentIndexChange * 100,
+    }));
     this.send(
       SocketEmit.ChiSoTrongNuoc2,
-      payload.sort((a, b) => (a.comGroupCode > b.comGroupCode ? -1 : 1)),
+      [...mappedData].sort((a, b) =>
+        a.comGroupCode > b.comGroupCode ? -1 : 1,
+      ),
     );
   }
 
