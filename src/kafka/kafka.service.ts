@@ -152,7 +152,7 @@ export class KafkaService {
   handleDomesticIndex2(payload: LineChartInterface[]): void {
     const mappedData = payload.map((item) => ({
       ...item,
-      percentIndexChange: item.percentIndexChange * 100,
+      percentIndexChange: +(item.percentIndexChange * 100).toFixed(2),
     }));
     this.send(
       SocketEmit.ChiSoTrongNuoc2,
