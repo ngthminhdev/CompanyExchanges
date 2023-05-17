@@ -128,4 +128,21 @@ export class CashFlowController {
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('top-net-buy-industry')
+  @ApiOperation({
+    summary: 'Chỉ số RSI',
+    description: 'HOSE, HNX, UPCOM',
+  })
+  @ApiOkResponse({ type: RsiSwagger })
+  async getTopNetBuyIndustry(
+    @Query() q: GetExchangeAndTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getTopNetBuyIndustry(
+      parseInt(q.type),
+      q.exchange.toUpperCase(),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

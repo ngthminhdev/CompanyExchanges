@@ -573,6 +573,37 @@ export class CashFlowService {
       group by LV2, [date]
       ) prev
       on now.industry = prev.industry
+      group by now.[date], now.[industry], now.[type]
+      union all
+      select
+          now.[type],
+          now.[date],
+          now.[industry],
+          (sum(now.transValue) - sum(prev.transValue)) / NULLIF(SUM(prev.transValue), 0)  * 100 as perChange
+      from (
+      select
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 2 as type
+      from [marketTrade].[dbo].[retail] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @1
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) now inner join (
+      select
+          sum(buyVal) + sum(sellVal) AS transValue,
+          i.LV2 AS industry, [date], 2 as type
+      from [marketTrade].[dbo].[retail] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @0
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) prev
+      on now.industry = prev.industry
       group by now.[date], now.[industry], now.[type];
     `;
 
@@ -678,5 +709,92 @@ export class CashFlowService {
     }
     await this.redis.set(`${RedisKeys.Rsi}:${ex}:${session}`, mappedData);
     return mappedData;
+  }
+
+  async getTopNetBuyIndustry(type: number, ex: string) {
+    const redisData = await this.redis.get(
+      `${RedisKeys.TopNetBuyIndustry}:${type}:${ex}`,
+    );
+    if (redisData) return redisData;
+
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = previousDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.YearToDate:
+        startDate = firstDateYear;
+        break;
+      default:
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
+    }
+
+    const query: string = `
+      CREATE TABLE ##TOP_TABLE (
+          industry nvarchar(255),
+          netBuyVal float,
+          sellVal float,
+          buyVal float,
+          type float,
+      );
+
+      INSERT INTO
+          ##TOP_TABLE(industry, netBuyVal, sellVal, buyVal, type)
+      SELECT TOP 1 i.LV2 AS industry,
+          SUM(f.netVal) AS netBuyVal,
+          SUM(f.sellVal) AS sellVal,
+          SUM(f.buyVal) AS buyVal, 0 AS type
+      FROM [marketTrade].dbo.[foreign] f
+      INNER JOIN [marketInfor].dbo.info i ON i.code = f.code
+      WHERE [date] >= @0 and [date] <= @1 AND i.type IN ('STOCK', 'ETF')
+          AND i.floor IN ${floor} AND f.netVal > 0
+      GROUP BY i.LV2
+      ORDER BY netBuyVal DESC;
+
+      INSERT INTO
+          ##TOP_TABLE(industry, netBuyVal, sellVal, buyVal, type)
+      SELECT TOP 1 i.LV2 AS industry,
+          SUM(p.netVal) AS netBuyVal,
+          SUM(p.sellVal) AS sellVal,
+          SUM(p.buyVal) AS buyVal, 1 AS type
+      FROM [marketTrade].dbo.[proprietary] p
+      INNER JOIN [marketInfor].dbo.info i ON i.code = p.code
+      WHERE [date] >= @0 and [date] <= @1 AND i.type IN ('STOCK', 'ETF')
+        AND i.floor IN ${floor} AND p.netVal > 0
+      GROUP BY i.LV2
+      ORDER BY netBuyVal DESC;
+
+      INSERT INTO
+          ##TOP_TABLE(industry, netBuyVal, sellVal, buyVal, type)
+      SELECT TOP 1 i.LV2 AS industry,
+          SUM(p.netVal) AS netBuyVal,
+          SUM(p.sellVal) AS sellVal,
+          SUM(p.buyVal) AS buyVal, 2 AS type
+      FROM [marketTrade].dbo.[retail] p
+      INNER JOIN [marketInfor].dbo.info i ON i.code = p.code
+      WHERE [date] >= @0 and [date] <= @1 AND i.type IN ('STOCK', 'ETF')
+        AND i.floor IN ${floor} AND p.netVal > 0
+      GROUP BY i.LV2
+      ORDER BY netBuyVal DESC;
+
+      SELECT * FROM ##TOP_TABLE;
+
+      DROP TABLE ##TOP_TABLE;
+    `;
+
+    const data = await this.dbServer.query(query, [startDate, latestDate]);
+    await this.redis.set(`${RedisKeys.TopNetBuyIndustry}:${type}:${ex}`, data);
+    return data;
   }
 }
