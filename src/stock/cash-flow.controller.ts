@@ -85,7 +85,7 @@ export class CashFlowController {
 
   @Get('investor-transaction-cash-flow-ratio')
   @ApiOperation({
-    summary: 'Tỷ lệ giá trị giao dịch nhà đầu tư trong phiên',
+    summary: 'Tỷ lệ dòng tiền nhà đầu tư',
   })
   @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
   async getInvestorTransactionCashFlowRatio(
@@ -131,7 +131,7 @@ export class CashFlowController {
 
   @Get('top-net-buy-industry')
   @ApiOperation({
-    summary: 'Chỉ số RSI',
+    summary: 'Top bán ròng theo ngành',
     description: 'HOSE, HNX, UPCOM',
   })
   @ApiOkResponse({ type: RsiSwagger })
