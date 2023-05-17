@@ -10,6 +10,8 @@ import { InvestorTransactionSwagger } from './responses/InvestorTransaction.resp
 import { InvestorTransactionRatioSwagger } from './responses/InvestorTransactionRatio.response';
 import { InvestorTransactionValueSwagger } from './responses/InvestorTransactionValue.response';
 import { LiquidityGrowthSwagger } from './responses/LiquidityGrowth.response';
+import { RsiSwagger } from './responses/Rsi.response';
+import { RsiQueryDto } from './dto/rsiQuery.dto';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -91,6 +93,36 @@ export class CashFlowController {
   ) {
     const data = await this.cashFlowService.getInvestorTransactionCashFlowRatio(
       parseInt(q.type),
+      q.exchange.toUpperCase(),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('industry-cash-flow')
+  @ApiOperation({
+    summary: 'Dòng tiền theo ngành',
+  })
+  @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
+  async getIndustryCashFlow(
+    @Query() q: GetExchangeAndTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getIndustryCashFlow(
+      parseInt(q.type),
+      q.exchange.toUpperCase(),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('rsi')
+  @ApiOperation({
+    summary: 'Chỉ số RSI',
+    description: 'HOSE, HNX, UPCOM',
+  })
+  @ApiOkResponse({ type: RsiSwagger })
+  async getRSI(@Query() q: RsiQueryDto, @Res() res: Response) {
+    const data = await this.cashFlowService.getRSI(
+      parseInt(q.session),
       q.exchange.toUpperCase(),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));

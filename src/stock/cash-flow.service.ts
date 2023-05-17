@@ -21,6 +21,8 @@ import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interfac
 import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
 import { InvestorTransactionRatioInterface } from './interfaces/investor-transaction-ratio.interface';
 import { InvestorTransactionRatioResponse } from './responses/InvestorTransactionRatio.response';
+import { RsiInterface, TransactionGroup } from './interfaces/rsi.interface';
+import { RsiResponse } from './responses/Rsi.response';
 
 @Injectable()
 export class CashFlowService {
@@ -169,7 +171,7 @@ export class CashFlowService {
     }
     const query: string = `
       select code,
-        sum(omVal * (closePrice + highPrice + lowPrice) / 3)
+        sum(omVol * (closePrice * 1000 + highPrice * 1000 + lowPrice * 1000) / 3)
       as cashFlowValue
       from [marketTrade].[dbo].[tickerTradeVND]
       where [date] >= @0 and [date] <= @1
@@ -482,6 +484,127 @@ export class CashFlowService {
       mappedData,
     );
 
+    return mappedData;
+  }
+
+  async getIndustryCashFlow(type: number, ex: string) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.Latest:
+        startDate = previousDate;
+        break;
+      case TransactionTimeTypeEnum.OneWeek:
+        startDate = weekDate;
+        break;
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.YearToDate:
+        startDate = firstDateYear;
+        break;
+      default:
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
+    }
+
+    const query: string = `
+      select
+          now.[date], now.[industry],
+          (sum(now.transValue) - sum(prev.transValue)) / NULLIF(SUM(prev.transValue), 0)  * 100 as perChange
+      from (
+      select
+          sum(totalVal) AS transValue,
+          i.LV2 AS industry, [date] from [marketTrade].[dbo].[tickerTradeVND] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @1
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) now right join (
+      select
+          sum(totalVal) AS transValue,
+          i.LV2 AS industry, [date] from [marketTrade].[dbo].[tickerTradeVND] t
+      join [marketInfor].[dbo].[info] i on t.code = i.code
+      where [date] = @0
+      and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      and i.floor in ${floor}
+      group by LV2, [date]
+      ) prev
+      on now.industry = prev.industry
+      group by now.[date], now.[industry];
+    `;
+
+    const data = await this.dbServer.query(query, [startDate, latestDate]);
+
+    return data;
+  }
+
+  async getRSI(session: number = 20, ex: string): Promise<RsiResponse[]> {
+    const redisData = await this.redis.get<RsiResponse[]>(
+      `${RedisKeys.Rsi}:${ex}:${session}`,
+    );
+    if (redisData) return redisData;
+
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const query = (count: number): string => `
+                select sum(totalVal) AS transaction_value, 
+                LV2 AS industry, [date] from [marketTrade].[dbo].[tickerTradeVND] t
+                join [marketInfor].[dbo].[info] i on t.code = i.code
+                where [date]
+                in (select distinct top ${count + 1} [date] from 
+                    [marketTrade].[dbo].[tickerTradeVND] order by [date] desc)
+                    AND i.LV2 != '' AND i.floor in ${floor}
+                    AND i.type in ('STOCK', 'ETF')
+                group by LV2, [date]
+                order by LV2, [date];
+            `;
+    const data: RsiInterface[] = await this.dbServer.query(query(session));
+
+    // This function calculates the relative strength index (RSI) of cash gains and losses by industry.
+    // It takes in an array of transaction data and returns an object with the RSI for each industry.
+
+    const cashByIndustry: { [key: string]: TransactionGroup } = {};
+    let previousTransaction = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const currentTransaction = data[i];
+      if (currentTransaction.industry === previousTransaction.industry) {
+        const diff =
+          currentTransaction.transaction_value -
+          previousTransaction.transaction_value;
+        if (!cashByIndustry[currentTransaction.industry]) {
+          cashByIndustry[currentTransaction.industry] = {
+            cashGain: 0,
+            cashLost: 0,
+          };
+        }
+        if (diff > 0) {
+          cashByIndustry[currentTransaction.industry].cashGain++;
+        } else if (diff < 0) {
+          cashByIndustry[currentTransaction.industry].cashLost++;
+        }
+      }
+      previousTransaction = currentTransaction;
+    }
+
+    const mappedData: RsiResponse[] = [];
+    for (const item in cashByIndustry) {
+      const { cashGain, cashLost } = cashByIndustry[item];
+      const rsCash: number = cashGain / cashLost || 0;
+      mappedData.push({
+        industry: item,
+        cashGain,
+        cashLost,
+        rsCash,
+        rsiCash: 100 - 100 / (1 + rsCash),
+      });
+    }
+    await this.redis.set(`${RedisKeys.Rsi}:${ex}:${session}`, mappedData);
     return mappedData;
   }
 }
