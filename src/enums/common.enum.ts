@@ -37,4 +37,5 @@ export enum InvestorTypeEnum {
   Foreign,
   Retail,
   Proprietary,
+  All,
 }

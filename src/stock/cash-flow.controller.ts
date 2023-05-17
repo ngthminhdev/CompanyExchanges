@@ -13,6 +13,7 @@ import { LiquidityGrowthSwagger } from './responses/LiquidityGrowth.response';
 import { RsiSwagger } from './responses/Rsi.response';
 import { RsiQueryDto } from './dto/rsiQuery.dto';
 import { IndustryCashFlowSwagger } from './responses/IndustryCashFlow.response';
+import { InvestorCashTimeExDto } from './dto/investorCashTimeEx.dto';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -140,6 +141,24 @@ export class CashFlowController {
     @Res() res: Response,
   ) {
     const data = await this.cashFlowService.getTopNetBuyIndustry(
+      parseInt(q.type),
+      q.exchange.toUpperCase(),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('investor-cash-flow-by-industry')
+  @ApiOperation({
+    summary: 'Dòng tiền nhà đầu tư theo các nhóm ngành',
+    description: 'HOSE, HNX, UPCOM',
+  })
+  @ApiOkResponse({ type: RsiSwagger })
+  async getInvestorCashFlowByIndustry(
+    @Query() q: InvestorCashTimeExDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getInvestorCashFlowByIndustry(
+      parseInt(q.investorType),
       parseInt(q.type),
       q.exchange.toUpperCase(),
     );

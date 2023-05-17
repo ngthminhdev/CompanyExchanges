@@ -40,4 +40,5 @@ export enum RedisKeys {
   InvestorTransactionCashFlowRatio = 'investor-transaction-cash-flow-ratio',
 
   TopNetBuyIndustry = 'top-net-buy-industry',
+  InvestorCashFlowByIndustry = 'investor-cash-flow-by-industry',
 }

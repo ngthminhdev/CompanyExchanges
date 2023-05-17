@@ -11,19 +11,19 @@ import {
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { ExceptionResponse } from '../exceptions/common.exception';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { InvestorTransactionRatioInterface } from './interfaces/investor-transaction-ratio.interface';
 import { InvestorTransactionValueInterface } from './interfaces/investor-transaction-value.interface';
+import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
+import { RsiInterface, TransactionGroup } from './interfaces/rsi.interface';
 import { SessionDatesInterface } from './interfaces/session-dates.interface';
 import { CashFlowValueResponse } from './responses/CashFlowValue.response';
-import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
-import { StockService } from './stock.service';
-import { InvestorTransactionValueResponse } from './responses/InvestorTransactionValue.response';
-import { LiquidityGrowthInterface } from './interfaces/liquidity-growth.interface';
-import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
-import { InvestorTransactionRatioInterface } from './interfaces/investor-transaction-ratio.interface';
-import { InvestorTransactionRatioResponse } from './responses/InvestorTransactionRatio.response';
-import { RsiInterface, TransactionGroup } from './interfaces/rsi.interface';
-import { RsiResponse } from './responses/Rsi.response';
 import { IndustryCashFlowResponse } from './responses/IndustryCashFlow.response';
+import { InvestorTransactionResponse } from './responses/InvestorTransaction.response';
+import { InvestorTransactionRatioResponse } from './responses/InvestorTransactionRatio.response';
+import { InvestorTransactionValueResponse } from './responses/InvestorTransactionValue.response';
+import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
+import { RsiResponse } from './responses/Rsi.response';
+import { StockService } from './stock.service';
 
 @Injectable()
 export class CashFlowService {
@@ -795,6 +795,101 @@ export class CashFlowService {
 
     const data = await this.dbServer.query(query, [startDate, latestDate]);
     await this.redis.set(`${RedisKeys.TopNetBuyIndustry}:${type}:${ex}`, data);
+    return data;
+  }
+
+  async getInvestorCashFlowByIndustry(
+    investorType: number,
+    type: number,
+    ex: string,
+  ) {
+    const redisData = await this.redis.get(
+      `${RedisKeys.InvestorCashFlowByIndustry}:${ex}:${type}:${investorType}`,
+    );
+
+    // if (redisData) return redisData;
+
+    let investor!: string;
+
+    switch (investorType) {
+      case InvestorTypeEnum.Foreign:
+        investor = 'foreign';
+        break;
+      case InvestorTypeEnum.Proprietary:
+        investor = 'proprietary';
+        break;
+      case InvestorTypeEnum.Retail:
+        investor = 'retail';
+        break;
+      default:
+        throw new ExceptionResponse(
+          HttpStatus.BAD_REQUEST,
+          'investor not found',
+        );
+    }
+
+    const { latestDate, monthDate, yearDate } = await this.getSessionDate(
+      `[marketTrade].[dbo].[${investor}]`,
+    );
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.OneQuarter:
+        startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
+        break;
+      case TransactionTimeTypeEnum.YearToYear:
+        startDate = yearDate;
+        break;
+      default:
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
+    }
+
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+    const query: string = `
+      SELECT t.industry,
+            t.buyVal,
+            t.sellVal,
+            t.netVal,
+            t.transVal,
+            t.type,
+            t.date,
+            m.marketTotalVal,
+            (t.transVal / NULLIF(m.marketTotalVal,0) * 100) as [percent]
+      FROM(
+          SELECT i.LV2 AS industry,
+                SUM(f.buyVal) AS buyVal,
+                SUM(f.sellVal) AS sellVal,
+                SUM(f.netVal) AS netVal,
+                SUM(f.buyVal) + SUM(f.sellVal) AS transVal,
+                0 AS type,
+                f.[date]
+          FROM [marketTrade].dbo.[${investor}] f
+          INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
+          WHERE f.[date] >= @0
+            AND f.[date] <= @1
+            AND i.floor IN ${floor}
+            AND i.LV2 != ''
+          GROUP BY f.[date], i.LV2
+      ) t
+      INNER JOIN (
+          SELECT f.[date], SUM(f.buyVal) + SUM(f.sellVal) AS marketTotalVal
+          FROM [marketTrade].dbo.[${investor}] f
+          INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
+          WHERE f.[date] >= @0
+            AND f.[date] <= @1
+            AND i.floor IN ${floor}
+            AND i.LV2 != ''
+          GROUP BY f.[date]
+      ) m ON t.date = m.date
+      ORDER BY t.date;
+    `;
+
+    const data = await this.dbServer.query(query, [startDate, latestDate]);
+
     return data;
   }
 }
