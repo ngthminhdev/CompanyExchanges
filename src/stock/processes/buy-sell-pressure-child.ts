@@ -36,10 +36,6 @@ process.on('message', async (data: any) => {
     // tạo database connection mới và thực hiện truy vấn
     const sql = await connectDB();
     const buySellData = (await sql.query(query)).recordset;
-    console.log(
-      '🚀 ~ file: buy-sell-pressure-child.ts:39 ~ process.on ~ buySellData:',
-      buySellData,
-    );
 
     // gửi kết quả truy vấn về cho process cha
     process.send(buySellData);
