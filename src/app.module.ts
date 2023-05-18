@@ -73,7 +73,7 @@ import { DB_SERVER } from './constants';
     UserModule,
     QueueModule,
     SocketModule,
-    // KafkaModule,
+    KafkaModule,
   ],
 })
 export class AppModule implements NestModule {
