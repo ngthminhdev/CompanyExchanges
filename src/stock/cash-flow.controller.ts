@@ -178,11 +178,12 @@ export class CashFlowController {
   })
   @ApiOkResponse({ type: InvestorCashFlowByIndustrySwagger })
   async getTotalTransactionValue(
-    @Query() q: TimestampQueryOnlyDto,
+    @Query() q: GetExchangeAndTimeQueryDto,
     @Res() res: Response,
   ) {
     const data = await this.cashFlowService.getTotalTransactionValue(
       parseInt(q.type),
+      q.exchange.toUpperCase(),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

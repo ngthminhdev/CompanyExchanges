@@ -4,6 +4,12 @@ import { UtilCommonTemplate } from '../../utils/utils.common';
 
 export class MarketTotalTransValueResponse {
   @ApiProperty({
+    type: String,
+    example: 'Ngan Hang',
+  })
+  industry: string;
+
+  @ApiProperty({
     type: Date,
     example: new Date(),
   })
@@ -16,6 +22,7 @@ export class MarketTotalTransValueResponse {
   marketTotalVal: number;
 
   constructor(data?: any) {
+    this.industry = data?.industry || '';
     this.date = UtilCommonTemplate.toDate(data?.date) || '';
     this.marketTotalVal = data?.marketTotalVal || 0;
   }

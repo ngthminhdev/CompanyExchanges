@@ -903,10 +903,12 @@ export class CashFlowService {
     return mappedData;
   }
 
-  async getTotalTransactionValue(type: number) {
+  async getTotalTransactionValue(type: number, ex: string) {
     const { latestDate, monthDate, yearDate } = await this.getSessionDate(
       '[marketTrade].[dbo].[tickerTradeVND]',
     );
+
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
     let startDate!: any;
     switch (type) {
@@ -925,12 +927,16 @@ export class CashFlowService {
 
     const query: string = `
       select
-        [date],
-        sum(totalVal) as marketTotalVal
-      from marketTrade.dbo.tickerTradeVND
+          i.LV2 as industry,
+          [date],
+          sum(totalVal) as marketTotalVal
+      from marketTrade.dbo.tickerTradeVND t
+      inner join marketInfor.dbo.info i on i.code = t.code
       where [date] >= @0 and [date] <= @1
-      group by [date]
-      order by [date]
+      and i.floor in ${floor} and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
+      group by i.LV2, [date]
+      order by [date], i.LV2
     `;
 
     const data = await this.dbServer.query(query, [startDate, latestDate]);
