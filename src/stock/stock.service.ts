@@ -1096,10 +1096,10 @@ export class StockService {
         await this.dbServer.query(query, [date, ex]),
       );
 
-      await this.redis.set(
-        `${RedisKeys.MarketMap}:${exchange}:${order}`,
-        mappedData,
-      );
+      // await this.redis.set(
+      //   `${RedisKeys.MarketMap}:${exchange}:${order}`,
+      //   mappedData,
+      // );
 
       return mappedData;
     } catch (e) {
