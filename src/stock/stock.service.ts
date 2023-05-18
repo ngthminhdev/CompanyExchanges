@@ -1036,7 +1036,7 @@ export class StockService {
       // if (redisData) return redisData;
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        '[marketTrade].[dbo].[tickerTrade]',
+        '[marketTrade].[dbo].[tickerTradeVND]',
         'date',
         this.dbServer,
       );
@@ -1085,7 +1085,7 @@ export class StockService {
       const query: string = `
                 SELECT c.floor AS global, c.LV2 AS industry, 
                 c.code as ticker, n.${field} AS value 
-                FROM [marketTrade].[dbo].[tickerTrade] n
+                FROM [marketTrade].[dbo].[tickerTradeVND] n
                 JOIN [marketInfor].[dbo].[info] c
                 ON c.code = n.code ${byExchange}
                 WHERE n.date = @0 and c.[type] = 'STOCK'

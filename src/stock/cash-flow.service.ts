@@ -867,7 +867,7 @@ export class CashFlowService {
                 SUM(f.sellVal) AS sellVal,
                 SUM(f.netVal) AS netVal,
                 SUM(f.buyVal) + SUM(f.sellVal) AS transVal,
-                0 AS type,
+                ${investorType} AS type,
                 f.[date]
           FROM [marketTrade].dbo.[${investor}] f
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
