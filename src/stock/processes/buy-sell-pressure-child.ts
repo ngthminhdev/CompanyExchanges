@@ -27,7 +27,7 @@ process.on('message', async (data: any) => {
 
     if (exchange == 'ALL') {
       query = `
-                select sum(CAST(Khoi_luong_cung AS int)) as sellPressure, sum(CAST(Khoi_luong_cau AS int)) as buyPressure
+                select sum(CAST(Khoi_luong_cung AS float)) as sellPressure, sum(CAST(Khoi_luong_cau AS float)) as buyPressure
                 from [PHANTICH].[dbo].[INDEX_AC_CC]
                 where Ticker in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
             `;
@@ -36,6 +36,10 @@ process.on('message', async (data: any) => {
     // tạo database connection mới và thực hiện truy vấn
     const sql = await connectDB();
     const buySellData = (await sql.query(query)).recordset;
+    console.log(
+      '🚀 ~ file: buy-sell-pressure-child.ts:39 ~ process.on ~ buySellData:',
+      buySellData,
+    );
 
     // gửi kết quả truy vấn về cho process cha
     process.send(buySellData);
