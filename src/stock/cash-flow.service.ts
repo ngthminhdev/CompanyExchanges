@@ -24,6 +24,9 @@ import { InvestorTransactionValueResponse } from './responses/InvestorTransactio
 import { LiquidityGrowthResponse } from './responses/LiquidityGrowth.response';
 import { RsiResponse } from './responses/Rsi.response';
 import { StockService } from './stock.service';
+import { InvestorCashFlowByIndustryInterface } from './interfaces/investor-cash-flow-by-industry.interface';
+import { InvestorCashFlowByIndustryResponse } from './responses/InvestorCashFlowByIndustry.response';
+import { MarketTotalTransValueResponse } from './responses/MarketTotalTransValue.response';
 
 @Injectable()
 export class CashFlowService {
@@ -806,8 +809,7 @@ export class CashFlowService {
     const redisData = await this.redis.get(
       `${RedisKeys.InvestorCashFlowByIndustry}:${ex}:${type}:${investorType}`,
     );
-
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     let investor!: string;
 
@@ -829,7 +831,7 @@ export class CashFlowService {
     }
 
     const { latestDate, monthDate, yearDate } = await this.getSessionDate(
-      `[marketTrade].[dbo].[${investor}]`,
+      `[marketTrade].[dbo].[proprietary]`,
     );
 
     let startDate!: any;
@@ -888,8 +890,52 @@ export class CashFlowService {
       ORDER BY t.date;
     `;
 
+    const data: InvestorCashFlowByIndustryInterface[] =
+      await this.dbServer.query(query, [startDate, latestDate]);
+
+    const mappedData = new InvestorCashFlowByIndustryResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.InvestorCashFlowByIndustry}:${ex}:${type}:${investorType}`,
+      mappedData,
+    );
+    return mappedData;
+  }
+
+  async getTotalTransactionValue(type: number) {
+    const { latestDate, monthDate, yearDate } = await this.getSessionDate(
+      '[marketTrade].[dbo].[tickerTradeVND]',
+    );
+
+    let startDate!: any;
+    switch (type) {
+      case TransactionTimeTypeEnum.OneMonth:
+        startDate = monthDate;
+        break;
+      case TransactionTimeTypeEnum.OneQuarter:
+        startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
+        break;
+      case TransactionTimeTypeEnum.YearToYear:
+        startDate = yearDate;
+        break;
+      default:
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
+    }
+
+    const query: string = `
+      select
+        [date],
+        sum(totalVal) as marketTotalVal
+      from marketTrade.dbo.tickerTradeVND
+      where [date] >= @0 and [date] <= @1
+      group by [date]
+      order by [date]
+    `;
+
     const data = await this.dbServer.query(query, [startDate, latestDate]);
 
-    return data;
+    const mappedData = new MarketTotalTransValueResponse().mapToList(data);
+
+    return mappedData;
   }
 }

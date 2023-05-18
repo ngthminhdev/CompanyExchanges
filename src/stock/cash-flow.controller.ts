@@ -14,6 +14,7 @@ import { RsiSwagger } from './responses/Rsi.response';
 import { RsiQueryDto } from './dto/rsiQuery.dto';
 import { IndustryCashFlowSwagger } from './responses/IndustryCashFlow.response';
 import { InvestorCashTimeExDto } from './dto/investorCashTimeEx.dto';
+import { InvestorCashFlowByIndustrySwagger } from './responses/InvestorCashFlowByIndustry.response';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -150,9 +151,12 @@ export class CashFlowController {
   @Get('investor-cash-flow-by-industry')
   @ApiOperation({
     summary: 'Dòng tiền nhà đầu tư theo các nhóm ngành',
-    description: 'HOSE, HNX, UPCOM',
+    description: `
+      Exchange: HOSE, HNX, UPCOM,
+      Timestamp: 2 - 1 thang , 4 - 1 quy(3 thang), 5 - 1 nam
+    `,
   })
-  @ApiOkResponse({ type: RsiSwagger })
+  @ApiOkResponse({ type: InvestorCashFlowByIndustrySwagger })
   async getInvestorCashFlowByIndustry(
     @Query() q: InvestorCashTimeExDto,
     @Res() res: Response,
@@ -161,6 +165,24 @@ export class CashFlowController {
       parseInt(q.investorType),
       parseInt(q.type),
       q.exchange.toUpperCase(),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('market-total-value')
+  @ApiOperation({
+    summary: 'Tổng giá trị giao dịch toàn thị trường',
+    description: `
+      Timestamp: 2 - 1 thang , 4 - 1 quy(3 thang), 5 - 1 nam
+    `,
+  })
+  @ApiOkResponse({ type: InvestorCashFlowByIndustrySwagger })
+  async getTotalTransactionValue(
+    @Query() q: TimestampQueryOnlyDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.cashFlowService.getTotalTransactionValue(
+      parseInt(q.type),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
