@@ -29,7 +29,6 @@ import { InternationalIndexInterface } from './interfaces/international-index.in
 import { MarketVolatilityRawInterface } from './interfaces/market-volatility.interface';
 import { MerchandisePriceInterface } from './interfaces/merchandise-price.interface';
 import { NetForeignInterface } from './interfaces/net-foreign.interface';
-import { RsiInterface, TransactionGroup } from './interfaces/rsi.interface';
 import { SessionDatesInterface } from './interfaces/session-dates.interface';
 import { StockEventsInterface } from './interfaces/stock-events.interface';
 import { TopNetForeignByExInterface } from './interfaces/top-net-foreign-by-ex.interface';
@@ -46,7 +45,6 @@ import { MarketVolatilityResponse } from './responses/MarketVolatiliy.response';
 import { MerchandisePriceResponse } from './responses/MerchandisePrice.response';
 import { NetForeignResponse } from './responses/NetForeign.response';
 import { NetTransactionValueResponse } from './responses/NetTransactionValue.response';
-import { RsiResponse } from './responses/Rsi.response';
 import { StockEventsResponse } from './responses/StockEvents.response';
 import { StockNewsResponse } from './responses/StockNews.response';
 import { TopNetForeignResponse } from './responses/TopNetForeign.response';
@@ -75,18 +73,21 @@ export class StockService {
       if (exchange) return exchange;
 
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        'PHANTICH.dbo.database_mkt',
+        '[marketTrade].[dbo].[tickerTradeVND]',
+        'date',
+        this.dbServer,
       );
       //Calculate exchange volume
 
       if (!exchange) {
         exchange = (
-          await this.db.query(
+          await this.dbServer.query(
             `
-                    SELECT c.EXCHANGE AS exchange, SUM(t.total_value_mil) as value
-                    FROM PHANTICH.dbo.database_mkt t
-                    JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                    WHERE date_time >= @0 and date_time <= @1
+                    SELECT c.floor AS exchange, SUM(t.totalVal) as value
+                    FROM [marketTrade].[dbo].[tickerTradeVND] t
+                    JOIN [marketInfor].[dbo].[info] c ON c.code = t.code
+                    WHERE [date] >= @0 and [date] <= @1
+                    AND c.type in ('STOCK', 'ETF')
                     GROUP BY exchange
                 `,
             [startDate || latestDate, endDate || latestDate],
@@ -98,12 +99,12 @@ export class StockService {
           `${RedisKeys.ExchangeVolume}:${startDate}:${endDate}`,
           {
             ...exchange,
-            ALL: exchange?.['HSX'] + exchange?.['HNX'] + exchange?.['UPCOM'],
+            ALL: exchange?.['HOSE'] + exchange?.['HNX'] + exchange?.['UPCOM'],
           },
         );
         return {
           ...exchange,
-          ALL: exchange?.['HSX'] + exchange?.['HNX'] + exchange?.['UPCOM'],
+          ALL: exchange?.['HOSE'] + exchange?.['HNX'] + exchange?.['UPCOM'],
         };
       }
     } catch (e) {
@@ -114,7 +115,9 @@ export class StockService {
   public async getTickerPrice() {
     try {
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        'PHANTICH.dbo.database_mkt',
+        '[marketTrade].[dbo].[tickerTradeVND]',
+        'date',
+        this.dbServer,
       );
       //Calculate exchange volume
       let tickerPrice: any = await this.redis.get(RedisKeys.TickerPrice);
@@ -122,12 +125,12 @@ export class StockService {
 
       if (!tickerPrice) {
         tickerPrice = (
-          await this.db.query(
+          await this.dbServer.query(
             `
-                        SELECT ticker, close_price as price
-                        FROM PHANTICH.dbo.database_mkt t
-                        WHERE date_time = @0
-                    `,
+              SELECT code as ticker, closePrice as price
+              FROM [marketTrade].[dbo].[tickerTradeVND]
+              WHERE [date] = @0
+            `,
             [latestDate],
           )
         ).reduce((prev, curr) => {
@@ -268,7 +271,11 @@ export class StockService {
       if (redisData) return redisData;
       // Get 2 latest date
       const { latestDate, previousDate }: SessionDatesInterface =
-        await this.getSessionDate('[PHANTICH].[dbo].[database_mkt]');
+        await this.getSessionDate(
+          '[marketTrade].[dbo].[tickerTradeVND]',
+          'date',
+          this.dbServer,
+        );
 
       //Calculate exchange volume
       let exchange: ExchangeValueInterface[] = await this.getExchangesVolume(
@@ -276,18 +283,19 @@ export class StockService {
       );
 
       const query: string = `
-                SELECT t.total_value_mil AS value, t.ticker, c.LV2 AS industry, c.EXCHANGE AS exchange,
-                ((t.total_value_mil - t2.total_value_mil) / NULLIF(t2.total_value_mil, 0)) * 100 AS value_change_percent
-                FROM PHANTICH.dbo.database_mkt t
-                JOIN PHANTICH.dbo.database_mkt t2 ON t.ticker = t2.ticker AND t2.date_time = @1
-                JOIN PHANTICH.dbo.ICBID c ON c.TICKER = t.ticker
-                WHERE t.date_time = @0
+                SELECT t.totalVal AS value, t.code as ticker, c.LV2 AS industry, c.floor AS exchange,
+                ((t.totalVal - t2.totalVal) / NULLIF(t2.totalVal, 0)) * 100 AS value_change_percent
+                FROM [marketTrade].[dbo].[tickerTradeVND] t
+                JOIN [marketTrade].[dbo].[tickerTradeVND] t2 
+                ON t.code = t2.code AND t2.[date] = @1
+                JOIN [marketInfor].[dbo].[info] c ON c.code = t.code
+                WHERE t.[date] = @0 AND c.type in ('STOCK', 'ETF')
             `;
 
-      const data: TickerByExchangeInterface[] = await this.db.query(query, [
-        latestDate,
-        previousDate,
-      ]);
+      const data: TickerByExchangeInterface[] = await this.dbServer.query(
+        query,
+        [latestDate, previousDate],
+      );
       const mappedData = new MarketLiquidityResponse().mapToList(
         data.map((item) => {
           return {
@@ -1029,11 +1037,7 @@ export class StockService {
     try {
       const { exchange, order } = q;
       const ex = exchange.toUpperCase();
-      const byExchange = ex === 'ALL' ? ' ' : ' AND c.floor = @1 ';
-      // const redisData = await this.redis.get<MarketMapResponse[]>(
-      //   `${RedisKeys.MarketMap}:${exchange}:${order}`,
-      // );
-      // if (redisData) return redisData;
+      const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
@@ -1051,20 +1055,49 @@ export class StockService {
         ).latestDate;
         const query: string = `
                 SELECT c.floor AS global, c.LV2 AS industry, 
-                c.code as ticker, n.netVal AS value
+                c.code as ticker, 
+                sum(n.buyVal) + sum(n.sellVal) AS value
                 FROM [marketTrade].[dbo].[foreign] n
                 JOIN [marketInfor].[dbo].[info] c
-                ON c.code = n.code ${byExchange}
-                WHERE n.date = @0 and c.[type] = 'STOCK'
+                ON c.code = n.code
+                WHERE n.date = @0 and c.[type] in ('STOCK', 'ETF')
+                AND c.floor in ${floor}
                 AND c.LV2 != ''
+                GROUP BY c.floor, c.LV2, c.code
+
             `;
         const mappedData = new MarketMapResponse().mapToList(
-          await this.dbServer.query(query, [date, ex]),
+          await this.dbServer.query(query, [date]),
         );
 
-        await this.redis.set(
-          `${RedisKeys.MarketMap}:${exchange}:${order}`,
-          mappedData,
+        return mappedData;
+      }
+
+      if (+order === MarketMapEnum.MarketCap) {
+        const floor =
+          ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+        date = (
+          await this.getSessionDate(
+            '[marketRatio].[dbo].[ratio]',
+            'date',
+            this.dbServer,
+          )
+        ).latestDate;
+
+        const query: string = `
+              select i.floor as global, i.LV2 as industry,
+              c.code as ticker, c.value
+              from [marketRatio].[dbo].[ratio] c
+              inner join [marketInfor].[dbo].[info] i
+              on c.code = i.code
+              where i.floor in ${floor}
+                and date = @0 and c.ratioCode = 'MARKETCAP'
+                and i.[type] in ('STOCK', 'ETF')
+                and i.LV2 != ''
+            `;
+        const mappedData = new MarketMapResponse().mapToList(
+          await this.dbServer.query(query, [date]),
         );
 
         return mappedData;
@@ -1072,14 +1105,17 @@ export class StockService {
 
       let field: string;
       switch (parseInt(order)) {
-        case MarketMapEnum.MarketCap:
-          field = 'marketCap';
-          break;
         case MarketMapEnum.Value:
           field = 'totalVal';
           break;
-        default:
+        case MarketMapEnum.Volume:
           field = 'totalVol';
+          break;
+        default:
+          throw new ExceptionResponse(
+            HttpStatus.BAD_REQUEST,
+            'order not found',
+          );
       }
 
       const query: string = `
@@ -1087,19 +1123,15 @@ export class StockService {
                 c.code as ticker, n.${field} AS value 
                 FROM [marketTrade].[dbo].[tickerTradeVND] n
                 JOIN [marketInfor].[dbo].[info] c
-                ON c.code = n.code ${byExchange}
+                ON c.code = n.code
                 WHERE n.date = @0 and c.[type] = 'STOCK'
+                AND c.floor in ${floor}
                 AND c.LV2 != ''   
             `;
 
       const mappedData = new MarketMapResponse().mapToList(
-        await this.dbServer.query(query, [date, ex]),
+        await this.dbServer.query(query, [date]),
       );
-
-      // await this.redis.set(
-      //   `${RedisKeys.MarketMap}:${exchange}:${order}`,
-      //   mappedData,
-      // );
 
       return mappedData;
     } catch (e) {
