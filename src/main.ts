@@ -55,8 +55,8 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  await app.startAllMicroservices().catch((e) => console.log(e));
+  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  // await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(

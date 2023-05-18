@@ -445,26 +445,26 @@ export class StockService {
         return stats;
       }, []);
 
-      const marketVolatility: any = final.reduce(
-        (prev, curr) => {
-          return {
-            equal: prev.equal + curr.equal,
-            high: prev.high + curr.high,
-            low: prev.low + curr.low,
-            increase: prev.increase + curr.increase,
-            decrease: prev.decrease + curr.decrease,
-          };
-        },
-        {
-          equal: 0,
-          high: 0,
-          low: 0,
-          increase: 0,
-          decrease: 0,
-        },
-      );
+      // const marketVolatility: any = final.reduce(
+      //   (prev, curr) => {
+      //     return {
+      //       equal: prev.equal + curr.equal,
+      //       high: prev.high + curr.high,
+      //       low: prev.low + curr.low,
+      //       increase: prev.increase + curr.increase,
+      //       decrease: prev.decrease + curr.decrease,
+      //     };
+      //   },
+      //   {
+      //     equal: 0,
+      //     high: 0,
+      //     low: 0,
+      //     increase: 0,
+      //     decrease: 0,
+      //   },
+      // );
 
-      await this.redis.set(RedisKeys.IndustryFull, marketVolatility);
+      // await this.redis.set(RedisKeys.IndustryFull, marketVolatility);
 
       const buySellPressure: ChildProcess = fork(
         __dirname + '/processes/buy-sell-pressure-child.js',
