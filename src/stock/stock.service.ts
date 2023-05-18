@@ -88,7 +88,7 @@ export class StockService {
                     JOIN [marketInfor].[dbo].[info] c ON c.code = t.code
                     WHERE [date] >= @0 and [date] <= @1
                     AND c.type in ('STOCK', 'ETF')
-                    GROUP BY exchange
+                    GROUP BY c.floor
                 `,
             [startDate || latestDate, endDate || latestDate],
           )
