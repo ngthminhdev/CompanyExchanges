@@ -87,8 +87,6 @@ export class CashFlowService {
     if (redisData) return redisData;
 
     const tickerPrice = await this.stockService.getTickerPrice();
-    const { latestDate, weekDate, monthDate, firstDateYear } =
-      await this.getSessionDate('[marketTrade].[dbo].[foreign]', 'date');
     let startDate!: Date | string;
     let table!: string;
     const query = (table): string => `
@@ -108,10 +106,18 @@ export class CashFlowService {
       case InvestorTypeEnum.Proprietary:
         table = 'proprietary';
         break;
-      default:
-        table = 'foreign';
+      case InvestorTypeEnum.Retail:
+        table = 'retail';
         break;
+      default:
+        throw new ExceptionResponse(
+          HttpStatus.BAD_REQUEST,
+          'investorType not found',
+        );
     }
+
+    const { latestDate, weekDate, monthDate, firstDateYear } =
+      await this.getSessionDate(`[marketTrade].[dbo].[${table}]`, 'date');
 
     switch (type) {
       case TransactionTimeTypeEnum.Latest:
