@@ -22,7 +22,7 @@ export class CashFlowController {
 
   @Get('investor-transaction')
   @ApiOperation({
-    summary: 'Diễn biến giao dịch đầu tư',
+    summary: 'Diễn biến giao dịch nhóm nhà đầu tư',
   })
   @ApiOkResponse({ type: InvestorTransactionSwagger })
   async getTickerContribute(
@@ -38,7 +38,7 @@ export class CashFlowController {
 
   @Get('value')
   @ApiOperation({
-    summary: 'Giá trị dòng tiền',
+    summary: 'Top giá trị dòng tiền',
   })
   @ApiOkResponse({ type: InvestorTransactionSwagger })
   async getCashFlowValue(
@@ -51,7 +51,7 @@ export class CashFlowController {
 
   @Get('investor-transaction-value')
   @ApiOperation({
-    summary: 'Giá trị giao dịch nhà đầu tư',
+    summary: 'Giá trị giao dịch toàn thị trường',
   })
   @ApiOkResponse({ type: InvestorTransactionValueSwagger })
   async getInvestorTransactionsValue(@Res() res: Response) {
@@ -76,7 +76,7 @@ export class CashFlowController {
 
   @Get('investor-transaction-ratio')
   @ApiOperation({
-    summary: 'Tỷ lệ giá trị giao dịch nhà đầu tư trong phiên',
+    summary: 'Tỷ lệ GTGD theo nhóm NĐT trong phiên',
   })
   @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
   async getInvestorTransactionRatio(@Res() res: Response) {
@@ -86,7 +86,7 @@ export class CashFlowController {
 
   @Get('investor-transaction-cash-flow-ratio')
   @ApiOperation({
-    summary: 'Tỷ lệ dòng tiền nhà đầu tư',
+    summary: 'Tỷ trọng dòng tiền theo nhóm NĐT',
   })
   @ApiOkResponse({ type: InvestorTransactionRatioSwagger })
   async getInvestorTransactionCashFlowRatio(
