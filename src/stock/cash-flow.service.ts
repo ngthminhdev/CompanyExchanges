@@ -873,6 +873,7 @@ export class CashFlowService {
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
             AND f.[date] <= @1
+            AND f.date != '2023-05-11'
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date], i.LV2
