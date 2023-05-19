@@ -430,7 +430,7 @@ export class CashFlowService {
             SUM(p.buyVal) + SUM(p.sellVal) AS totalVal,
             MAX(m.marketTotalVal) AS marketTotalVal,
             (SUM(p.buyVal) + SUM(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-            0 AS type
+            1 AS type
         FROM [marketTrade].[dbo].[proprietary] AS p
         INNER JOIN market AS m ON p.[date] = m.[date]
         WHERE p.[date] >= @0 and p.[date] <= @1
@@ -446,7 +446,7 @@ export class CashFlowService {
             SUM(f.buyVal) + SUM(f.sellVal) AS totalVal,
             MAX(m.marketTotalVal) AS marketTotalVal,
             (SUM(f.buyVal) + SUM(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-            1 AS type
+            0 AS type
         FROM [marketTrade].[dbo].[foreign] AS f
         INNER JOIN market AS m ON f.[date] = m.[date]
         WHERE f.[date] >= @0 and f.[date] <= @1
@@ -879,7 +879,6 @@ export class CashFlowService {
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
             AND f.[date] <= @1
-            AND f.date != '2023-05-11'
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date], i.LV2

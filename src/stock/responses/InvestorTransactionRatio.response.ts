@@ -7,7 +7,7 @@ export class InvestorTransactionRatioResponse {
   @ApiProperty({
     type: Number,
     example: '0',
-    description: ' 0 - Tu doanh, 1 - Khoi ngoai, 2 - Ca Nhan',
+    description: ' 0 - Khoi ngoai,1 - Tu doanh, 2 - Ca Nhan',
   })
   type: number;
 
