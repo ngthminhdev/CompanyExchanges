@@ -1,49 +1,35 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { BaseResponse } from '../../utils/utils.response';
-import { NetForeignInterface } from '../interfaces/net-foreign.interface';
+import { UtilCommonTemplate } from '../../utils/utils.common';
 
-export class NetForeignResponse {
+export class MarketTotalTransValueResponse {
   @ApiProperty({
     type: String,
-    example: 'VNIndex',
+    example: 'Ngan Hang',
   })
-  EXCHANGE: string;
+  industry: string;
 
   @ApiProperty({
-    type: String,
-    example: 'Hóa Chất',
+    type: Date,
+    example: new Date(),
   })
-  LV2: string;
+  date: Date | string;
 
   @ApiProperty({
     type: String,
-    example: '',
+    example: '#512DA8',
   })
   color: string;
 
   @ApiProperty({
-    type: String,
-    example: 'VCB',
-  })
-  ticker: string;
-
-  @ApiProperty({
     type: Number,
-    example: 65.5,
+    example: 1502.9,
   })
-  total_value_buy?: number;
+  transVal: number;
 
-  @ApiProperty({
-    type: Number,
-    example: 65.5,
-  })
-  total_value_sell?: number;
-
-  constructor(data?: NetForeignInterface) {
-    this.EXCHANGE =
-      data?.EXCHANGE && data?.EXCHANGE == 'HSX' ? 'HOSE' : data?.EXCHANGE || '';
-    this.LV2 = data?.LV2 || '';
-    switch (this.LV2) {
+  constructor(data?: any) {
+    this.industry = data?.industry || '';
+    switch (this.industry) {
       case 'Bảo hiểm':
         this.color = '#512DA8';
         break;
@@ -102,22 +88,19 @@ export class NetForeignResponse {
         this.color = '#90ed7d';
         break;
     }
-    this.ticker = data?.ticker || '';
-    data?.total_value_buy != undefined &&
-      (this.total_value_buy = data?.total_value_buy);
-    data?.total_value_sell != undefined &&
-      (this.total_value_sell = -data?.total_value_sell);
+    this.date = UtilCommonTemplate.toDate(data?.date) || '';
+    this.transVal = data?.marketTotalVal || 0;
   }
 
-  public mapToList(data?: NetForeignInterface[] | any[]) {
-    return data.map((i) => new NetForeignResponse(i));
+  public mapToList(data?: any[]) {
+    return data?.map((i) => new MarketTotalTransValueResponse(i));
   }
 }
 
-export class NetForeignSwagger extends PartialType(BaseResponse) {
+export class MarketTotalTransValueSwagger extends PartialType(BaseResponse) {
   @ApiProperty({
-    type: NetForeignResponse,
+    type: MarketTotalTransValueResponse,
     isArray: true,
   })
-  data: NetForeignResponse[];
+  data: MarketTotalTransValueResponse[];
 }

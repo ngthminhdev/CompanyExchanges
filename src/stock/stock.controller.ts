@@ -1,32 +1,32 @@
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { IndustrySwagger } from './responses/Industry.response';
-import { MarketVolatilitySwagger } from './responses/MarketVolatiliy.response';
 import { BaseResponse } from '../utils/utils.response';
-import { StockService } from './stock.service';
 import { GetExchangeQuery } from './dto/getExchangeQuery.dto';
-import { NetTransactionValueResponse } from './responses/NetTransactionValue.response';
-import { MarketLiquiditySwagger } from './responses/MarketLiquidity.response';
-import { MarketLiquidityQueryDto } from './dto/marketLiquidityQuery.dto';
-import { StockNewsSwagger } from './responses/StockNews.response';
-import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
-import { TopNetForeignSwagger } from './responses/TopNetForeign.response';
-import { NetForeignSwagger } from './responses/NetForeign.response';
-import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
-import { TopRocSwagger } from './responses/TopRoc.response';
-import { TopNetForeignByExsSwagger } from './responses/TopNetForeignByEx.response';
-import { InternationalIndexSwagger } from './responses/InternationalIndex.response';
-import { StockEventsSwagger } from './responses/StockEvents.response';
-import { MerchandisePriceQueryDto } from './dto/merchandisePriceQuery.dto';
-import { MerchandisePriceSwagger } from './responses/MerchandisePrice.response';
-import { RsiQueryDto } from './dto/rsiQuery.dto';
-import { RsiSwagger } from './responses/Rsi.response';
-import { MarketEvaluationSwagger } from './responses/MarketEvaluation.response';
-import { GetMarketMapQueryDto } from './dto/getMarketMapQuery.dto';
-import { MarketMapSwagger } from './responses/market-map.response';
-import { LiquidContributeSwagger } from './responses/LiquidityContribute.response';
 import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
+import { GetMarketMapQueryDto } from './dto/getMarketMapQuery.dto';
+import { IndexQueryDto } from './dto/indexQuery.dto';
+import { MarketLiquidityQueryDto } from './dto/marketLiquidityQuery.dto';
+import { MerchandisePriceQueryDto } from './dto/merchandisePriceQuery.dto';
+import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
+import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
+import { IndustrySwagger } from './responses/Industry.response';
+import { InternationalIndexSwagger } from './responses/InternationalIndex.response';
+import { LiquidContributeSwagger } from './responses/LiquidityContribute.response';
+import { MarketEvaluationSwagger } from './responses/MarketEvaluation.response';
+import { MarketLiquiditySwagger } from './responses/MarketLiquidity.response';
+import { MarketVolatilitySwagger } from './responses/MarketVolatiliy.response';
+import { MerchandisePriceSwagger } from './responses/MerchandisePrice.response';
+import { NetForeignSwagger } from './responses/NetForeign.response';
+import { NetTransactionValueResponse } from './responses/NetTransactionValue.response';
+import { StockEventsSwagger } from './responses/StockEvents.response';
+import { StockNewsSwagger } from './responses/StockNews.response';
+import { TopNetForeignSwagger } from './responses/TopNetForeign.response';
+import { TopNetForeignByExsSwagger } from './responses/TopNetForeignByEx.response';
+import { TopRocSwagger } from './responses/TopRoc.response';
+import { UpDownTickerSwagger } from './responses/UpDownTicker.response';
+import { MarketMapSwagger } from './responses/market-map.response';
+import { StockService } from './stock.service';
 
 @Controller('stock')
 @ApiTags('Stock - Api')
@@ -107,10 +107,15 @@ export class StockController {
   }
 
   @Get('top-net-foreign')
-  @ApiOperation({ summary: 'Top mua bán ròng ngoại khối' })
+  @ApiOperation({
+    summary: 'Top mua bán ròng ngoại khối',
+    description: 'HOSE, HNX,, UPCOM',
+  })
   @ApiOkResponse({ type: TopNetForeignSwagger })
-  async getTopNetForeign(@Res() res: Response) {
-    const data = await this.stockService.getTopNetForeign();
+  async getTopNetForeign(@Query() q: GetExchangeQuery, @Res() res: Response) {
+    const data = await this.stockService.getTopNetForeign(
+      q.exchange.toUpperCase(),
+    );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
@@ -173,16 +178,6 @@ export class StockController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('get-rsi')
-  @ApiOperation({
-    summary: 'Chỉ số RSI',
-  })
-  @ApiOkResponse({ type: RsiSwagger })
-  async getRSI(@Query() q: RsiQueryDto, @Res() res: Response) {
-    const data = await this.stockService.getRSI(q.session);
-    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  }
-
   @Get('market-evaluation')
   @ApiOperation({
     summary: 'Đánh giá thị trường',
@@ -225,13 +220,11 @@ export class StockController {
     summary: 'Biến động thị trường (tăng, giảm, trần, sàn)',
   })
   @ApiOkResponse({
-    type: MarketMapSwagger,
-    description: 'HOSE, HNX, UPCOM',
+    type: UpDownTickerSwagger,
+    description: 'VNINDEX, VN30, VNXALL, HNXINDEX, HNX30 , UPINDEX',
   })
-  async getUpDownTicker(@Query() q: GetExchangeQuery, @Res() res: Response) {
-    const data = await this.stockService.getUpDownTicker(
-      q.exchange.toUpperCase(),
-    );
+  async getUpDownTicker(@Query() q: IndexQueryDto, @Res() res: Response) {
+    const data = await this.stockService.getUpDownTicker(q.index.toUpperCase());
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

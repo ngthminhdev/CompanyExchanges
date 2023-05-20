@@ -58,7 +58,7 @@ export class UtilCommonTemplate {
     );
   }
 
-  static generateDeviceId(mac: string, userAgent: string) {
+  static generateDeviceId(userAgent: string, mac: string) {
     // Chuyển đổi chuỗi thành mảng byte
     const arr1 = mac.split(':').map((x) => parseInt(x, 16));
     const arr2 = new TextEncoder().encode(userAgent);

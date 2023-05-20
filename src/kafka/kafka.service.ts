@@ -9,6 +9,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { SocketEmit } from '../enums/socket-enum';
 import { CatchSocketException } from '../exceptions/socket.exception';
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import { UtilCommonTemplate } from '../utils/utils.common';
 import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
 import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
@@ -25,7 +26,10 @@ import { LineChartResponse } from './responses/LineChart.response';
 import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
 import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
-import { UtilCommonTemplate } from '../utils/utils.common';
+import { industries } from './chores';
+import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
+import { DB_SERVER } from '../constants';
+import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
 
 @Injectable()
 export class KafkaService {
@@ -36,6 +40,7 @@ export class KafkaService {
     private readonly db: DataSource,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
+    @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
   ) {}
 
   send<T>(event: string, message: T): void {
@@ -53,20 +58,28 @@ export class KafkaService {
     );
     if (redisData) return redisData;
 
-    const data = await this.db.query(`
-            select distinct t.ticker, c.LV2 as industry from [PHANTICH].[dbo].[database_mkt] t
-            inner join [PHANTICH].[dbo].[ICBID] c
-            on c.ticker = t.ticker
+    const data = await this.dbServer.query(`
+            select distinct t.code as ticker, c.LV2 as industry from [marketTrade].[dbo].[tickerTradeVND] t
+            inner join [marketInfor].[dbo].[info] c
+            on c.code = t.code
         `);
     await this.redis.set(RedisKeys.TickerIndustry, data);
     return data;
   }
 
   async getTickerArrFromRedis(key: string) {
-    const tickerArr: string[] = (await this.redis.get<any>(key)).map(
+    const tickerArr: string[] = (await this.redis.get<any>(key))?.map(
       (i) => i.ticker,
     );
     return tickerArr;
+  }
+
+  async getTickerArrayByEx() {
+    const hose: string[] = await this.getTickerArrFromRedis(RedisKeys.HOSE);
+    const hnx: string[] = await this.getTickerArrFromRedis(RedisKeys.HNX);
+    const upcom: string[] = await this.getTickerArrFromRedis(RedisKeys.UPCoM);
+
+    return { hose, hnx, upcom };
   }
 
   getTickerInEx = async (ex: string): Promise<any> => {
@@ -80,9 +93,36 @@ export class KafkaService {
     return data;
   };
 
+  private async filterAndSortPayload(
+    payload: ForeignKafkaInterface[],
+    floor: string,
+    netVal: number,
+  ) {
+    const tickerIndustry = await this.getTickerInIndustry();
+
+    const tickerList = _(payload)
+      .filter((item) => item.floor === floor && item.netVal * netVal > 0)
+      .map((item) => ({
+        ...item,
+        industry: tickerIndustry.find((i) => i.ticker === item.code)?.industry,
+      }))
+      .filter((i) => i.industry !== undefined)
+      .sortBy('netVal')
+      .value();
+
+    return new ForeignKafkaResponse().mapToList([...tickerList]);
+  }
+
   handleMarketBreadth(payload: MarketBreadthKafkaInterface[]): void {
     this.send(
       SocketEmit.DoRongThiTruong,
+      new MarketBreadthResponse().mapToList(payload),
+    );
+  }
+
+  handleMarketBreadthHNX(payload: MarketBreadthKafkaInterface[]): void {
+    this.send(
+      SocketEmit.DoRongThiTruongHNX,
       new MarketBreadthResponse().mapToList(payload),
     );
   }
@@ -110,9 +150,15 @@ export class KafkaService {
   }
 
   handleDomesticIndex2(payload: LineChartInterface[]): void {
+    const mappedData = payload.map((item) => ({
+      ...item,
+      percentIndexChange: +(item.percentIndexChange * 100).toFixed(2),
+    }));
     this.send(
       SocketEmit.ChiSoTrongNuoc2,
-      payload.sort((a, b) => (a.comGroupCode > b.comGroupCode ? -1 : 1)),
+      [...mappedData].sort((a, b) =>
+        a.comGroupCode > b.comGroupCode ? -1 : 1,
+      ),
     );
   }
 
@@ -173,64 +219,35 @@ export class KafkaService {
     }
   }
 
-  async handleTickerContribute(payload: TickerChangeInterface[]) {
+  async handleTickerContribute(payload: TickerContributeKafkaInterface[]) {
     try {
-      const hsxTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.HOSE,
-      );
-      const hnxTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.HNX,
-      );
-      const upcomTickerArr: string[] = await this.getTickerArrFromRedis(
-        RedisKeys.UPCoM,
-      );
-
-      const HSXTicker = payload.filter((ticker) =>
-        hsxTickerArr.includes(ticker.ticker),
-      );
-      const HNXTicker = payload.filter((ticker) =>
-        hnxTickerArr.includes(ticker.ticker),
-      );
-      const UPTicker = payload.filter((ticker) =>
-        upcomTickerArr.includes(ticker.ticker),
-      );
-
       //1d
-      const hsx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HSXTicker,
-        '1D',
+      const HSXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'HSX'),
+        'point',
       );
-      const hnx1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HNXTicker,
-        '1D',
+      const HNXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'HNX'),
+        'point',
       );
-      const up1dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        UPTicker,
-        '1D',
-      );
-
-      //5d
-      const hsx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HSXTicker,
-        '5D',
-      );
-      const hnx5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        HNXTicker,
-        '5D',
-      );
-      const up5dData = UtilCommonTemplate.getTop10HighestAndLowestData(
-        UPTicker,
-        '5D',
+      const VN30Data = UtilCommonTemplate.getTop10HighestAndLowestData(
+        payload.filter((item) => item.floor === 'VN30'),
+        'point',
       );
 
       //sent
-      this.send(SocketEmit.HsxTickerContribute1, hsx1dData);
-      this.send(SocketEmit.HnxTickerContribute1, hnx1dData);
-      this.send(SocketEmit.UpTickerContribute1, up1dData);
-
-      this.send(SocketEmit.HsxTickerContribute5, hsx5dData);
-      this.send(SocketEmit.HnxTickerContribute5, hnx5dData);
-      this.send(SocketEmit.UpTickerContribute5, up5dData);
+      this.send(
+        SocketEmit.HsxTickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(HSXData, 'point'),
+      );
+      this.send(
+        SocketEmit.HnxTickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(HNXData, 'point'),
+      );
+      this.send(
+        SocketEmit.VN30TickerContribute0,
+        new TickerContributeKafkaResponse().mapToList(VN30Data, 'point'),
+      );
     } catch (e) {
       throw new CatchSocketException(e);
     }
@@ -321,26 +338,6 @@ export class KafkaService {
     );
   }
 
-  private async filterAndSortPayload(
-    payload: ForeignKafkaInterface[],
-    floor: string,
-    netVal: number,
-  ) {
-    const tickerIndustry = await this.getTickerInIndustry();
-
-    const tickerList = _(payload)
-      .filter((item) => item.floor === floor && item.netVal * netVal > 0)
-      .map((item) => ({
-        ...item,
-        industry: tickerIndustry.find((i) => i.ticker === item.code)?.industry,
-      }))
-      .filter((i) => i.industry !== undefined)
-      .sortBy('netVal')
-      .value();
-
-    return new ForeignKafkaResponse().mapToList([...tickerList]);
-  }
-
   async handleForeign(payload: ForeignKafkaInterface[]) {
     const tickerBuyHSX = await this.filterAndSortPayload(payload, 'HOSE', 1);
     const tickerBuyHNX = await this.filterAndSortPayload(payload, 'HNX', 1);
@@ -364,13 +361,43 @@ export class KafkaService {
   }
 
   async handleTopForeign(payload: ForeignKafkaInterface[]) {
-    const data = UtilCommonTemplate.getTop10HighestAndLowestData(
-      payload,
+    //get ticker andd filter by ex
+    const { hose, hnx, upcom } = await this.getTickerArrayByEx();
+
+    const HSXTicker = payload.filter((ticker) => hose?.includes(ticker.code));
+    const HNXTicker = payload.filter((ticker) => hnx?.includes(ticker.code));
+    const UPTicker = payload.filter((ticker) => upcom?.includes(ticker.code));
+
+    //send
+
+    const HSXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      HSXTicker,
       'netVal',
     );
+
+    const HNXData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      HNXTicker,
+      'netVal',
+    );
+
+    const UPData = UtilCommonTemplate.getTop10HighestAndLowestData(
+      UPTicker,
+      'netVal',
+    );
+
     this.send(
-      SocketEmit.TopForeign,
-      new TopNetForeignKafkaResponse().mapToList(data),
+      SocketEmit.TopForeignHOSE,
+      new TopNetForeignKafkaResponse().mapToList(HSXData),
+    );
+
+    this.send(
+      SocketEmit.TopForeignHNX,
+      new TopNetForeignKafkaResponse().mapToList(HNXData),
+    );
+
+    this.send(
+      SocketEmit.TopForeignUPCOM,
+      new TopNetForeignKafkaResponse().mapToList(UPData),
     );
   }
 }

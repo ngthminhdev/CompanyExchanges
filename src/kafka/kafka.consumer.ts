@@ -17,6 +17,7 @@ import { TickerChangeInterface } from './interfaces/ticker-change.interface';
 import { LineChartInterface } from './interfaces/line-chart.interface';
 import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
+import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
 
 @Controller()
 export class KafkaConsumer {
@@ -56,6 +57,18 @@ export class KafkaConsumer {
   ) {
     try {
       this.kafkaService.handleMarketBreadth(payload);
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.DoRongThiTruongHNX)
+  handleMarketBreadthHNX(
+    @Payload() payload: MarketBreadthKafkaInterface[],
+    @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleMarketBreadthHNX(payload);
     } catch (error) {
       this.logger.error(error);
     }
@@ -132,7 +145,7 @@ export class KafkaConsumer {
         this.kafkaService.handleTopRocHNX(payload),
         this.kafkaService.handleTopRocHSX(payload),
         this.kafkaService.handleTopRocUPCOM(payload),
-        // this.kafkaService.handleTickerContribute(payload),
+        // this.kafkaService.handleIndustryByEx(payload),
       ]);
     } catch (error) {
       this.logger.error(error);
@@ -159,6 +172,18 @@ export class KafkaConsumer {
   ) {
     try {
       this.kafkaService.handleDomesticIndex2(payload);
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  @MessagePattern(Topics.CoPhieuAnhHuong)
+  async handleTickerContribute(
+    @Payload() payload: TickerContributeKafkaInterface[],
+    @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleTickerContribute(payload);
     } catch (error) {
       this.logger.error(error);
     }

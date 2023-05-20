@@ -1,49 +1,72 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { BaseResponse } from '../../utils/utils.response';
-import { NetForeignInterface } from '../interfaces/net-foreign.interface';
+import { InvestorCashFlowByIndustryInterface } from '../interfaces/investor-cash-flow-by-industry.interface';
+import { UtilCommonTemplate } from '../../utils/utils.common';
 
-export class NetForeignResponse {
+export class InvestorCashFlowByIndustryResponse {
   @ApiProperty({
     type: String,
-    example: 'VNIndex',
+    example: 1.05,
   })
-  EXCHANGE: string;
+  industry: string;
 
   @ApiProperty({
     type: String,
-    example: 'Hóa Chất',
-  })
-  LV2: string;
-
-  @ApiProperty({
-    type: String,
-    example: '',
+    example: '#512DA8',
   })
   color: string;
 
   @ApiProperty({
-    type: String,
-    example: 'VCB',
+    type: Number,
+    example: 1.05,
   })
-  ticker: string;
+  buyVal: number;
 
   @ApiProperty({
     type: Number,
-    example: 65.5,
+    example: 1.05,
   })
-  total_value_buy?: number;
+  sellVal: number;
 
   @ApiProperty({
     type: Number,
-    example: 65.5,
+    example: 1.05,
   })
-  total_value_sell?: number;
+  netVal: number;
 
-  constructor(data?: NetForeignInterface) {
-    this.EXCHANGE =
-      data?.EXCHANGE && data?.EXCHANGE == 'HSX' ? 'HOSE' : data?.EXCHANGE || '';
-    this.LV2 = data?.LV2 || '';
-    switch (this.LV2) {
+  @ApiProperty({
+    type: Number,
+    example: 1.05,
+  })
+  transVal: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 1.05,
+  })
+  type: number;
+
+  @ApiProperty({
+    type: Date,
+    example: 1.05,
+  })
+  date: Date | string;
+
+  @ApiProperty({
+    type: Number,
+    example: 1.05,
+  })
+  marketTotalVal: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 1.05,
+  })
+  percent: number;
+
+  constructor(data?: InvestorCashFlowByIndustryInterface) {
+    this.industry = data?.industry || '';
+    switch (this.industry) {
       case 'Bảo hiểm':
         this.color = '#512DA8';
         break;
@@ -102,22 +125,27 @@ export class NetForeignResponse {
         this.color = '#90ed7d';
         break;
     }
-    this.ticker = data?.ticker || '';
-    data?.total_value_buy != undefined &&
-      (this.total_value_buy = data?.total_value_buy);
-    data?.total_value_sell != undefined &&
-      (this.total_value_sell = -data?.total_value_sell);
+    this.buyVal = data?.buyVal || 0;
+    this.sellVal = data?.sellVal || 0;
+    this.netVal = data?.netVal || 0;
+    this.transVal = data?.transVal || 0;
+    this.type = data?.type || 0;
+    this.date = UtilCommonTemplate.toDate(data?.date) || '';
+    this.marketTotalVal = data?.marketTotalVal || 0;
+    this.percent = data?.percent || 0;
   }
 
-  public mapToList(data?: NetForeignInterface[] | any[]) {
-    return data.map((i) => new NetForeignResponse(i));
+  public mapToList(data?: InvestorCashFlowByIndustryInterface[]) {
+    return data?.map((i) => new InvestorCashFlowByIndustryResponse(i));
   }
 }
 
-export class NetForeignSwagger extends PartialType(BaseResponse) {
+export class InvestorCashFlowByIndustrySwagger extends PartialType(
+  BaseResponse,
+) {
   @ApiProperty({
-    type: NetForeignResponse,
+    type: InvestorCashFlowByIndustryResponse,
     isArray: true,
   })
-  data: NetForeignResponse[];
+  data: InvestorCashFlowByIndustryResponse[];
 }

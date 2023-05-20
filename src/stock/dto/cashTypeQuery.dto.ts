@@ -3,6 +3,7 @@ import { IsEnum } from 'class-validator';
 import { TimestampQueryOnlyDto } from './timestampOnlyQuery.dto';
 
 export class CashTypeQueryDto extends TimestampQueryOnlyDto {
+  @IsEnum(['0', '1', '2'], { message: 'investorType not found' })
   @ApiProperty({
     type: Number,
     example: 0,

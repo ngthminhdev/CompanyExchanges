@@ -109,7 +109,6 @@ export class ChartService {
   // Chỉ số các index
   async getLineChart(type: number, index: string): Promise<any> {
     try {
-      const industryFull = await this.redis.get(RedisKeys.IndustryFull);
       if (type === TransactionTimeTypeEnum.Latest) {
         const data = await this.db.query(`
                     SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange,
@@ -119,19 +118,18 @@ export class ChartService {
                     ORDER BY tradingDate ASC
                 `);
 
-        return {
-          lineChartData: new LineChartResponse().mapToList(data),
-          industryFull,
-        };
+        return new LineChartResponse().mapToList(data);
       }
       const redisData: VnIndexResponse[] = await this.redis.get(
         `${RedisKeys.LineChart}:${type}:${index}`,
       );
-      if (redisData) return { lineChartData: redisData, industryFull };
+      // if (redisData) return { lineChartData: redisData, industryFull };
 
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[PHANTICH].[dbo].[database_chisotoday]',
+          '[marketTrade].[dbo].[indexTrade]',
+          'date',
+          this.dbServer,
         );
       let startDate: Date | string;
       switch (type) {
@@ -149,21 +147,21 @@ export class ChartService {
       }
 
       const query: string = `
-                select ticker as comGroupCode, close_price as indexValue, date_time as tradingDate
-                from [PHANTICH].[dbo].[database_chisotoday]
-                where ticker = '${index}' and date_time >= @0 and date_time <= @1
-                ORDER BY date_time
+                select code as comGroupCode, closePrice as indexValue, date as tradingDate
+                from [marketTrade].[dbo].[indexTrade]
+                where code = '${index}' and date >= @0 and date <= @1
+                ORDER BY date
             `;
 
       const mappedData = new VnIndexResponse().mapToList(
-        await this.db.query(query, [startDate, latestDate]),
+        await this.dbServer.query(query, [startDate, latestDate]),
         type,
       );
-      await this.redis.set(
-        `${RedisKeys.LineChart}:${type}:${index}`,
-        mappedData,
-      );
-      return { lineChartData: mappedData, industryFull };
+      // await this.redis.set(
+      //   `${RedisKeys.LineChart}:${type}:${index}`,
+      //   mappedData,
+      // );
+      return mappedData;
     } catch (e) {
       throw new CatchException(e);
     }
@@ -185,17 +183,14 @@ export class ChartService {
   async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
     try {
       const { exchange, order, type } = q;
-      const redisData = await this.redis.get(
-        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-      );
-      if (redisData) return redisData;
-
-      const ex: string =
-        exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+      // const redisData = await this.redis.get(
+      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+      // );
+      // if (redisData) return redisData;
 
       const { latestDate, weekDate, monthDate, firstDateYear } =
         await this.stockService.getSessionDate(
-          `[COPHIEUANHHUONG].[dbo].[${ex}]`,
+          `[WEBSITE_SERVER].[dbo].[CPAH]`,
           'date',
         );
       let endDate: Date | string;
@@ -227,9 +222,9 @@ export class ChartService {
       )}' `;
       let query: string = `
                WITH temp AS (
-                  SELECT ${industry} as symbol, sum(diemanhhuong) as contribute_price
-                  FROM [COPHIEUANHHUONG].[dbo].[${ex}] t
-                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.ticker
+                  SELECT ${industry} as symbol, sum(t.point) as contribute_price
+                  FROM [WEBSITE_SERVER].[dbo].[CPAH] t
+                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.symbol
                   WHERE ${dateRangeFilter} and ${industry} != '#N/A'
                   GROUP BY ${industry}
                 )
@@ -241,16 +236,16 @@ export class ChartService {
       if (+type == SelectorTypeEnum.Ticker) {
         query = `
                     WITH temp AS (
-                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
-                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                      WHERE ${dateRangeFilter}
-                      GROUP BY ticker
+                      SELECT TOP 10 symbol, sum(point) as contribute_price
+                      FROM [WEBSITE_SERVER].[dbo].[CPAH] 
+                      WHERE ${dateRangeFilter} AND floor = '${exchange.toUpperCase()}'
+                      GROUP BY symbol
                       ORDER BY contribute_price DESC
                       UNION ALL
-                      SELECT TOP 10 ticker as symbol, sum(diemanhhuong) as contribute_price
-                      FROM [COPHIEUANHHUONG].[dbo].[${ex}] 
-                      WHERE ${dateRangeFilter}
-                      GROUP BY ticker
+                      SELECT TOP 10 symbol, sum(point) as contribute_price
+                      FROM [WEBSITE_SERVER].[dbo].[CPAH] 
+                      WHERE ${dateRangeFilter} AND floor = '${exchange.toUpperCase()}'
+                      GROUP BY symbol
                       ORDER BY contribute_price ASC
                     )
                     SELECT *
@@ -267,10 +262,10 @@ export class ChartService {
 
       const data = await this.db.query(query);
       const mappedData = new TickerContributeResponse().mapToList(data);
-      await this.redis.set(
-        `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-        mappedData,
-      );
+      // await this.redis.set(
+      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
+      //   mappedData,
+      // );
       return mappedData;
     } catch (e) {
       throw new CatchException(e);
@@ -296,6 +291,20 @@ export class ChartService {
 
   async getMarketBreadth(exchange: string, type: number) {
     try {
+      //phien hien tai
+      if (type === 0) {
+        const timeCheck = this.timeCheck();
+        if (!timeCheck) return [];
+        let ex = exchange == 'HOSE' ? 'MarketBreadth' : 'MarketBreadthHNX';
+
+        return new MarketBreadthResponse().mapToList(
+          await this.db.query(`
+                SELECT * FROM [WEBSITE_SERVER].[dbo].[${ex}]
+                ORDER BY time ASC
+            `),
+        );
+      }
+
       const redisData = await this.redis.get(
         `${RedisKeys.MarketBreadth}:${exchange}:${type}`,
       );
@@ -303,7 +312,7 @@ export class ChartService {
 
       const { latestDate, monthDate, firstDateYear }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[marketTrade].[dbo].[tickerTrade]',
+          '[marketTrade].[dbo].[tickerTradeVND]',
           'date',
           this.dbServer,
         );
@@ -327,7 +336,7 @@ export class ChartService {
           sum(case when t.perChange > 0 then 1 else 0 end) as advance,
           sum(case when t.perChange < 0 then 1 else 0 end) as decline,
           sum(case when t.perChange = 0 then 1 else 0 end) as noChange
-        from [marketTrade].[dbo].[tickerTrade] t
+        from [marketTrade].[dbo].[tickerTradeVND] t
         left join [marketInfor].[dbo].[info] i on
             i.code = t.code
         where i.floor = @0 and i.type = 'STOCK'

@@ -1,32 +1,41 @@
-import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { QueueEnum } from '../enums/queue.enum';
+import { PhoneNumberInterceptor } from '../interceptors/phone-number.interceptor';
+import { DeviceIdMiddleware } from '../middlewares/device-di.middleware';
+import { QueueService } from '../queue/queue.service';
+import { SmsService } from '../sms/sms.service';
+import { UserEntity } from '../user/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeviceEntity } from './entities/device.entity';
-import { UserEntity } from '../user/entities/user.entity';
-import { JwtService } from '@nestjs/jwt';
-import {PhoneNumberInterceptor} from "../interceptors/phone-number.interceptor";
-import {APP_INTERCEPTOR} from "@nestjs/core";
-import {QueueService} from "../queue/queue.service";
-import {SmsService} from "../sms/sms.service";
-import {VerifyEntity} from "./entities/verify.entity";
-import {BullModule} from "@nestjs/bull";
-import {QueueEnum} from "../enums/queue.enum";
+import { VerifyEntity } from './entities/verify.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
     //queue
-    BullModule.registerQueue(
-        {name: QueueEnum.MainProcessor}
-    )],
+    BullModule.registerQueue({ name: QueueEnum.MainProcessor }),
+  ],
   controllers: [AuthController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
-      useClass: PhoneNumberInterceptor
+      useClass: PhoneNumberInterceptor,
     },
-      AuthService, JwtService, SmsService, QueueService
+    AuthService,
+    JwtService,
+    SmsService,
+    QueueService,
   ],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(DeviceIdMiddleware).forRoutes('/auth/*');
+    // .apply(SignVerifyMiddleware)
+    // .forRoutes("*");
+  }
+}

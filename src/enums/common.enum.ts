@@ -25,6 +25,7 @@ export enum TransactionTimeTypeEnum {
   OneMonth,
   YearToDate,
   OneQuarter,
+  YearToYear,
 }
 
 export enum TransactionEnum {
@@ -34,6 +35,7 @@ export enum TransactionEnum {
 
 export enum InvestorTypeEnum {
   Foreign,
-  Retail,
   Proprietary,
+  Retail,
+  All,
 }

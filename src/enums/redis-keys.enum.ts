@@ -33,4 +33,12 @@ export enum RedisKeys {
   CashFlowValue = 'cash-flow-value',
 
   BienDongThiTruong = 'bien-dong-thi-truong',
+  KLCPLH = 'klcplh',
+  MarketCap = 'market-cap',
+
+  InvestorTransactionRatio = 'investor-transaction-ratio',
+  InvestorTransactionCashFlowRatio = 'investor-transaction-cash-flow-ratio',
+
+  TopNetBuyIndustry = 'top-net-buy-industry',
+  InvestorCashFlowByIndustry = 'investor-cash-flow-by-industry',
 }
