@@ -15,6 +15,7 @@ import { RsiQueryDto } from './dto/rsiQuery.dto';
 import { IndustryCashFlowSwagger } from './responses/IndustryCashFlow.response';
 import { InvestorCashTimeExDto } from './dto/investorCashTimeEx.dto';
 import { InvestorCashFlowByIndustrySwagger } from './responses/InvestorCashFlowByIndustry.response';
+import { MarketTotalTransValueSwagger } from './responses/MarketTotalTransValue.response';
 
 @Controller('cash-flow')
 @ApiTags('Cash Flow - API')
@@ -176,7 +177,7 @@ export class CashFlowController {
       Timestamp: 2 - 1 thang , 4 - 1 quy(3 thang), 5 - 1 nam
     `,
   })
-  @ApiOkResponse({ type: InvestorCashFlowByIndustrySwagger })
+  @ApiOkResponse({ type: MarketTotalTransValueSwagger })
   async getTotalTransactionValue(
     @Query() q: GetExchangeAndTimeQueryDto,
     @Res() res: Response,

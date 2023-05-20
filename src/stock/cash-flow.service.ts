@@ -318,7 +318,7 @@ export class CashFlowService {
             SUM(p.buyVal) + SUM(p.sellVal) AS totalVal,
             MAX(m.marketTotalVal) AS marketTotalVal,
             (SUM(p.buyVal) + SUM(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-            0 AS type
+            1 AS type
         FROM [marketTrade].[dbo].[proprietary] AS p
         INNER JOIN market AS m ON p.[date] = m.[date]
         WHERE p.[date] = (SELECT MAX([date]) FROM [marketTrade].[dbo].[proprietary])
@@ -333,7 +333,7 @@ export class CashFlowService {
             SUM(f.buyVal) + SUM(f.sellVal) AS totalVal,
             MAX(m.marketTotalVal) AS marketTotalVal,
             (SUM(f.buyVal) + SUM(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
-            1 AS type
+            0 AS type
         FROM [marketTrade].[dbo].[foreign] AS f
         INNER JOIN market AS m ON f.[date] = m.[date]
         WHERE f.[date] = (SELECT MAX([date]) FROM [marketTrade].[dbo].[proprietary])
@@ -343,16 +343,16 @@ export class CashFlowService {
     SELECT
         [date], netVal, buyVal, sellVal,
         totalVal, marketTotalVal, [percent],
-        0 AS type
+        1 AS type
     FROM data
-    WHERE type = 0
+    WHERE type = 1
     UNION ALL
     SELECT
         [date], netVal, buyVal, sellVal,
         totalVal, marketTotalVal, [percent],
-        1 AS type
+        0 AS type
     FROM data
-    WHERE type = 1
+    WHERE type = 0
     UNION ALL
     SELECT
     [date],
@@ -386,7 +386,7 @@ export class CashFlowService {
 
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear, yearDate } =
       await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
     let startDate!: any;
@@ -403,6 +403,9 @@ export class CashFlowService {
       case TransactionTimeTypeEnum.YearToDate:
         startDate = firstDateYear;
         break;
+      case TransactionTimeTypeEnum.YearToYear:
+        startDate = yearDate;
+        break;
       case TransactionTimeTypeEnum.OneQuarter:
         startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
         break;
@@ -417,6 +420,7 @@ export class CashFlowService {
             SUM(totalVal) AS marketTotalVal
         FROM [marketTrade].[dbo].[tickerTradeVND]
         WHERE [date] >= @0 and [date] <= @1
+            AND [date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND [type] IN ('STOCK', 'ETF')
             AND [floor] IN ${floor}  
         GROUP BY [date]
@@ -434,6 +438,7 @@ export class CashFlowService {
         FROM [marketTrade].[dbo].[proprietary] AS p
         INNER JOIN market AS m ON p.[date] = m.[date]
         WHERE p.[date] >= @0 and p.[date] <= @1
+            AND p.[date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND p.type IN ('STOCK', 'ETF')
             AND p.[floor] IN ${floor}  
         GROUP BY p.[date]
@@ -450,6 +455,7 @@ export class CashFlowService {
         FROM [marketTrade].[dbo].[foreign] AS f
         INNER JOIN market AS m ON f.[date] = m.[date]
         WHERE f.[date] >= @0 and f.[date] <= @1
+            AND f.[date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND f.type IN ('STOCK', 'ETF')
             AND f.[floor] IN ${floor}  
         GROUP BY f.[date]
@@ -457,16 +463,16 @@ export class CashFlowService {
     SELECT
         [date], netVal, buyVal, sellVal,
         totalVal, marketTotalVal, [percent],
-        0 AS type
+        1 AS type
     FROM data
-    WHERE type = 0
+    WHERE type = 1
     UNION ALL
     SELECT
         [date], netVal, buyVal, sellVal,
         totalVal, marketTotalVal, [percent],
-        1 AS type
+        0 AS type
     FROM data
-    WHERE type = 1
+    WHERE type = 0
     UNION ALL
     SELECT
       [date],
@@ -878,7 +884,8 @@ export class CashFlowService {
           FROM [marketTrade].dbo.[${investor}] f
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
-            AND f.[date] <= @1
+            AND f.[date] <= @1            
+            AND f.[date] not in ('2023-05-11', '2023-05-05', '2023-04-28')
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date], i.LV2
@@ -888,7 +895,8 @@ export class CashFlowService {
           FROM [marketTrade].dbo.[${investor}] f
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
-            AND f.[date] <= @1
+            AND f.[date] <= @1            
+            AND f.[date] not in ('2023-05-11', '2023-05-05', '2023-04-28')
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date]
