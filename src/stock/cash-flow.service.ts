@@ -154,20 +154,14 @@ export class CashFlowService {
   }
 
   async getCashFlowValue(type: number): Promise<CashFlowValueResponse[]> {
-    const redisData = await this.redis.get<CashFlowValueResponse[]>(
-      `${RedisKeys.CashFlowValue}:${type}`,
-    );
-
-    if (redisData) return redisData;
-
     const tickerPrice = await this.stockService.getTickerPrice();
-    const { latestDate, weekDate, monthDate, firstDateYear } =
+    const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
       await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
 
     let startDate!: Date | string;
     switch (type) {
       case TransactionTimeTypeEnum.Latest:
-        startDate = latestDate;
+        startDate = previousDate;
         break;
       case TransactionTimeTypeEnum.OneWeek:
         startDate = weekDate;
@@ -184,7 +178,7 @@ export class CashFlowService {
         sum(omVol * (closePrice * 1000 + highPrice * 1000 + lowPrice * 1000) / 3)
       as cashFlowValue
       from [marketTrade].[dbo].[tickerTradeVND]
-      where [date] >= @0 and [date] <= @1
+      where [date] >= @0 and [date] <= @1 and type in ('STOCK', 'ETF')
       group by code
       order by cashFlowValue desc
     `;
@@ -198,7 +192,7 @@ export class CashFlowService {
     const mappedData = new CashFlowValueResponse().mapToList(
       UtilCommonTemplate.getTop10HighestAndLowestData(data, 'cashFlowValue'),
     );
-    await this.redis.set(`${RedisKeys.CashFlowValue}:${type}`, mappedData);
+
     return mappedData;
   }
 
