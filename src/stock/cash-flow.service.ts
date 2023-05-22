@@ -356,7 +356,7 @@ export class CashFlowService {
     UNION ALL
     SELECT
     [date],
-    -(-SUM(CASE WHEN type = 0 THEN netVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN netVal ELSE 0 END)) AS netVal,
+    -(SUM(CASE WHEN type = 0 THEN netVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN netVal ELSE 0 END)) AS netVal,
     marketTotalVal - (SUM(CASE WHEN type = 0 THEN buyVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN buyVal ELSE 0 END)) AS buyVal,
     marketTotalVal - (SUM(CASE WHEN type = 0 THEN sellVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN sellVal ELSE 0 END)) AS sellVal,
     (marketTotalVal * 2) - (SUM(CASE WHEN type = 0 THEN totalVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN totalVal ELSE 0 END)) AS totalVal,
@@ -386,8 +386,14 @@ export class CashFlowService {
 
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-    const { latestDate, previousDate, weekDate, monthDate, firstDateYear, yearDate } =
-      await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
+    const {
+      latestDate,
+      previousDate,
+      weekDate,
+      monthDate,
+      firstDateYear,
+      yearDate,
+    } = await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
     let startDate!: any;
     switch (type) {
