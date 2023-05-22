@@ -154,12 +154,6 @@ export class CashFlowService {
   }
 
   async getCashFlowValue(type: number): Promise<CashFlowValueResponse[]> {
-    const redisData = await this.redis.get<CashFlowValueResponse[]>(
-      `${RedisKeys.CashFlowValue}:${type}`,
-    );
-
-    if (redisData) return redisData;
-
     const tickerPrice = await this.stockService.getTickerPrice();
     const { latestDate, weekDate, monthDate, firstDateYear } =
       await this.getSessionDate('[marketTrade].[dbo].[tickerTradeVND]');
@@ -184,7 +178,8 @@ export class CashFlowService {
         sum(omVol * (closePrice * 1000 + highPrice * 1000 + lowPrice * 1000) / 3)
       as cashFlowValue
       from [marketTrade].[dbo].[tickerTradeVND]
-      where [date] >= @0 and [date] <= @1
+      where [date] >= @0 and [date] <= @1 and type in ('STOCK', 'ETF')
+      and omVol != 0
       group by code
       order by cashFlowValue desc
     `;
@@ -426,7 +421,6 @@ export class CashFlowService {
             SUM(totalVal) AS marketTotalVal
         FROM [marketTrade].[dbo].[tickerTradeVND]
         WHERE [date] >= @0 and [date] <= @1
-            AND [date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND [type] IN ('STOCK', 'ETF')
             AND [floor] IN ${floor}  
         GROUP BY [date]
@@ -444,7 +438,6 @@ export class CashFlowService {
         FROM [marketTrade].[dbo].[proprietary] AS p
         INNER JOIN market AS m ON p.[date] = m.[date]
         WHERE p.[date] >= @0 and p.[date] <= @1
-            AND p.[date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND p.type IN ('STOCK', 'ETF')
             AND p.[floor] IN ${floor}  
         GROUP BY p.[date]
@@ -461,7 +454,6 @@ export class CashFlowService {
         FROM [marketTrade].[dbo].[foreign] AS f
         INNER JOIN market AS m ON f.[date] = m.[date]
         WHERE f.[date] >= @0 and f.[date] <= @1
-            AND f.[date] not in ('2023-05-11', '2022-12-26', '2023-03-09', '2023-03-22', '2023-05-04', '2022-05-19', '2022-07-04', '2022-08-16', '2022-11-30', '2022-12-30', '2023-01-18', '2023-01-19', '2023-02-13')
             AND f.type IN ('STOCK', 'ETF')
             AND f.[floor] IN ${floor}  
         GROUP BY f.[date]
@@ -891,7 +883,6 @@ export class CashFlowService {
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
             AND f.[date] <= @1            
-            AND f.[date] not in ('2023-05-11', '2023-05-05', '2023-04-28')
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date], i.LV2
@@ -902,7 +893,6 @@ export class CashFlowService {
           INNER JOIN [marketInfor].dbo.[info] i ON i.code = f.code
           WHERE f.[date] >= @0
             AND f.[date] <= @1            
-            AND f.[date] not in ('2023-05-11', '2023-05-05', '2023-04-28')
             AND i.floor IN ${floor}
             AND i.LV2 != ''
           GROUP BY f.[date]
