@@ -1054,7 +1054,7 @@ export class StockService {
           )
         ).latestDate;
         const query: string = `
-                SELECT c.floor AS global, c.LV2 AS industry, 
+                SELECT c.floor AS EXCHANGE, c.LV2, 
                 c.code as ticker, 
                 sum(n.buyVal) + sum(n.sellVal) AS value
                 FROM [marketTrade].[dbo].[foreign] n
@@ -1086,7 +1086,7 @@ export class StockService {
         ).latestDate;
 
         const query: string = `
-              select i.floor as global, i.LV2 as industry,
+              select i.floor as EXCHANGE, i.LV2,
               c.code as ticker, c.value
               from [marketRatio].[dbo].[ratio] c
               inner join [marketInfor].[dbo].[info] i
@@ -1119,7 +1119,7 @@ export class StockService {
       }
 
       const query: string = `
-                SELECT c.floor AS global, c.LV2 AS industry, 
+                SELECT c.floor AS EXCHANGE, c.LV2, 
                 c.code as ticker, n.${field} AS value 
                 FROM [marketTrade].[dbo].[tickerTradeVND] n
                 JOIN [marketInfor].[dbo].[info] c
