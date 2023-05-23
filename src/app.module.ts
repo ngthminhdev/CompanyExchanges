@@ -19,6 +19,7 @@ import { KafkaModule } from './kafka/kafka.module';
 import { QueueModule } from './queue/queue.module';
 import { RealIpMiddleware } from './middlewares/real-ip.middleware';
 import { DB_SERVER } from './constants';
+import { MarketModule } from './market/market.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { DB_SERVER } from './constants';
     UserModule,
     QueueModule,
     SocketModule,
+    MarketModule,
     KafkaModule,
   ],
 })
