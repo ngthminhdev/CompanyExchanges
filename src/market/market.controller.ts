@@ -1,10 +1,10 @@
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { InvestorTransactionSwagger } from '../stock/responses/InvestorTransaction.response';
 import { BaseResponse } from '../utils/utils.response';
 import { IndustryFilterDto } from './dto/industry-filter.dto';
 import { MarketService } from './market.service';
+import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -15,7 +15,7 @@ export class MarketController {
   @ApiOperation({
     summary: 'Hiệu suất giá thay đổi các cổ phiếu',
   })
-  @ApiOkResponse({ type: InvestorTransactionSwagger })
+  @ApiOkResponse({ type: PriceChangePerformanceSwagger })
   async priceChangePerformance(
     @Query() q: IndustryFilterDto,
     @Res() res: Response,
