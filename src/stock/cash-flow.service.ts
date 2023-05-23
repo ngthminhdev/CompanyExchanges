@@ -56,10 +56,12 @@ export class CashFlowService {
         `);
 
     const query: string = `
-            SELECT TOP 1 ${column} FROM ${table}
-            WHERE ${column} IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
-            `;
+          SELECT TOP 1 ${column}
+          FROM ${table}
+          WHERE ${column} IS NOT NULL
+          AND ${column} >= @0
+          ORDER BY ${column};
+        `;
 
     return {
       latestDate: dates[0]?.[dateColumn] || new Date(),
