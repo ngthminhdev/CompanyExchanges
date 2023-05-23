@@ -108,4 +108,21 @@ export class UtilCommonTemplate {
     const top10Lowest = _.take(_.reverse(sortedData), 10);
     return [...top10Highest, ...top10Lowest];
   }
+
+  static getQuarterDate(
+    date: moment.Moment | Date | string,
+    count: number,
+    results = [],
+  ) {
+    if (count === 0) {
+      return results;
+    }
+
+    const previousQuarterEndDate = moment(date)
+      .subtract(1, 'quarter')
+      .endOf('quarter');
+    results.push(previousQuarterEndDate.format('YYYY/MM/DD'));
+
+    return this.getQuarterDate(previousQuarterEndDate, count - 1, results);
+  }
 }
