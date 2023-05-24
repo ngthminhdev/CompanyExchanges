@@ -43,4 +43,6 @@ export enum RedisKeys {
   InvestorCashFlowByIndustry = 'investor-cash-flow-by-industry',
 
   SessionDate = 'session-date',
+
+  LiquidityChangePerformance = 'liquidity-change-performance',
 }

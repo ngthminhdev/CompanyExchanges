@@ -9,6 +9,8 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPriceChangePerformance } from './interfaces/price-change-performance.interface';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import * as _ from 'lodash';
+import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
+import { LiquidityChangePerformanceResponse } from './responses/liquidity-change-performance.response';
 
 @Injectable()
 export class MarketService {
@@ -132,11 +134,19 @@ export class MarketService {
         lastYearDate,
       });
 
-    return _.take(_.orderBy(mappedData, 'perFive', 'desc'), 50);
+    return new PriceChangePerformanceResponse().mapToList(
+      _.take(_.orderBy(mappedData, 'perFive', 'desc'), 50),
+    );
   }
 
   async liquidityChangePerformance(ex: string, industries: string[]) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.LiquidityChangePerformance}:${floor}:${inds}`,
+    );
+    if (redisData) return redisData;
 
     const quarterDate = UtilCommonTemplate.getPastDate(5);
     const latestQuarterDate = quarterDate[0];
@@ -176,8 +186,6 @@ export class MarketService {
 
     const dates = await this.dbServer.query(timeQuery);
 
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
-
     const query: string = `
         select
         other.date, other.code,
@@ -216,6 +224,15 @@ export class MarketService {
         fourYearsDate: correctDate[3],
       });
 
-    return _.take(_.orderBy(mappedData, 'perQuarter', 'desc'), 50);
+    const result = new LiquidityChangePerformanceResponse().mapToList(
+      _.take(_.orderBy(mappedData, 'perQuarter', 'desc'), 50),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.LiquidityChangePerformance}:${floor}:${inds}`,
+      result,
+    );
+
+    return result;
   }
 }

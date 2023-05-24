@@ -5,6 +5,7 @@ import { BaseResponse } from '../utils/utils.response';
 import { IndustryFilterDto } from './dto/industry-filter.dto';
 import { MarketService } from './market.service';
 import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
+import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -31,7 +32,7 @@ export class MarketController {
   @ApiOperation({
     summary: 'Hiệu suất giá tăng trưởng thanh khoản các cổ phiếu',
   })
-  @ApiOkResponse({ type: PriceChangePerformanceSwagger })
+  @ApiOkResponse({ type: LiquidityChangePerformanceSwagger })
   async liquidityChangePerformance(
     @Query() q: IndustryFilterDto,
     @Res() res: Response,
