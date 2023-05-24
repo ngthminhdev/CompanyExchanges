@@ -8,6 +8,7 @@ import { SessionDatesInterface } from '../stock/interfaces/session-dates.interfa
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPriceChangePerformance } from './interfaces/price-change-performance.interface';
 import { RedisKeys } from '../enums/redis-keys.enum';
+import * as _ from 'lodash';
 
 @Injectable()
 export class MarketService {
@@ -97,7 +98,7 @@ export class MarketService {
     const query: string = `
       select
           other.date, other.code,
-          (now.closePrice - other.closePrice) / other.closePrice * 100 as perChange
+          (now.closePrice - other.closePrice) / nullif(other.closePrice, 0) * 100 as perChange
       from (
           select [date], t.code, closePrice
           from [marketTrade].dbo.tickerTradeVND t
@@ -117,13 +118,13 @@ export class MarketService {
       ) as other
       on now.date > other.date and now.code = other.code
       group by other.date, other.code, now.closePrice, other.closePrice
-      order by  other.code, other.date desc
+      order by perChange desc, other.code, other.date desc
     `;
 
     const data = await this.dbServer.query(query);
 
     const mappedData: IPriceChangePerformance[] =
-      UtilCommonTemplate.transformData(data, {
+      UtilCommonTemplate.transformData([...data], {
         latestDate,
         lastFiveDate,
         lastQuarterDate,
@@ -131,6 +132,90 @@ export class MarketService {
         lastYearDate,
       });
 
-    return mappedData;
+    return _.take(_.orderBy(mappedData, 'perFive', 'desc'), 50);
+  }
+
+  async liquidityChangePerformance(ex: string, industries: string[]) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+    const quarterDate = UtilCommonTemplate.getPastDate(5);
+    const latestQuarterDate = quarterDate[0];
+    const secondQuarterDate = quarterDate[1];
+    const yearQuarterDate = quarterDate[4];
+    const fourYearsDate = moment(new Date(latestQuarterDate))
+      .subtract(4, 'years')
+      .format('YYYY/MM/DD');
+    const timeQuery: string = `
+      WITH data as (
+              SELECT TOP 1 [date]
+              FROM [marketTrade].dbo.tickerTradeVND
+              WHERE [date] IS NOT NULL
+              AND [date] <= '${latestQuarterDate}'
+              ORDER BY [date] DESC
+              UNION ALL
+              SELECT TOP 1 [date]
+              FROM [marketTrade].dbo.tickerTradeVND
+              WHERE [date] IS NOT NULL
+              AND [date] <= '${secondQuarterDate}'
+              ORDER BY [date] DESC
+              UNION ALL
+              SELECT TOP 1 [date]
+              FROM [marketTrade].dbo.tickerTradeVND
+              WHERE [date] IS NOT NULL
+              AND [date] <= '${yearQuarterDate}'
+              ORDER BY [date] DESC
+              UNION ALL
+              SELECT TOP 1 [date]
+              FROM [marketTrade].dbo.tickerTradeVND
+              WHERE [date] IS NOT NULL
+              AND [date] <= '${fourYearsDate}'
+              ORDER BY [date] DESC
+          )
+          select * from data
+    `;
+
+    const dates = await this.dbServer.query(timeQuery);
+
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+
+    const query: string = `
+        select
+        other.date, other.code,
+            (now.totalVal - other.totalVal) / nullif(other.totalVal, 0) * 100 as perChange
+        from (
+            select [date], t.code, totalVal
+            from [marketTrade].dbo.tickerTradeVND t
+            inner join [marketInfor].dbo.info i
+            on i.code = t.code
+            where [date] = @0 and i.LV2 in ${inds}
+                and i.floor in ${floor} and i.type in ('STOCK', 'ETF')
+        ) as now
+        inner join (
+                select [date], t.code, totalVal
+            from [marketTrade].dbo.tickerTradeVND t
+            inner join [marketInfor].dbo.info i
+            on i.code = t.code
+            where [date] in (@1, @2, @3)
+            and i.LV2 in ${inds}
+                and i.floor in ${floor} and i.type in ('STOCK', 'ETF')
+        ) as other
+        on now.date > other.date and now.code = other.code
+        group by other.date, other.code, now.totalVal, other.totalVal
+        order by perChange desc, other.code, other.date desc;
+    `;
+    const correctDate = [
+      ...dates.map((i) => UtilCommonTemplate.toDate(i.date)),
+    ];
+    const data = await this.dbServer.query(query, correctDate);
+
+    const mappedData: IPriceChangePerformance[] =
+      UtilCommonTemplate.transformDataLiquid([...data], {
+        latestQuarterDate: correctDate[0],
+        secondQuarterDate: correctDate[1],
+        yearQuarterDate: correctDate[2],
+        fourYearsDate: correctDate[3],
+      });
+
+    return _.take(_.orderBy(mappedData, 'perQuarter', 'desc'), 50);
   }
 }

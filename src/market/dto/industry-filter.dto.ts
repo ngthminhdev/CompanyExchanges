@@ -25,6 +25,7 @@ export class IndustryFilterDto extends GetExchangeQuery {
     thucPham: 'Thực phẩm & Đồ uống',
     vienThong: 'Viễn thông',
     xayDung: 'Xây dựng & Vật liệu',
+    taiNguyen: 'Tài nguyên',
     yTe: 'Y tế',`,
   })
   industry: string;

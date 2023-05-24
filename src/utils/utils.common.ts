@@ -112,9 +112,9 @@ export class UtilCommonTemplate {
   }
 
   static getPastDate(
-    date: moment.Moment | Date | string,
     count: number,
     type: number = TimeTypeEnum.Quarter,
+    date: moment.Moment | Date | string = new Date(),
     results = [],
   ) {
     if (count === 0) {
@@ -128,7 +128,7 @@ export class UtilCommonTemplate {
     }
     results.push(previousEndDate.format('YYYY/MM/DD'));
 
-    return this.getPastDate(previousEndDate, count - 1, type, results);
+    return this.getPastDate(count - 1, type, previousEndDate, results);
   }
 
   static getIndustryFilter(input: string[]): string {
@@ -145,13 +145,13 @@ export class UtilCommonTemplate {
 
       if (transformedItem) {
         if (this.toDate(item.date) === obj.lastFiveDate) {
-          transformedItem.perFive = item.perChange;
+          transformedItem.perFive = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.lastQuarterDate) {
-          transformedItem.perQuarter = item.perChange;
+          transformedItem.perQuarter = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.firstYearDate) {
-          transformedItem.perYtd = item.perChange;
+          transformedItem.perYtd = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.lastYearDate) {
-          transformedItem.perYtY = item.perChange;
+          transformedItem.perYtY = item.perChange ?? 0;
         }
       } else {
         const newItem = {
@@ -163,13 +163,52 @@ export class UtilCommonTemplate {
         };
 
         if (this.toDate(item.date) === obj.lastFiveDate) {
-          newItem.perFive = item.perChange;
+          newItem.perFive = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.lastQuarterDate) {
-          newItem.perQuarter = item.perChange;
+          newItem.perQuarter = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.firstYearDate) {
-          newItem.perYtd = item.perChange;
+          newItem.perYtd = item.perChange ?? 0;
         } else if (this.toDate(item.date) === obj.lastYearDate) {
-          newItem.perYtY = item.perChange;
+          newItem.perYtY = item.perChange ?? 0;
+        }
+
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
+  }
+
+  static transformDataLiquid(arr, obj) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (this.toDate(item.date) === obj.secondQuarterDate) {
+          transformedItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.yearQuarterDate) {
+          transformedItem.perQuarterLastYear = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.fourYearsDate) {
+          transformedItem.perFourYear = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          perQuarter: '',
+          perQuarterLastYear: '',
+          perFourYear: '',
+        };
+
+        if (this.toDate(item.date) === obj.secondQuarterDate) {
+          newItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.yearQuarterDate) {
+          newItem.perQuarterLastYear = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.fourYearsDate) {
+          newItem.perFourYear = item.perChange ?? 0;
         }
 
         transformedArr.push(newItem);
