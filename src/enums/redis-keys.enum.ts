@@ -41,4 +41,6 @@ export enum RedisKeys {
 
   TopNetBuyIndustry = 'top-net-buy-industry',
   InvestorCashFlowByIndustry = 'investor-cash-flow-by-industry',
+
+  SessionDate = 'session-date',
 }

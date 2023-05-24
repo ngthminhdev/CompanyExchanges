@@ -7,6 +7,7 @@ import { DB_SERVER } from '../constants';
 import { SessionDatesInterface } from '../stock/interfaces/session-dates.interface';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPriceChangePerformance } from './interfaces/price-change-performance.interface';
+import { RedisKeys } from '../enums/redis-keys.enum';
 
 @Injectable()
 export class MarketService {
@@ -23,6 +24,11 @@ export class MarketService {
     column: string = 'date',
     instance: any = this.dbServer,
   ): Promise<SessionDatesInterface> {
+    const redisData = await this.redis.get<SessionDatesInterface>(
+      `${RedisKeys.SessionDate}:${table}:${column}`,
+    );
+    if (redisData) return redisData;
+
     const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
     const quarterDate = moment()
@@ -64,13 +70,16 @@ export class MarketService {
       lastYear,
     ]);
 
-    return {
+    const result = {
       latestDate: UtilCommonTemplate.toDate(data[0][column]),
       lastFiveDate: UtilCommonTemplate.toDate(data[4][column]),
       lastQuarterDate: UtilCommonTemplate.toDate(data[5][column]),
       firstYearDate: UtilCommonTemplate.toDate(data[6][column]),
       lastYearDate: UtilCommonTemplate.toDate(data[7][column]),
     };
+
+    await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
+    return result;
   }
 
   async priceChangePerformance(ex: string, industries: string[]) {

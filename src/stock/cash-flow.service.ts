@@ -42,6 +42,11 @@ export class CashFlowService {
     table: string,
     column: string = 'date',
   ): Promise<SessionDatesInterface> {
+    const redisData = await this.redis.get<SessionDatesInterface>(
+      `${RedisKeys.SessionDate}:${table}:${column}`,
+    );
+    if (redisData) return redisData;
+
     let dateColumn = column;
     if (column.startsWith('[')) {
       dateColumn = column.slice(1, column.length - 1);
@@ -62,8 +67,7 @@ export class CashFlowService {
           AND ${column} >= @0
           ORDER BY ${column};
         `;
-
-    return {
+    const result = {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate: dates[4]?.[dateColumn] || new Date(),
@@ -75,6 +79,8 @@ export class CashFlowService {
         (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
         new Date(),
     };
+    await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
+    return result;
   }
 
   //Diễn biến giao dịch đầu tư

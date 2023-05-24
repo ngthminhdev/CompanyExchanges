@@ -148,13 +148,16 @@ export class StockService {
     column: string = 'date_time',
     instance: any = this.db,
   ): Promise<SessionDatesInterface> {
+    const redisData = await this.redis.get<SessionDatesInterface>(
+      `${RedisKeys.SessionDate}:${table}:${column}`,
+    );
+    if (redisData) return redisData;
+
     let dateColumn = column;
     if (column.startsWith('[')) {
       dateColumn = column.slice(1, column.length - 1);
     }
 
-    const lastWeek = moment().subtract('1', 'week').format('YYYY-MM-DD');
-    const lastMonth = moment().subtract('1', 'month').format('YYYY-MM-DD');
     const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
     const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
 
@@ -170,8 +173,7 @@ export class StockService {
           AND ${column} >= @0
           ORDER BY ${column};
         `;
-
-    return {
+    const result = {
       latestDate: dates[0]?.[dateColumn] || new Date(),
       previousDate: dates[1]?.[dateColumn] || new Date(),
       weekDate: dates[4]?.[dateColumn] || new Date(),
@@ -183,6 +185,9 @@ export class StockService {
         (await instance.query(query, [firstDateYear]))[0]?.[dateColumn] ||
         new Date(),
     };
+
+    await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
+    return result;
   }
 
   //Biến động thị trường
@@ -1056,18 +1061,34 @@ export class StockService {
           )
         ).latestDate;
         const query: string = `
-                SELECT c.floor AS global, c.LV2 AS industry, 
-                c.code as ticker, 
-                sum(n.buyVal) + sum(n.sellVal) AS value
-                FROM [marketTrade].[dbo].[foreign] n
-                JOIN [marketInfor].[dbo].[info] c
-                ON c.code = n.code
-                WHERE n.date = @0 and c.[type] in ('STOCK', 'ETF')
-                AND c.floor in ${floor}
-                AND c.LV2 != ''
-                GROUP BY c.floor, c.LV2, c.code
-
-            `;
+          WITH top10 AS (
+            SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, sum(c.buyVal) + sum(c.sellVal) AS value,
+            ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY sum(c.buyVal) + sum(c.sellVal) DESC) AS rn
+          FROM [marketTrade].[dbo].[foreign] c
+          INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+          WHERE i.floor IN ${floor}
+            AND c.date = @0
+            AND i.[type] IN ('STOCK', 'ETF')
+            AND i.LV2 != ''
+          GROUP BY i.floor, i.LV2, c.code
+          )
+          SELECT * FROM (
+            SELECT global, industry, ticker, value
+            FROM top10
+            WHERE rn <= 10
+            UNION ALL
+            SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.buyVal + c.sellVal) AS value
+            FROM [marketTrade].[dbo].[foreign] c
+            INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+            WHERE i.floor IN ${floor}
+              AND c.date = @0
+              AND i.[type] IN ('STOCK', 'ETF')
+              AND i.LV2 != ''
+              AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+            GROUP BY i.floor, i.LV2
+          ) AS result
+          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+        `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
@@ -1081,23 +1102,41 @@ export class StockService {
 
         date = (
           await this.getSessionDate(
-            '[marketRatio].[dbo].[ratio]',
+            '[RATIO].[dbo].[ratio]',
             'date',
             this.dbServer,
           )
         ).latestDate;
 
         const query: string = `
-              select i.floor as global, i.LV2 as industry,
-              c.code as ticker, c.value
-              from [marketRatio].[dbo].[ratio] c
-              inner join [marketInfor].[dbo].[info] i
-              on c.code = i.code
-              where i.floor in ${floor}
-                and date = @0 and c.ratioCode = 'MARKETCAP'
-                and i.[type] in ('STOCK', 'ETF')
-                and i.LV2 != ''
-            `;
+          WITH top10 AS (
+              SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, c.value,
+                    ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY c.value DESC) AS rn
+              FROM [RATIO].[dbo].[ratio] c
+              INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+              WHERE i.floor IN ${floor}
+                AND c.date = @0 AND c.ratioCode = 'MARKETCAP'
+                AND i.[type] IN ('STOCK', 'ETF')
+                AND i.LV2 != ''
+              GROUP BY i.floor, i.LV2, c.code, c.value
+          )
+          SELECT * FROM (
+              SELECT global, industry, ticker, value
+              FROM top10
+              WHERE rn <= 10
+              UNION ALL
+              SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.value) AS value
+              FROM [RATIO].[dbo].[ratio] c
+              INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+              WHERE i.floor IN ${floor}
+                AND c.date = @0 AND c.ratioCode = 'MARKETCAP'
+                AND i.[type] IN ('STOCK', 'ETF')
+                AND i.LV2 != ''
+                AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+              GROUP BY i.floor, i.LV2
+          ) AS result
+          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+        `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
@@ -1121,15 +1160,34 @@ export class StockService {
       }
 
       const query: string = `
-                SELECT c.floor AS global, c.LV2 AS industry, 
-                c.code as ticker, n.${field} AS value 
-                FROM [marketTrade].[dbo].[tickerTradeVND] n
-                JOIN [marketInfor].[dbo].[info] c
-                ON c.code = n.code
-                WHERE n.date = @0 and c.[type] = 'STOCK'
-                AND c.floor in ${floor}
-                AND c.LV2 != ''   
-            `;
+        WITH top10 AS (
+              SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, c.${field} as value,
+                    ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY c.${field} DESC) AS rn
+              FROM [marketTrade].[dbo].[tickerTradeVND] c
+              INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+              WHERE i.floor IN ${floor}
+                AND c.date = @0
+                AND i.[type] IN ('STOCK', 'ETF')
+                AND i.LV2 != ''
+              GROUP BY i.floor, i.LV2, c.code, c.${field}
+          )
+          SELECT * FROM (
+              SELECT global, industry, ticker, value
+              FROM top10
+              WHERE rn <= 10
+              UNION ALL
+              SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.${field}) AS value
+              FROM [marketTrade].[dbo].[tickerTradeVND] c
+              INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
+              WHERE i.floor IN ${floor}
+                AND c.date = @0
+                AND i.[type] IN ('STOCK', 'ETF')
+                AND i.LV2 != ''
+                AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+              GROUP BY i.floor, i.LV2
+          ) AS result
+          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+      `;
 
       const mappedData = new MarketMapResponse().mapToList(
         await this.dbServer.query(query, [date]),

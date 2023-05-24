@@ -16,5 +16,6 @@ export const industryMapping = {
   thucPham: `N'Thực phẩm & Đồ uống'`,
   vienThong: `N'Viễn thông'`,
   xayDung: `N'Xây dựng & Vật liệu'`,
+  taiNguyen: `N'Tài nguyên'`,
   yTe: `N'Y tế'`,
 };
