@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CatchException } from '../exceptions/common.exception';
+import { UtilCommonTemplate } from '../utils/utils.common';
 const sql = require('mssql');
 
 @Injectable()
@@ -21,5 +22,11 @@ export class MssqlService {
 
   async query<T>(query: string): Promise<T> {
     return (await this.database.query(query)).recordset;
+  }
+
+  async getDate<T>(query: string): Promise<T> {
+    return UtilCommonTemplate.toDate(
+      (await this.database.query(query))?.recordset[0]?.date,
+    );
   }
 }

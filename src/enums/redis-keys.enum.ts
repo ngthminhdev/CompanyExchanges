@@ -45,4 +45,5 @@ export enum RedisKeys {
   SessionDate = 'session-date',
 
   LiquidityChangePerformance = 'liquidity-change-performance',
+  IndusLiquidity = 'indus-liquidity',
 }

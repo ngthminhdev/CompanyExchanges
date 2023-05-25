@@ -7,6 +7,7 @@ import { MarketService } from './market.service';
 import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
 import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
 import { MarketTimeQueryDto } from './dto/market-time-query.dto';
+import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -66,7 +67,7 @@ export class MarketController {
   @ApiOperation({
     summary: 'Tăng trưởng thanh khoản các ngành',
   })
-  @ApiOkResponse({ type: LiquidityChangePerformanceSwagger })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
   async indsLiquidityChangePerformance(
     @Query() q: MarketTimeQueryDto,
     @Res() res: Response,
@@ -75,6 +76,7 @@ export class MarketController {
       q.exchange.toUpperCase(),
       q.industry.split(','),
       parseInt(q.type),
+      parseInt(q.order),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

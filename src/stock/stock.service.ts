@@ -181,10 +181,10 @@ export class StockService {
         dates[dates.length - 1]?.[dateColumn],
       ),
       yearDate: UtilCommonTemplate.toDate(
-        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn],
+        (await instance.query(query, [lastYear]))[0]?.[dateColumn],
       ),
       firstDateYear: UtilCommonTemplate.toDate(
-        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn],
+        (await instance.query(query, [firstDateYear]))[0]?.[dateColumn],
       ),
     };
 

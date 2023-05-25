@@ -116,7 +116,7 @@ export class UtilCommonTemplate {
     type: number = TimeTypeEnum.Quarter,
     date: moment.Moment | Date | string = new Date(),
     results = [],
-  ) {
+  ): string[] {
     if (count === 0) {
       return results;
     }
@@ -133,6 +133,14 @@ export class UtilCommonTemplate {
 
   static getIndustryFilter(input: string[]): string {
     return `(${input.map((name) => industryMapping[name]).join(', ')})`;
+  }
+
+  static getDateFilter(input: string[]) {
+    const filteredDates = input.filter((date) => date !== '');
+    return {
+      startDate: filteredDates.pop(),
+      dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
+    };
   }
 
   static transformData(arr, obj) {

@@ -1,18 +1,19 @@
-import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
+import * as _ from 'lodash';
 import * as moment from 'moment';
 import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
+import { RedisKeys } from '../enums/redis-keys.enum';
+import { MssqlService } from '../mssql/mssql.service';
 import { SessionDatesInterface } from '../stock/interfaces/session-dates.interface';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPriceChangePerformance } from './interfaces/price-change-performance.interface';
-import { RedisKeys } from '../enums/redis-keys.enum';
-import * as _ from 'lodash';
-import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
 import { LiquidityChangePerformanceResponse } from './responses/liquidity-change-performance.response';
-import { MssqlService } from '../mssql/mssql.service';
-import { ExceptionResponse } from '../exceptions/common.exception';
+import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
+import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
+import { IndusLiquidityInterface } from './interfaces/indus-liquidity.interface';
 
 @Injectable()
 export class MarketService {
@@ -86,6 +87,18 @@ export class MarketService {
 
     await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
     return result;
+  }
+
+  async getNearestDate(table: string, date: Date | string) {
+    const query: string = `
+      SELECT TOP 1 [date]
+      FROM ${table}
+      WHERE [date] IS NOT NULL
+      AND [date] <= '${date}'
+      ORDER BY [date] DESC
+    `;
+
+    return await this.mssqlService.getDate(query);
   }
 
   async priceChangePerformance(ex: string, industries: string[]) {
@@ -281,27 +294,26 @@ export class MarketService {
     ex: string,
     industries: string[],
     type: number,
+    order: number,
   ) {
-    const { latestDate, weekDate, monthDate, firstDateYear, yearDate } =
-      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
+    );
+    // if (redisData) return redisData;
 
-    let startDate!: any;
-    switch (type) {
-      case 2:
-        startDate = weekDate;
-        break;
-      case 2:
-        startDate = monthDate;
-        break;
-      case 2:
-        startDate = firstDateYear;
-        break;
-      case 2:
-        startDate = yearDate;
-        break;
-      default:
-        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
-    }
+    const date = (await Promise.all(
+      UtilCommonTemplate.getPastDate(type, order).map(
+        async (date: string) =>
+          await this.getNearestDate(
+            '[marketTrade].[dbo].[tickerTradeVND]',
+            date,
+          ),
+      ),
+    )) as string[];
+
+    const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       SELECT
@@ -316,10 +328,10 @@ export class MarketService {
           FROM [marketTrade].[dbo].[tickerTradeVND] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
-          WHERE [date] in ('2023-05-12', '2023-05-15', '2023-05-24')
-            and i.floor in ('HOSE')
+          WHERE [date] in ${dateFilter}
+            and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 != ''
+            and i.LV2 in ${inds}
           group by [date], i.LV2
         ) AS now
       INNER JOIN
@@ -331,18 +343,28 @@ export class MarketService {
           FROM [marketTrade].[dbo].[tickerTradeVND] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
-          WHERE [date] = '2023-05-12'
-            and i.floor in ('HOSE')
+          WHERE [date] = '${startDate}'
+            and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 != ''
+            and i.LV2 in ${inds}
           group by [date], i.LV2
         ) AS prev
       ON now.[date] >= prev.[date] and now.industry = prev.industry
       GROUP BY now.[date], now.industry, prev.[date], now.totalVal, prev.totalVal
       ORDER BY now.[date]
     `;
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
 
-    const data1 = await this.mssqlService.query(query);
-    return data1;
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+    return mappedData;
   }
 }

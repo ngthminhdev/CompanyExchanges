@@ -517,14 +517,6 @@ export class CashFlowService {
     const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
       await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
 
-    console.log({
-      latestDate,
-      previousDate,
-      weekDate,
-      monthDate,
-      firstDateYear,
-    });
-
     let startDate!: any;
     switch (type) {
       case TransactionTimeTypeEnum.Latest:
