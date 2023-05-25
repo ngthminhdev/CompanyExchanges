@@ -20,6 +20,7 @@ import { QueueModule } from './queue/queue.module';
 import { RealIpMiddleware } from './middlewares/real-ip.middleware';
 import { DB_SERVER } from './constants';
 import { MarketModule } from './market/market.module';
+import { MssqlModule } from './mssql/mssql.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { MarketModule } from './market/market.module';
 
     //aplication modules
     ConfigModuleModule,
+    MssqlModule,
     StockModule,
     AuthModule,
     UserModule,

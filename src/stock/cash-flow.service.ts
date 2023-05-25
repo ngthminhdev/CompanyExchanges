@@ -68,16 +68,18 @@ export class CashFlowService {
           ORDER BY ${column};
         `;
     const result = {
-      latestDate: dates[0]?.[dateColumn] || new Date(),
-      previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate: dates[4]?.[dateColumn] || new Date(),
-      monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
-      yearDate:
-        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
-        new Date(),
-      firstDateYear:
-        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
-        new Date(),
+      latestDate: UtilCommonTemplate.toDate(dates[0]?.[dateColumn]),
+      previousDate: UtilCommonTemplate.toDate(dates[1]?.[dateColumn]),
+      weekDate: UtilCommonTemplate.toDate(dates[4]?.[dateColumn]),
+      monthDate: UtilCommonTemplate.toDate(
+        dates[dates.length - 1]?.[dateColumn],
+      ),
+      yearDate: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn],
+      ),
+      firstDateYear: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn],
+      ),
     };
     await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
     return result;
@@ -491,7 +493,7 @@ export class CashFlowService {
       2 AS type
     FROM data
     GROUP BY marketTotalVal, [date]
-    ORDER BY [date] ASC
+    ORDER BY [date]
     `;
 
     const data: InvestorTransactionRatioInterface[] = await this.dbServer.query(
@@ -514,6 +516,14 @@ export class CashFlowService {
 
     const { latestDate, previousDate, weekDate, monthDate, firstDateYear } =
       await this.getSessionDate('[marketTrade].[dbo].[proprietary]');
+
+    console.log({
+      latestDate,
+      previousDate,
+      weekDate,
+      monthDate,
+      firstDateYear,
+    });
 
     let startDate!: any;
     switch (type) {

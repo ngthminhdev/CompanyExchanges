@@ -6,6 +6,7 @@ import { IndustryFilterDto } from './dto/industry-filter.dto';
 import { MarketService } from './market.service';
 import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
 import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
+import { MarketTimeQueryDto } from './dto/market-time-query.dto';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -28,7 +29,7 @@ export class MarketController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('hieu-suat-tang-trung-thanh-khoan-co-phieu')
+  @Get('hieu-suat-tang-truong-thanh-khoan-co-phieu')
   @ApiOperation({
     summary: 'Hiệu suất giá tăng trưởng thanh khoản các cổ phiếu',
   })
@@ -40,6 +41,40 @@ export class MarketController {
     const data = await this.marketService.liquidityChangePerformance(
       q.exchange.toUpperCase(),
       q.industry.split(','),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-thay-doi-von-hoa-nganh')
+  @ApiOperation({
+    summary: 'Hiệu suất thay đổi vốn hóa (ROC) của các ngành',
+  })
+  @ApiOkResponse({ type: LiquidityChangePerformanceSwagger })
+  async marketCapChangePerformance(
+    @Query() q: MarketTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.marketCapChangePerformance(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-thay-doi-thanh-khoan-nganh')
+  @ApiOperation({
+    summary: 'Tăng trưởng thanh khoản các ngành',
+  })
+  @ApiOkResponse({ type: LiquidityChangePerformanceSwagger })
+  async indsLiquidityChangePerformance(
+    @Query() q: MarketTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.indsLiquidityChangePerformance(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

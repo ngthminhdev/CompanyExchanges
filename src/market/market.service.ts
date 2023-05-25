@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
@@ -11,6 +11,8 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import * as _ from 'lodash';
 import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
 import { LiquidityChangePerformanceResponse } from './responses/liquidity-change-performance.response';
+import { MssqlService } from '../mssql/mssql.service';
+import { ExceptionResponse } from '../exceptions/common.exception';
 
 @Injectable()
 export class MarketService {
@@ -19,6 +21,7 @@ export class MarketService {
     private readonly redis: Cache,
     @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
+    private readonly mssqlService: MssqlService,
   ) {}
 
   //Get the nearest day have transaction in session, week, month...
@@ -234,5 +237,112 @@ export class MarketService {
     );
 
     return result;
+  }
+
+  async marketCapChangePerformance(
+    ex: string,
+    industries: string[],
+    type: number,
+  ) {
+    const query: string = `
+      SELECT
+        now.date, now.code as floor,
+        ((now.totalVal - prev.totalVal) / NULLIF(prev.totalVal, 0)) * 100 AS perChange
+      FROM
+        (
+          SELECT
+            [date],
+            code,
+            totalVal
+          FROM [marketTrade].[dbo].[indexTrade]
+          WHERE [date] >= @0
+          AND [date] <= @1
+          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+        ) AS now
+      INNER JOIN
+        (
+          SELECT
+            [date],
+            code,
+            totalVal
+          FROM [marketTrade].[dbo].[indexTrade]
+          WHERE [date] = @0
+          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+        ) AS prev
+      ON now.[date] > prev.[date] and now.code = prev.code
+      GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
+      ORDER BY now.[date] ASC;
+    `;
+
+    const data = await this.dbServer.query(query);
+  }
+
+  async indsLiquidityChangePerformance(
+    ex: string,
+    industries: string[],
+    type: number,
+  ) {
+    const { latestDate, weekDate, monthDate, firstDateYear, yearDate } =
+      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+
+    let startDate!: any;
+    switch (type) {
+      case 2:
+        startDate = weekDate;
+        break;
+      case 2:
+        startDate = monthDate;
+        break;
+      case 2:
+        startDate = firstDateYear;
+        break;
+      case 2:
+        startDate = yearDate;
+        break;
+      default:
+        throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
+    }
+
+    const query: string = `
+      SELECT
+        now.date, now.industry,
+        ((now.totalVal - prev.totalVal) / NULLIF(prev.totalVal, 0)) * 100 AS perChange
+      FROM
+        (
+          SELECT
+            [date],
+            i.LV2 as industry,
+            sum(totalVal) as totalVal
+          FROM [marketTrade].[dbo].[tickerTradeVND] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] in ('2023-05-12', '2023-05-15', '2023-05-24')
+            and i.floor in ('HOSE')
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 != ''
+          group by [date], i.LV2
+        ) AS now
+      INNER JOIN
+        (
+          SELECT
+            [date],
+            i.LV2 as industry,
+            sum(totalVal) as totalVal
+          FROM [marketTrade].[dbo].[tickerTradeVND] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] = '2023-05-12'
+            and i.floor in ('HOSE')
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 != ''
+          group by [date], i.LV2
+        ) AS prev
+      ON now.[date] >= prev.[date] and now.industry = prev.industry
+      GROUP BY now.[date], now.industry, prev.[date], now.totalVal, prev.totalVal
+      ORDER BY now.[date]
+    `;
+
+    const data1 = await this.mssqlService.query(query);
+    return data1;
   }
 }

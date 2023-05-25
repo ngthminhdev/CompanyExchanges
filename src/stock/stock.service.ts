@@ -174,16 +174,18 @@ export class StockService {
           ORDER BY ${column};
         `;
     const result = {
-      latestDate: dates[0]?.[dateColumn] || new Date(),
-      previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate: dates[4]?.[dateColumn] || new Date(),
-      monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
-      yearDate:
-        (await instance.query(query, [lastYear]))[0]?.[dateColumn] ||
-        new Date(),
-      firstDateYear:
-        (await instance.query(query, [firstDateYear]))[0]?.[dateColumn] ||
-        new Date(),
+      latestDate: UtilCommonTemplate.toDate(dates[0]?.[dateColumn]),
+      previousDate: UtilCommonTemplate.toDate(dates[1]?.[dateColumn]),
+      weekDate: UtilCommonTemplate.toDate(dates[4]?.[dateColumn]),
+      monthDate: UtilCommonTemplate.toDate(
+        dates[dates.length - 1]?.[dateColumn],
+      ),
+      yearDate: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn],
+      ),
+      firstDateYear: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn],
+      ),
     };
 
     await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
@@ -459,27 +461,6 @@ export class StockService {
         }
         return stats;
       }, []);
-
-      // const marketVolatility: any = final.reduce(
-      //   (prev, curr) => {
-      //     return {
-      //       equal: prev.equal + curr.equal,
-      //       high: prev.high + curr.high,
-      //       low: prev.low + curr.low,
-      //       increase: prev.increase + curr.increase,
-      //       decrease: prev.decrease + curr.decrease,
-      //     };
-      //   },
-      //   {
-      //     equal: 0,
-      //     high: 0,
-      //     low: 0,
-      //     increase: 0,
-      //     decrease: 0,
-      //   },
-      // );
-
-      // await this.redis.set(RedisKeys.IndustryFull, marketVolatility);
 
       const buySellPressure: ChildProcess = fork(
         __dirname + '/processes/buy-sell-pressure-child.js',
@@ -897,7 +878,7 @@ export class StockService {
                 SELECT name, price, unit, change1D AS Day,
                 changeMTD AS MTD, changeYTD AS YTD
                 FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
-                WHERE lastUpdated = @0 and unit ${+type ? '=' : '!='} ''
+                WHERE lastUpdated >= @0 and unit ${+type ? '=' : '!='} ''
             `;
 
       const data: MerchandisePriceInterface[] = await this.db.query(query, [
