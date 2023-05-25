@@ -59,6 +59,7 @@ export class MarketController {
       q.exchange.toUpperCase(),
       q.industry.split(','),
       parseInt(q.type),
+      parseInt(q.order),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

@@ -256,38 +256,81 @@ export class MarketService {
     ex: string,
     industries: string[],
     type: number,
+    order: number,
   ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = (await Promise.all(
+      UtilCommonTemplate.getPastDate(type, order).map(
+        async (date: string) =>
+          await this.getNearestDate(
+            '[marketTrade].[dbo].[tickerTradeVND]',
+            date,
+          ),
+      ),
+    )) as string[];
+
+    const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
     const query: string = `
       SELECT
-        now.date, now.code as floor,
-        ((now.totalVal - prev.totalVal) / NULLIF(prev.totalVal, 0)) * 100 AS perChange
+        now.date, now.industry,
+        ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
       FROM
         (
           SELECT
             [date],
-            code,
-            totalVal
-          FROM [marketTrade].[dbo].[indexTrade]
-          WHERE [date] >= @0
-          AND [date] <= @1
-          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+            i.LV2 as industry,
+            sum(value) as value
+          FROM [RATIO].[dbo].[ratio] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] in ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.ratioCode = 'MARKETCAP'
+          group by [date], i.LV2
         ) AS now
       INNER JOIN
         (
           SELECT
             [date],
-            code,
-            totalVal
-          FROM [marketTrade].[dbo].[indexTrade]
-          WHERE [date] = @0
-          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+            i.LV2 as industry,
+            sum(value) as value
+          FROM [RATIO].[dbo].[ratio] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] = '${startDate}'
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.ratioCode = 'MARKETCAP'
+          group by [date], i.LV2
         ) AS prev
-      ON now.[date] > prev.[date] and now.code = prev.code
-      GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
-      ORDER BY now.[date] ASC;
+      ON now.[date] >= prev.[date] and now.industry = prev.industry
+      GROUP BY now.[date], now.industry, prev.[date], now.value, prev.value
+      ORDER BY now.[date]
     `;
 
-    const data = await this.dbServer.query(query);
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+    return mappedData;
   }
 
   async indsLiquidityChangePerformance(
@@ -301,7 +344,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const date = (await Promise.all(
       UtilCommonTemplate.getPastDate(type, order).map(
