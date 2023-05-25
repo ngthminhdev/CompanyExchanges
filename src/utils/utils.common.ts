@@ -138,7 +138,7 @@ export class UtilCommonTemplate {
   static getDateFilter(input: string[]) {
     const filteredDates = input.filter((date) => date !== '');
     return {
-      startDate: filteredDates.pop(),
+      startDate: filteredDates[filteredDates.length - 1],
       dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
     };
   }

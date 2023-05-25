@@ -162,7 +162,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.LiquidityChangePerformance}:${floor}:${inds}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const quarterDate = UtilCommonTemplate.getPastDate(5);
     const latestQuarterDate = quarterDate[0];
@@ -223,7 +223,7 @@ export class MarketService {
             and i.LV2 in ${inds}
                 and i.floor in ${floor} and i.type in ('STOCK', 'ETF')
         ) as other
-        on now.date > other.date and now.code = other.code
+        on now.date >= other.date and now.code = other.code
         group by other.date, other.code, now.totalVal, other.totalVal
         order by perChange desc, other.code, other.date desc;
     `;
@@ -263,7 +263,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const date = (await Promise.all(
       UtilCommonTemplate.getPastDate(type, order).map(
@@ -317,6 +317,10 @@ export class MarketService {
       GROUP BY now.[date], now.industry, prev.[date], now.value, prev.value
       ORDER BY now.[date]
     `;
+    console.log(
+      '🚀 ~ file: market.service.ts:320 ~ MarketService ~ query:',
+      query,
+    );
 
     const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
       query,
@@ -410,4 +414,11 @@ export class MarketService {
     );
     return mappedData;
   }
+
+  async equityChangePerformance(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {}
 }
