@@ -263,15 +263,12 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const date = (await Promise.all(
       UtilCommonTemplate.getPastDate(type, order).map(
         async (date: string) =>
-          await this.getNearestDate(
-            '[marketTrade].[dbo].[tickerTradeVND]',
-            date,
-          ),
+          await this.getNearestDate('[RATIO].[dbo].[ratio]', date),
       ),
     )) as string[];
 
@@ -317,10 +314,6 @@ export class MarketService {
       GROUP BY now.[date], now.industry, prev.[date], now.value, prev.value
       ORDER BY now.[date]
     `;
-    console.log(
-      '🚀 ~ file: market.service.ts:320 ~ MarketService ~ query:',
-      query,
-    );
 
     const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
       query,
@@ -420,5 +413,24 @@ export class MarketService {
     industries: string[],
     type: number,
     order: number,
-  ) {}
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = (await Promise.all(
+      UtilCommonTemplate.getPastDate(type, order).map(
+        async (date: string) =>
+          await this.getNearestDate(
+            '[marketTrade].[dbo].[tickerTradeVND]',
+            date,
+          ),
+      ),
+    )) as string[];
+
+    const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
+  }
 }
