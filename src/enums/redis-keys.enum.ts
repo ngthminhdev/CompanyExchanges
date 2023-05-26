@@ -41,4 +41,14 @@ export enum RedisKeys {
 
   TopNetBuyIndustry = 'top-net-buy-industry',
   InvestorCashFlowByIndustry = 'investor-cash-flow-by-industry',
+
+  SessionDate = 'session-date',
+
+  LiquidityChangePerformance = 'liquidity-change-performance',
+  IndusLiquidity = 'indus-liquidity',
+  marketCapChange = 'market-cap-change',
+  EquityIndsChange = 'equity-inds-change',
+  LiabilitiesIndsChange = 'liabilities-inds-change',
+
+  NearestDate = 'nearest-date',
 }

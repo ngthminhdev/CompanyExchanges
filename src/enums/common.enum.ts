@@ -28,9 +28,17 @@ export enum TransactionTimeTypeEnum {
   YearToYear,
 }
 
-export enum TransactionEnum {
-  Buy,
-  Sell,
+export enum QuarterTimeTypeEnum {
+  Two = 2,
+  Four = 4,
+  Eight = 8,
+  Twelve = 12,
+  TwentyFive = 20,
+}
+
+export enum TimeTypeEnum {
+  Quarter,
+  Year,
 }
 
 export enum InvestorTypeEnum {

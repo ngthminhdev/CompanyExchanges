@@ -42,6 +42,11 @@ export class CashFlowService {
     table: string,
     column: string = 'date',
   ): Promise<SessionDatesInterface> {
+    const redisData = await this.redis.get<SessionDatesInterface>(
+      `${RedisKeys.SessionDate}:${table}:${column}`,
+    );
+    if (redisData) return redisData;
+
     let dateColumn = column;
     if (column.startsWith('[')) {
       dateColumn = column.slice(1, column.length - 1);
@@ -56,23 +61,28 @@ export class CashFlowService {
         `);
 
     const query: string = `
-            SELECT TOP 1 ${column} FROM ${table}
-            WHERE ${column} IS NOT NULL
-            ORDER BY ABS(DATEDIFF(day, ${column}, @0))
-            `;
-
-    return {
-      latestDate: dates[0]?.[dateColumn] || new Date(),
-      previousDate: dates[1]?.[dateColumn] || new Date(),
-      weekDate: dates[4]?.[dateColumn] || new Date(),
-      monthDate: dates[dates.length - 1]?.[dateColumn] || new Date(),
-      yearDate:
-        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn] ||
-        new Date(),
-      firstDateYear:
-        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn] ||
-        new Date(),
+          SELECT TOP 1 ${column}
+          FROM ${table}
+          WHERE ${column} IS NOT NULL
+          AND ${column} >= @0
+          ORDER BY ${column};
+        `;
+    const result = {
+      latestDate: UtilCommonTemplate.toDate(dates[0]?.[dateColumn]),
+      previousDate: UtilCommonTemplate.toDate(dates[1]?.[dateColumn]),
+      weekDate: UtilCommonTemplate.toDate(dates[4]?.[dateColumn]),
+      monthDate: UtilCommonTemplate.toDate(
+        dates[dates.length - 1]?.[dateColumn],
+      ),
+      yearDate: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [lastYear]))[0]?.[dateColumn],
+      ),
+      firstDateYear: UtilCommonTemplate.toDate(
+        (await this.dbServer.query(query, [firstDateYear]))[0]?.[dateColumn],
+      ),
     };
+    await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
+    return result;
   }
 
   //Diễn biến giao dịch đầu tư
@@ -483,7 +493,7 @@ export class CashFlowService {
       2 AS type
     FROM data
     GROUP BY marketTotalVal, [date]
-    ORDER BY [date] ASC
+    ORDER BY [date]
     `;
 
     const data: InvestorTransactionRatioInterface[] = await this.dbServer.query(

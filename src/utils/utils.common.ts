@@ -1,6 +1,8 @@
 import { ValidationError } from '@nestjs/common';
 import * as moment from 'moment';
 import * as _ from 'lodash';
+import { TimeTypeEnum } from '../enums/common.enum';
+import { industryMapping } from '../market/mapping/industry.mapping';
 export class UtilCommonTemplate {
   static toDateTime(value?: any): any | string {
     if (!value) {
@@ -107,5 +109,141 @@ export class UtilCommonTemplate {
     const top10Highest = _.take(sortedData, 10);
     const top10Lowest = _.take(_.reverse(sortedData), 10);
     return [...top10Highest, ...top10Lowest];
+  }
+
+  static getPastDate(
+    count: number,
+    type: number = TimeTypeEnum.Quarter,
+    date: moment.Moment | Date | string = new Date(),
+    results = [],
+  ): string[] {
+    if (count === 0) {
+      return results;
+    }
+    let previousEndDate: moment.Moment | Date | string;
+    if (type === TimeTypeEnum.Year) {
+      previousEndDate = moment(date).subtract(1, 'years').endOf('year');
+    } else {
+      previousEndDate = moment(date).subtract(1, 'quarter').endOf('quarter');
+    }
+    results.push(previousEndDate.format('YYYY/MM/DD'));
+
+    return this.getPastDate(count - 1, type, previousEndDate, results);
+  }
+
+  static getYearQuarters(
+    count: number,
+    type: number = TimeTypeEnum.Quarter,
+    date: moment.Moment | Date | string = new Date(),
+    results = [],
+  ): string[] {
+    if (count === 0) {
+      return results;
+    }
+    let previousEndDate: moment.Moment | Date | string;
+    if (type === TimeTypeEnum.Year) {
+      previousEndDate = moment(date).subtract(1, 'years').endOf('year');
+    } else {
+      previousEndDate = moment(date).subtract(1, 'quarter').endOf('quarter');
+    }
+    const resultDate = `${previousEndDate.year()}${previousEndDate.quarter()}`;
+    results.push(resultDate);
+
+    return this.getYearQuarters(count - 1, type, previousEndDate, results);
+  }
+
+  static getIndustryFilter(input: string[]): string {
+    return `(${input.map((name) => industryMapping[name]).join(', ')})`;
+  }
+
+  static getDateFilter(input: string[]) {
+    const filteredDates = input.filter((date) => date !== '');
+    return {
+      startDate: filteredDates[filteredDates.length - 1],
+      dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
+    };
+  }
+
+  static transformData(arr, obj) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (this.toDate(item.date) === obj.lastFiveDate) {
+          transformedItem.perFive = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.lastQuarterDate) {
+          transformedItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.firstYearDate) {
+          transformedItem.perYtd = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.lastYearDate) {
+          transformedItem.perYtY = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          perFive: '',
+          perQuarter: '',
+          perYtd: '',
+          perYtY: '',
+        };
+
+        if (this.toDate(item.date) === obj.lastFiveDate) {
+          newItem.perFive = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.lastQuarterDate) {
+          newItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.firstYearDate) {
+          newItem.perYtd = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.lastYearDate) {
+          newItem.perYtY = item.perChange ?? 0;
+        }
+
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
+  }
+
+  static transformDataLiquid(arr, obj) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (this.toDate(item.date) === obj.secondQuarterDate) {
+          transformedItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.yearQuarterDate) {
+          transformedItem.perQuarterLastYear = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.fourYearsDate) {
+          transformedItem.perFourYear = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          perQuarter: '',
+          perQuarterLastYear: '',
+          perFourYear: '',
+        };
+
+        if (this.toDate(item.date) === obj.secondQuarterDate) {
+          newItem.perQuarter = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.yearQuarterDate) {
+          newItem.perQuarterLastYear = item.perChange ?? 0;
+        } else if (this.toDate(item.date) === obj.fourYearsDate) {
+          newItem.perFourYear = item.perChange ?? 0;
+        }
+
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
   }
 }
