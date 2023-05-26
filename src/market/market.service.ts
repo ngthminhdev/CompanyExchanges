@@ -277,10 +277,6 @@ export class MarketService {
         async (date: string) => await this.getNearestDate('proprietary', date),
       ),
     )) as string[];
-    console.log(
-      '🚀 ~ file: market.service.ts:281 ~ MarketService ~ date:',
-      date,
-    );
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
