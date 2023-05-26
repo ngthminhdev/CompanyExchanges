@@ -131,6 +131,27 @@ export class UtilCommonTemplate {
     return this.getPastDate(count - 1, type, previousEndDate, results);
   }
 
+  static getYearQuarters(
+    count: number,
+    type: number = TimeTypeEnum.Quarter,
+    date: moment.Moment | Date | string = new Date(),
+    results = [],
+  ): string[] {
+    if (count === 0) {
+      return results;
+    }
+    let previousEndDate: moment.Moment | Date | string;
+    if (type === TimeTypeEnum.Year) {
+      previousEndDate = moment(date).subtract(1, 'years').endOf('year');
+    } else {
+      previousEndDate = moment(date).subtract(1, 'quarter').endOf('quarter');
+    }
+    const resultDate = `${previousEndDate.year()}${previousEndDate.quarter()}`;
+    results.push(resultDate);
+
+    return this.getYearQuarters(count - 1, type, previousEndDate, results);
+  }
+
   static getIndustryFilter(input: string[]): string {
     return `(${input.map((name) => industryMapping[name]).join(', ')})`;
   }

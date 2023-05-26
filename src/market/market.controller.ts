@@ -82,7 +82,7 @@ export class MarketController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('hieu-suat-thay-doi-thanh-khoan-nganh')
+  @Get('hieu-suat-tang-truong-von-chu-so-huu-nganh')
   @ApiOperation({
     summary: 'Hiệu suất tăng trưởng vốn chủ sở hữu của các ngành (%)',
   })

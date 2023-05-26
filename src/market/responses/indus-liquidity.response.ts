@@ -27,7 +27,7 @@ export class IndusLiquidityResponse {
   })
   perChange: number;
 
-  constructor(data?: IndusLiquidityInterface) {
+  constructor(data?: IndusLiquidityInterface, type: number = 0) {
     this.industry = data?.industry || '';
     switch (this.industry) {
       case 'Bảo hiểm':
@@ -88,12 +88,15 @@ export class IndusLiquidityResponse {
         this.color = '#90ed7d';
         break;
     }
-    this.date = UtilCommonTemplate.toDate(data?.date) || '';
+    this.date =
+      type === 1
+        ? data?.date.toString()
+        : UtilCommonTemplate.toDate(data?.date) || '';
     this.perChange = data?.perChange || 0;
   }
 
-  public mapToList(data?: IndusLiquidityInterface[]) {
-    return data?.map((item) => new IndusLiquidityResponse(item));
+  public mapToList(data?: IndusLiquidityInterface[], type: number = 0) {
+    return data?.map((item) => new IndusLiquidityResponse(item, type));
   }
 }
 
