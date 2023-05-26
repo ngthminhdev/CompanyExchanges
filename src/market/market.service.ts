@@ -104,7 +104,7 @@ export class MarketService {
     `;
 
     const dated = await this.mssqlService.getDate(query);
-    await this.redis.set(`${RedisKeys.NearestDate}:${table}:${date}`, date);
+    await this.redis.set(`${RedisKeys.NearestDate}:${table}:${date}`, dated);
     return dated;
   }
 
@@ -169,7 +169,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.LiquidityChangePerformance}:${floor}:${inds}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const quarterDate = UtilCommonTemplate.getPastDate(5);
     const latestQuarterDate = quarterDate[0];
@@ -270,16 +270,19 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const date = (await Promise.all(
       UtilCommonTemplate.getPastDate(type, order).map(
-        async (date: string) => await this.getNearestDate('proprietary', date),
+        async (date: string) => await this.getNearestDate('foreign', date),
       ),
     )) as string[];
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
+    console.log(UtilCommonTemplate.getPastDate(type, order));
+
+    console.log({ startDate, dateFilter, date });
     const query: string = `
       SELECT
         now.date, now.industry,
@@ -329,10 +332,10 @@ export class MarketService {
       _.orderBy(data, 'date'),
     );
 
-    await this.redis.set(
-      `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
-      mappedData,
-    );
+    // await this.redis.set(
+    //   `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
+    //   mappedData,
+    // );
     return mappedData;
   }
 
