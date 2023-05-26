@@ -87,11 +87,45 @@ export class MarketController {
     summary: 'Hiệu suất tăng trưởng vốn chủ sở hữu của các ngành (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async equityIndsChangePerformance(
+    @Query() q: MarketTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.equityIndsChangePerformance(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-von-chu-so-co-phieu')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng vốn chủ sở hữu của các cổ phiếu (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
   async equityChangePerformance(
     @Query() q: MarketTimeQueryDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.equityChangePerformance(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-no-phai-tra-nganh')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng nợ phải trả của các ngành (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async liabilitiesIndsChangePerformance(
+    @Query() q: MarketTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.liabilitiesIndsChangePerformance(
       q.exchange.toUpperCase(),
       q.industry.split(','),
       parseInt(q.type),

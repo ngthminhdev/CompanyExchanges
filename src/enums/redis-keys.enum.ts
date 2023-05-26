@@ -47,7 +47,8 @@ export enum RedisKeys {
   LiquidityChangePerformance = 'liquidity-change-performance',
   IndusLiquidity = 'indus-liquidity',
   marketCapChange = 'market-cap-change',
-  EquityChange = 'equity-change',
+  EquityIndsChange = 'equity-inds-change',
+  LiabilitiesIndsChange = 'liabilities-inds-change',
 
   NearestDate = 'nearest-date',
 }
