@@ -90,6 +90,11 @@ export class MarketService {
   }
 
   async getNearestDate(table: string, date: Date | string) {
+    const redisData = await this.redis.get(
+      `${RedisKeys.NearestDate}:${table}:${date}`,
+    );
+    if (redisData) return redisData;
+
     const query: string = `
       SELECT TOP 1 [date]
       FROM ${table}
@@ -98,7 +103,9 @@ export class MarketService {
       ORDER BY [date] DESC
     `;
 
-    return await this.mssqlService.getDate(query);
+    const dated = await this.mssqlService.getDate(query);
+    await this.redis.set(`${RedisKeys.NearestDate}:${table}:${date}`, date);
+    return dated;
   }
 
   async priceChangePerformance(ex: string, industries: string[]) {
@@ -267,10 +274,13 @@ export class MarketService {
 
     const date = (await Promise.all(
       UtilCommonTemplate.getPastDate(type, order).map(
-        async (date: string) =>
-          await this.getNearestDate('[RATIO].[dbo].[ratio]', date),
+        async (date: string) => await this.getNearestDate('proprietary', date),
       ),
     )) as string[];
+    console.log(
+      '🚀 ~ file: market.service.ts:281 ~ MarketService ~ date:',
+      date,
+    );
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 

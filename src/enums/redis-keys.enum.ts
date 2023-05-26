@@ -48,4 +48,5 @@ export enum RedisKeys {
   IndusLiquidity = 'indus-liquidity',
 
   marketCapChange = 'market-cap-change',
+  NearestDate = 'nearest-date',
 }
