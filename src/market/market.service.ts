@@ -572,7 +572,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.EquityChange}:${floor}:${inds}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(2);
 
@@ -638,10 +638,10 @@ export class MarketService {
       _.orderBy(data, 'date'),
     );
 
-    // await this.redis.set(
-    //   `${RedisKeys.EquityChange}:${floor}:${inds}`,
-    //   mappedData,
-    // );
+    await this.redis.set(
+      `${RedisKeys.EquityChange}:${floor}:${inds}`,
+      mappedData,
+    );
 
     return mappedData;
   }
