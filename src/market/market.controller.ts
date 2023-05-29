@@ -8,6 +8,7 @@ import { PriceChangePerformanceSwagger } from './responses/price-change-performa
 import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
 import { MarketTimeQueryDto } from './dto/market-time-query.dto';
 import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
+import { IndsReportSwagger } from './responses/inds-report.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -104,9 +105,9 @@ export class MarketController {
   @ApiOperation({
     summary: 'Hiệu suất tăng trưởng vốn chủ sở hữu của các cổ phiếu (%)',
   })
-  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  @ApiOkResponse({ type: IndsReportSwagger })
   async equityChangePerformance(
-    @Query() q: MarketTimeQueryDto,
+    @Query() q: IndustryFilterDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.equityChangePerformance(

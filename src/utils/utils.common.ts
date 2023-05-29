@@ -160,6 +160,7 @@ export class UtilCommonTemplate {
     const filteredDates = input.filter((date) => date !== '');
     return {
       startDate: filteredDates[filteredDates.length - 1],
+      endDate: filteredDates[0],
       dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
     };
   }

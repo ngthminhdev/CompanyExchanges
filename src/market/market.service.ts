@@ -14,6 +14,7 @@ import { LiquidityChangePerformanceResponse } from './responses/liquidity-change
 import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
 import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
 import { IndusLiquidityInterface } from './interfaces/indus-liquidity.interface';
+import { IndsReportResponse } from './responses/inds-report.response';
 
 @Injectable()
 export class MarketService {
@@ -564,5 +565,84 @@ export class MarketService {
     return mappedData;
   }
 
-  async equityChangePerformance(ex: string, industries: string[]) {}
+  async equityChangePerformance(ex: string, industries: string[]) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.EquityChange}:${floor}:${inds}`,
+    );
+    // if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(2);
+
+    const { startDate, dateFilter, endDate } =
+      UtilCommonTemplate.getDateFilter(date);
+
+    console.log({ startDate, dateFilter, endDate });
+
+    const query: string = `
+      SELECT
+          now.year as date, now.industry, lower(now.report) as report,
+          ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
+        FROM
+          (
+            SELECT
+              [year],
+              i.LV2 as industry,
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${endDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (N'VỐN CHỦ SỞ HỮU',
+                N'Thặng dư vốn cổ phần',
+                N'Lợi ích cổ đông không kiểm soát',
+                N'Lãi chưa phân phối')
+            group by [year], i.LV2, t.reportName
+          ) AS now
+        INNER JOIN
+          (
+            SELECT
+              [year],
+              i.LV2 as industry,
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${startDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (N'VỐN CHỦ SỞ HỮU',
+                N'Thặng dư vốn cổ phần',
+                N'Lợi ích cổ đông không kiểm soát',
+                N'Lãi chưa phân phối')
+            group by [year], i.LV2, t.reportName
+          ) AS prev
+        ON now.[year] >= prev.[year] and now.industry = prev.industry and now.report = prev.report
+        GROUP BY now.[year], now.industry, prev.[year], now.value, prev.value, now.report
+        ORDER BY now.[industry]
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndsReportResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    // await this.redis.set(
+    //   `${RedisKeys.EquityChange}:${floor}:${inds}`,
+    //   mappedData,
+    // );
+
+    return mappedData;
+  }
 }
