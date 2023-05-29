@@ -153,13 +153,91 @@ export class MarketController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('hieu-suat-tang-truong-danh-thu-thuan-nganh')
+  @Get('hieu-suat-tang-truong-doanh-thu-thuan-nganh')
   @ApiOperation({
     summary: 'Hiệu suất tăng trưởng doanh thu thuần của các ngành (%)',
   })
-  @ApiOkResponse({ type: LiabilitiesChangeSwagger })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
   async netRevenueInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
     const data = await this.marketService.netRevenueInds(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-loi-nhuan-gop-nganh')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng lợi nhuân gộp các ngành (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async profitInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+    const data = await this.marketService.profitInds(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-loi-nhuan-kinh-doanh-nganh')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng lợi nhuận hoạt động các ngành (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async activityProfitInds(
+    @Query() q: MarketTimeQueryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.activityProfitInds(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-eps')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng EPS các ngành (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async epsInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+    const data = await this.marketService.epsInds(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-ebitda')
+  @ApiOperation({
+    summary: 'Tăng trưởng EBITDA của các ngành qua từng kỳ (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async ebitdaInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+    const data = await this.marketService.ebitdaInds(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-co-tuc-tien-mat')
+  @ApiOperation({
+    summary: 'Tăng trưởng cổ tức tiền mặt của các ngành qua từng kỳ (%)',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async cashDividend(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+    const data = await this.marketService.cashDividend(
       q.exchange.toUpperCase(),
       q.industry.split(','),
       parseInt(q.type),
