@@ -24,11 +24,8 @@ export class InvestorTransactionValueResponse {
       case 'VNINDEX':
         this.floor = 'HOSE';
         break;
-      case 'HNXINDEX':
-        this.floor = 'HNX';
-        break;
       default:
-        this.floor = 'UPCOM';
+        this.floor = data?.floor || '';
     }
     this.totalVal = data?.totalVal || 0;
     this.date = UtilCommonTemplate.toDate(data?.date || new Date());
