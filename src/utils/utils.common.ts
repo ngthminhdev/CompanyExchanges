@@ -160,6 +160,7 @@ export class UtilCommonTemplate {
     const filteredDates = input.filter((date) => date !== '');
     return {
       startDate: filteredDates[filteredDates.length - 1],
+      endDate: filteredDates[0],
       dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
     };
   }
@@ -240,6 +241,88 @@ export class UtilCommonTemplate {
           newItem.perFourYear = item.perChange ?? 0;
         }
 
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
+  }
+
+  static transformEquityData(arr) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (item.report === 'lãi chưa phân phối') {
+          transformedItem.laiChuPhanPhoi = item.perChange ?? 0;
+        } else if (item.report === 'lợi ích cổ đông không kiểm soát') {
+          transformedItem.loiIchCoDong = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          transformedItem.vonChuSoHuu = item.perChange ?? 0;
+        } else if (item.report === 'thặng dư vốn cổ phần') {
+          transformedItem.thangDuVon = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          laiChuPhanPhoi: 0,
+          loiIchCoDong: 0,
+          vonChuSoHuu: 0,
+          thangDuVon: 0,
+        };
+
+        if (item.report === 'lãi chưa phân phối') {
+          newItem.laiChuPhanPhoi = item.perChange ?? 0;
+        } else if (item.report === 'lợi ích cổ đông không kiểm soát') {
+          newItem.loiIchCoDong = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          newItem.vonChuSoHuu = item.perChange ?? 0;
+        } else if (item.report === 'thặng dư vốn cổ phần') {
+          newItem.thangDuVon = item.perChange ?? 0;
+        }
+
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
+  }
+
+  static transformLiabilitiesData(arr) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (item.report === 'nợ ngắn hạn') {
+          transformedItem.noNganHan = item.perChange ?? 0;
+        } else if (item.report === 'nợ dài hạn') {
+          transformedItem.noDaiHan = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          transformedItem.tiSoThanhToanNhanh = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          noNganHan: 0,
+          noDaiHan: 0,
+          tiSoThanhToanNhanh: 0,
+        };
+
+        if (item.report === 'nợ ngắn hạn') {
+          newItem.noNganHan = item.perChange ?? 0;
+        } else if (item.report === 'nợ dài hạn') {
+          newItem.noDaiHan = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          newItem.tiSoThanhToanNhanh = item.perChange ?? 0;
+        }
         transformedArr.push(newItem);
       }
     });

@@ -14,6 +14,9 @@ import { LiquidityChangePerformanceResponse } from './responses/liquidity-change
 import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
 import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
 import { IndusLiquidityInterface } from './interfaces/indus-liquidity.interface';
+import { IndsReportResponse } from './responses/inds-report.response';
+import { EquityChangeResponse } from './responses/equity-change.response';
+import { LiabilitiesChangeResponse } from './responses/liabilities-change.response';
 
 @Injectable()
 export class MarketService {
@@ -564,5 +567,221 @@ export class MarketService {
     return mappedData;
   }
 
-  async equityChangePerformance(ex: string, industries: string[]) {}
+  async equityChangePerformance(ex: string, industries: string[]) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.EquityChange}:${floor}:${inds}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(2);
+
+    const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      SELECT
+          now.year as date, now.[code], lower(now.report) as report,
+          ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
+        FROM
+          (
+            SELECT
+              [year],
+              t.[code],
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${endDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (N'VỐN CHỦ SỞ HỮU',
+                N'Thặng dư vốn cổ phần',
+                N'Lợi ích cổ đông không kiểm soát',
+                N'Lãi chưa phân phối')
+            group by [year], t.[code], t.reportName
+          ) AS now
+        INNER JOIN
+          (
+            SELECT
+              [year],
+              t.[code],
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${startDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (N'VỐN CHỦ SỞ HỮU',
+                N'Thặng dư vốn cổ phần',
+                N'Lợi ích cổ đông không kiểm soát',
+                N'Lãi chưa phân phối')
+            group by [year], t.[code], t.reportName
+          ) AS prev
+        ON now.[year] >= prev.[year] and now.code = prev.code and now.report = prev.report
+        GROUP BY now.[year], now.code, prev.[year], now.value, prev.value, now.report
+        ORDER BY perChange desc
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const tranformData: any[] = UtilCommonTemplate.transformEquityData([
+      ...data,
+    ]);
+
+    const mappedData = new EquityChangeResponse().mapToList(
+      _.orderBy(tranformData, 'vonChuSoHuu', 'desc'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.EquityChange}:${floor}:${inds}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async liabilitiesChangePerformance(ex: string, industries: string[]) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.LiabilitiesChange}:${floor}:${inds}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(2);
+
+    const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      SELECT
+          now.year as date, now.[code], lower(now.report) as report,
+          ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
+        FROM
+          (
+            SELECT
+              [year],
+              t.[code],
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${endDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (
+                N'Nợ ngắn hạn',
+                N'Nợ dài hạn')
+            group by [year], t.[code], t.reportName
+          ) AS now
+        INNER JOIN
+          (
+            SELECT
+              [year],
+              t.[code],
+              reportName as report,
+              sum(value) as value
+            FROM financialReport.dbo.[financialReport] t
+            inner join marketInfor.dbo.info i
+            on t.code = i.code
+            WHERE [year] = '${startDate}'
+              and i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.LV2 in ${inds}
+              and t.reportName in (
+                N'Nợ ngắn hạn',
+                N'Nợ dài hạn')
+            group by [year], t.[code], t.reportName
+          ) AS prev
+        ON now.[year] >= prev.[year] and now.code = prev.code and now.report = prev.report
+        GROUP BY now.[year], now.code, prev.[year], now.value, prev.value, now.report
+        ORDER BY perChange desc
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const tranformData: any[] = UtilCommonTemplate.transformLiabilitiesData([
+      ...data,
+    ]);
+
+    const mappedData = new LiabilitiesChangeResponse().mapToList(
+      _.orderBy(tranformData, 'noNganHan', 'desc'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.LiabilitiesChange}:${floor}:${inds}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async netRevenueInds(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.netRevenueInds}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [year],
+            i.LV2 as industry,
+            reportName as report,
+            sum(value) as value
+          FROM financialReport.dbo.[financialReport] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [year] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.reportName in (N'Doanh số thuần', N'Thu nhập lãi thuần')
+          group by [year], i.LV2, t.reportName
+      ) select [year] as [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [year])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [year])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+      1,
+    );
+
+    await this.redis.set(
+      `${RedisKeys.netRevenueInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
 }
