@@ -212,8 +212,8 @@ export class CashFlowService {
   > {
     const query: string = `
       select top 60 [code] as floor, [date], totalVal 
-      from [marketTrade].[dbo].[indexTrade]
-      where [code] in('VNINDEX', 'HNXINDEX', 'UPINDEX')
+      from [marketTrade].[dbo].[indexTradeVND]
+      where [code] in('VNINDEX', 'HNX', 'UPCOM')
       order by [date] desc
     `;
 
