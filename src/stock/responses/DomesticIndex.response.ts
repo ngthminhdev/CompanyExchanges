@@ -56,8 +56,7 @@ export class DomesticIndexResponse {
     this.indexChange = data?.indexChange || 0;
     this.totalMatchVolume = data?.totalMatchVolume || 0;
     this.totalMatchValue = data?.totalMatchValue || 0;
-    this.percentIndexChange =
-      +(+data?.percentIndexChange).toFixed(2) || 0;
+    this.percentIndexChange = data?.percentIndexChange || 0;
     // this.lastUpdated = UtilCommonTemplate.toDateTime(data?.) || "";
   }
 
