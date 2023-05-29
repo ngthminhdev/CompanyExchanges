@@ -746,6 +746,7 @@ export class MarketService {
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
             and i.LV2 in ${inds}
+            and i.LV2 != N'Dịch vụ tài chính'
             and t.reportName in (N'Doanh số thuần', N'Thu nhập lãi thuần')
           group by [year], i.LV2, t.reportName
       ) select [year] as [date],
