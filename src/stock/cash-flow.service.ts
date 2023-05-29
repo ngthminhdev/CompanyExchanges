@@ -258,7 +258,7 @@ export class CashFlowService {
           FROM [marketTrade].[dbo].[indexTradeVND]
           WHERE [date] >= @0
           AND [date] <= @1
-          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+          AND [code] in ('VNINDEX', 'HNX', 'UPCOM')
         ) AS now
       INNER JOIN
         (
@@ -268,7 +268,7 @@ export class CashFlowService {
             totalVal
           FROM [marketTrade].[dbo].[indexTradeVND]
           WHERE [date] = @0
-          AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+          AND [code] in ('VNINDEX', 'HNX', 'UPCOM')
         ) AS prev
       ON now.[date] >= prev.[date] and now.code = prev.code
       GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
