@@ -291,4 +291,42 @@ export class UtilCommonTemplate {
 
     return transformedArr;
   }
+
+  static transformLiabilitiesData(arr) {
+    const transformedArr = [];
+
+    arr.forEach((item) => {
+      const transformedItem = transformedArr.find(
+        (transformedItem) => transformedItem.code === item.code,
+      );
+
+      if (transformedItem) {
+        if (item.report === 'nợ ngắn hạn') {
+          transformedItem.noNganHan = item.perChange ?? 0;
+        } else if (item.report === 'nợ dài hạn') {
+          transformedItem.noDaiHan = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          transformedItem.tiSoThanhToanNhanh = item.perChange ?? 0;
+        }
+      } else {
+        const newItem = {
+          code: item.code,
+          noNganHan: 0,
+          noDaiHan: 0,
+          tiSoThanhToanNhanh: 0,
+        };
+
+        if (item.report === 'nợ ngắn hạn') {
+          newItem.noNganHan = item.perChange ?? 0;
+        } else if (item.report === 'nợ dài hạn') {
+          newItem.noDaiHan = item.perChange ?? 0;
+        } else if (item.report === 'vốn chủ sở hữu') {
+          newItem.tiSoThanhToanNhanh = item.perChange ?? 0;
+        }
+        transformedArr.push(newItem);
+      }
+    });
+
+    return transformedArr;
+  }
 }

@@ -52,6 +52,7 @@ export enum RedisKeys {
   EquityChange = 'equity-change',
 
   LiabilitiesIndsChange = 'liabilities-inds-change',
+  LiabilitiesChange = 'liabilities-change',
 
   NearestDate = 'nearest-date',
 }

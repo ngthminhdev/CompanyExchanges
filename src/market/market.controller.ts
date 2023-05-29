@@ -10,6 +10,7 @@ import { MarketTimeQueryDto } from './dto/market-time-query.dto';
 import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
 import { IndsReportSwagger } from './responses/inds-report.response';
 import { EquityChangeSwagger } from './responses/equity-change.response';
+import { LiabilitiesChangeSwagger } from './responses/liabilities-change.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -132,6 +133,22 @@ export class MarketController {
       q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('hieu-suat-tang-truong-no-phai-tra-co-phieu')
+  @ApiOperation({
+    summary: 'Hiệu suất tăng trưởng vốn chủ sở hữu của các ngành (%)',
+  })
+  @ApiOkResponse({ type: LiabilitiesChangeSwagger })
+  async liabilitiesChangePerformance(
+    @Query() q: IndustryFilterDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.marketService.liabilitiesChangePerformance(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
