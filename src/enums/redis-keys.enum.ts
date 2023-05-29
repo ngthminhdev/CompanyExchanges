@@ -56,5 +56,11 @@ export enum RedisKeys {
 
   netRevenueInds = 'net-revenue-inds',
 
+  ProfitInds = 'profit-inds',
+  ActivityProfitInds = 'activity-profit-inds',
+  EPSInds = 'eps-inds',
+  EBITDAInds = 'eBITDA-inds',
+  CashDividend = 'cash-dividend',
+
   NearestDate = 'nearest-date',
 }

@@ -275,12 +275,7 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = (await Promise.all(
-      UtilCommonTemplate.getPastDate(type, order).map(
-        async (date: string) =>
-          await this.getNearestDate('[marketTrade].[dbo].[foreign]', date),
-      ),
-    )) as string[];
+    const date = UtilCommonTemplate.getPastDate(type, order);
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
@@ -353,15 +348,7 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = (await Promise.all(
-      UtilCommonTemplate.getPastDate(type, order).map(
-        async (date: string) =>
-          await this.getNearestDate(
-            '[marketTrade].[dbo].[tickerTradeVND]',
-            date,
-          ),
-      ),
-    )) as string[];
+    const date = UtilCommonTemplate.getPastDate(type, order);
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
@@ -779,6 +766,278 @@ export class MarketService {
 
     await this.redis.set(
       `${RedisKeys.netRevenueInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async profitInds(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.ProfitInds}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [year],
+            i.LV2 as industry,
+            reportName as report,
+            sum(value) as value
+          FROM financialReport.dbo.[financialReport] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [year] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.reportName in (N'Lãi gộp')
+          group by [year], i.LV2, t.reportName
+      ) select [year] as [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [year])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [year])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+      1,
+    );
+
+    await this.redis.set(
+      `${RedisKeys.ProfitInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async activityProfitInds(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.ActivityProfitInds}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [year],
+            i.LV2 as industry,
+            reportName as report,
+            sum(value) as value
+          FROM financialReport.dbo.[financialReport] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [year] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.reportName in (N'Lãi/(lỗ) từ hoạt động kinh doanh')
+          group by [year], i.LV2, t.reportName
+      ) select [year] as [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [year])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [year])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+      1,
+    );
+
+    await this.redis.set(
+      `${RedisKeys.ActivityProfitInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async epsInds(ex: string, industries: string[], type: number, order: number) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.EPSInds}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDate(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [date],
+            i.LV2 as industry,
+            itemName as report,
+            sum(value) as value
+          FROM [RATIO].dbo.[ratio] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.ratioCode ='EPS_TR'
+          group by [date], i.LV2, t.itemName
+      ) select [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [date])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [date])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.EPSInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async ebitdaInds(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.EBITDAInds}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDate(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [date],
+            i.LV2 as industry,
+            itemName as report,
+            sum(value) as value
+          FROM [RATIO].dbo.[ratio] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.ratioCode ='OPERATING_EBIT_MARGIN_QR'
+          group by [date], i.LV2, t.itemName
+      ) select [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [date])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [date])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.EBITDAInds}:${floor}:${inds}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async cashDividend(
+    ex: string,
+    industries: string[],
+    type: number,
+    order: number,
+  ) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.CashDividend}:${floor}:${inds}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDate(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with temp_data as (
+          SELECT
+            [date],
+            i.LV2 as industry,
+            itemName as report,
+            sum(value) as value
+          FROM [RATIO].dbo.[ratio] t
+          inner join marketInfor.dbo.info i
+          on t.code = i.code
+          WHERE [date] IN ${dateFilter}
+            and i.floor in ${floor}
+            and i.type in ('STOCK', 'ETF')
+            and i.LV2 in ${inds}
+            and t.ratioCode ='N'DIVIDEND_PAID_TR'
+          group by [date], i.LV2, t.itemName
+      ) select [date],
+          [industry],
+          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [date])) /
+          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [date])), 0) * 100 AS perChange
+      from [temp_data];
+    `;
+
+    const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
+      query,
+    );
+
+    const mappedData = new IndusLiquidityResponse().mapToList(
+      _.orderBy(data, 'date'),
+    );
+
+    await this.redis.set(
+      `${RedisKeys.CashDividend}:${floor}:${inds}:${order}:${type}`,
       mappedData,
     );
 
