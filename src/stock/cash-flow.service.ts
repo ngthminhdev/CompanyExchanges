@@ -226,7 +226,7 @@ export class CashFlowService {
 
   async getLiquidityGrowth(type: number) {
     const { latestDate, weekDate, monthDate, firstDateYear, yearDate } =
-      await this.getSessionDate('[marketTrade].[dbo].[indexTrade]');
+      await this.getSessionDate('[marketTrade].[dbo].[indexTradeVND]');
 
     let startDate!: any;
     switch (type) {
@@ -248,14 +248,14 @@ export class CashFlowService {
     const query: string = `
       SELECT
         now.date, now.code as floor,
-        ((now.totalVal - prev.totalVal) / NULLIF(prev.totalVal, 0)) * 100 AS perChange
+        ((now.totalVal - prev.totalVal) / NULLIF(abs(prev.totalVal), 0)) * 100 AS perChange
       FROM
         (
           SELECT
             [date],
             code,
             totalVal
-          FROM [marketTrade].[dbo].[indexTrade]
+          FROM [marketTrade].[dbo].[indexTradeVND]
           WHERE [date] >= @0
           AND [date] <= @1
           AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
@@ -266,11 +266,11 @@ export class CashFlowService {
             [date],
             code,
             totalVal
-          FROM [marketTrade].[dbo].[indexTrade]
+          FROM [marketTrade].[dbo].[indexTradeVND]
           WHERE [date] = @0
           AND [code] in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
         ) AS prev
-      ON now.[date] > prev.[date] and now.code = prev.code
+      ON now.[date] >= prev.[date] and now.code = prev.code
       GROUP BY now.[date], now.[code], prev.[date], now.totalVal, prev.totalVal
       ORDER BY now.[date] ASC;
     `;
@@ -280,24 +280,7 @@ export class CashFlowService {
       latestDate,
     ]);
 
-    return new LiquidityGrowthResponse().mapToList([
-      {
-        floor: 'VNINDEX',
-        perChange: 0,
-        date: startDate,
-      },
-      {
-        floor: 'HNXINDEX',
-        perChange: 0,
-        date: startDate,
-      },
-      {
-        floor: 'UPINDEX',
-        perChange: 0,
-        date: startDate,
-      },
-      ...data,
-    ]);
+    return new LiquidityGrowthResponse().mapToList([...data]);
   }
 
   async getInvestorTransactionRatio() {
