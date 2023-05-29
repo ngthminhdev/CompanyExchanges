@@ -29,12 +29,6 @@ export class LiquidityGrowthResponse {
       case 'VNINDEX':
         this.floor = 'HOSE';
         break;
-      case 'HNXINDEX':
-        this.floor = 'HNX';
-        break;
-      case 'UPINDEX':
-        this.floor = 'UPCOM';
-        break;
       default:
         this.floor = data?.floor || '';
     }
