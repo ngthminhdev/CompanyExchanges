@@ -140,7 +140,7 @@ export class ChartService {
 
       const query: string = `
           select code      as comGroupCode,
-                timeInday  as tradingDate,
+                CONCAT(date, ' ', timeInday) AS tradingDate,
                 closePrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
@@ -149,7 +149,7 @@ export class ChartService {
           from [tradeIntraday].[dbo].[indexTradeVNDIntraday]
           where code = '${index}'
               and date >= '${startDate}' and date <= '${latestDate}'
-          order by code desc;
+          order by code desc, timeInday;
         `;
 
       const mappedData = new VnIndexResponse().mapToList(
@@ -167,7 +167,7 @@ export class ChartService {
     try {
       const query: string = `
           select code      as comGroupCode,
-                timeInday  as tradingDate,
+                CONCAT(date, ' ', timeInday) AS tradingDate,
                 closePrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
@@ -176,7 +176,7 @@ export class ChartService {
           from [tradeIntraday].[dbo].[indexTradeVNDIntraday]
           where code = '${index}'
               and date = (select max(date) from [tradeIntraday].[dbo].[indexTradeVNDIntraday])
-          order by code desc;
+          order by code desc, timeInday;
         `;
 
       const data = await this.mssqlService.query<LineChartInterface[]>(query);
