@@ -730,7 +730,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -761,7 +761,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
 
@@ -787,7 +787,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -817,7 +817,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
 
@@ -843,7 +843,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -873,7 +873,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
 
@@ -894,7 +894,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -924,7 +924,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
     await this.redis.set(
@@ -949,7 +949,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -979,7 +979,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
     await this.redis.set(
@@ -1004,7 +1004,7 @@ export class MarketService {
     if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(type, order);
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+    const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
       with temp_data as (
@@ -1034,7 +1034,7 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityResponse().mapToList(
-      _.orderBy(data, 'date'),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
     await this.redis.set(
