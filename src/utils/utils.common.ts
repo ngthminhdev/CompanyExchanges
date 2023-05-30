@@ -332,22 +332,19 @@ export class UtilCommonTemplate {
 
   static generateColor(input: Date | string): string {
     if (!input) return '';
-    // Chuyển đổi đầu vào thành chuỗi
-    const inputString = typeof input === 'string' ? input : input.toString();
 
-    // Tạo mã hash từ chuỗi đầu vào
+    const inputString = typeof input === 'string' ? input : input.toString();
     let hash = 0;
+
     for (let i = 0; i < inputString.length; i++) {
       hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
     }
 
-    // Tạo màu hex từ mã hash
-    const color = (hash & 0x00ffffff).toString(16).toUpperCase();
+    const blueLevels = [100, 120, 140, 160, 180, 200, 220, 240, 255];
+    const blueLevelIndex = Math.abs(hash) % blueLevels.length;
+    const blueLevel = blueLevels[blueLevelIndex];
 
-    // Bổ sung ký tự '0' để đảm bảo mã màu luôn có 6 ký tự
-    const paddedColor = '000000'.substring(0, 6 - color.length) + color;
-
-    // Trả về mã màu hoàn chỉnh
-    return `#${paddedColor}`;
+    const color = blueLevel.toString(16).toUpperCase().padStart(2, '0');
+    return `#00${color}FF`;
   }
 }
