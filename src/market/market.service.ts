@@ -891,7 +891,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.EPSInds}:${floor}:${inds}:${order}:${type}`,
     );
-    // if (redisData) return redisData;
+    if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(type, order);
     const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
