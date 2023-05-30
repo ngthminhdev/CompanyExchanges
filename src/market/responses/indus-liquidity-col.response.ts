@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UtilCommonTemplate } from '../../utils/utils.common';
 import { IndusLiquidityInterface } from '../interfaces/indus-liquidity.interface';
-import { IndusLiquidityResponse } from './indus-liquidity.response';
 
-export class IndusLiquidityColResponse extends IndusLiquidityResponse {
+export class IndusLiquidityColResponse {
   @ApiProperty({
     type: String,
     example: 'ACB',
@@ -29,7 +28,6 @@ export class IndusLiquidityColResponse extends IndusLiquidityResponse {
   perChange: number;
 
   constructor(data?: IndusLiquidityInterface, type: number = 0) {
-    super(data, type);
     this.industry = data?.industry || '';
     this.color = UtilCommonTemplate.generateColor(data?.date) || '';
     this.date =

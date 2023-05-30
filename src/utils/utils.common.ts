@@ -331,6 +331,7 @@ export class UtilCommonTemplate {
   }
 
   static generateColor(input: Date | string): string {
+    if (!input) return '';
     // Chuyển đổi đầu vào thành chuỗi
     const inputString = typeof input === 'string' ? input : input.toString();
 
