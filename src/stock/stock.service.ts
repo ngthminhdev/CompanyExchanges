@@ -661,8 +661,6 @@ export class StockService {
         this.dbServer,
       );
 
-      console.log({ latestDate });
-
       const query = (transaction: number): string => `
         SELECT c.floor as EXCHANGE, c.LV2, c.code as ticker, n.netVal AS total_value_${
           +transaction ? 'sell' : 'buy'

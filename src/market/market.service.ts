@@ -1020,7 +1020,7 @@ export class MarketService {
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
             and i.LV2 in ${inds}
-            and t.ratioCode ='N'DIVIDEND_PAID_TR'
+            and t.ratioCode = N'DIVIDEND_PAID_TR'
           group by [date], i.LV2, t.itemName
       ) select [date],
           [industry],
@@ -1043,5 +1043,35 @@ export class MarketService {
     );
 
     return mappedData;
+  }
+
+  async topHotIndustry() {
+    const redisData = await this.redis.get(RedisKeys.TopHotIndustry);
+    if (redisData) return redisData;
+
+    const { latestDate } = await this.getSessionDate(
+      '[marketTrade].[dbo].[tickerTradeVND]',
+    );
+
+    const query: string = `
+      with temp_data as (
+          select
+          i.LV2 as industry,
+          sum(t.totalVal) as totalVal
+      from marketTrade.dbo.tickerTradeVND t
+      inner join marketInfor.dbo.info i
+      on t.code = i.code
+      where i.floor in ('HOSE', 'HNX', 'UPCOM')
+      and i.type in ('STOCK', 'ETF')
+      and date = '${latestDate}'
+      group by i.LV2
+      ) select top 5 industry, rank() over (order by totalVal desc) as rank
+      from temp_data;
+    `;
+
+    const data = await this.mssqlService.query(query);
+
+    await this.redis.set(RedisKeys.TopHotIndustry, data);
+    return data;
   }
 }

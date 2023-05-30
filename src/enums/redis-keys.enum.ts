@@ -62,5 +62,7 @@ export enum RedisKeys {
   EBITDAInds = 'eBITDA-inds',
   CashDividend = 'cash-dividend',
 
+  TopHotIndustry = 'top-hot-industry',
+
   NearestDate = 'nearest-date',
 }

@@ -245,4 +245,14 @@ export class MarketController {
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('top-nganh-hot')
+  @ApiOperation({
+    summary: 'top-nganh-hot',
+  })
+  @ApiOkResponse({ type: IndusLiquiditySwagger })
+  async topHotIndustry(@Res() res: Response) {
+    const data = await this.marketService.topHotIndustry();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
