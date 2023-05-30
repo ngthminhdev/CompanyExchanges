@@ -9,14 +9,14 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { SessionDatesInterface } from '../stock/interfaces/session-dates.interface';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { IndusLiquidityInterface } from './interfaces/indus-liquidity.interface';
 import { IPriceChangePerformance } from './interfaces/price-change-performance.interface';
+import { EquityChangeResponse } from './responses/equity-change.response';
+import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
+import { LiabilitiesChangeResponse } from './responses/liabilities-change.response';
 import { LiquidityChangePerformanceResponse } from './responses/liquidity-change-performance.response';
 import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
-import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
-import { IndusLiquidityInterface } from './interfaces/indus-liquidity.interface';
-import { IndsReportResponse } from './responses/inds-report.response';
-import { EquityChangeResponse } from './responses/equity-change.response';
-import { LiabilitiesChangeResponse } from './responses/liabilities-change.response';
+import { IndusLiquidityColResponse } from './responses/indus-liquidity-col.response';
 
 @Injectable()
 export class MarketService {
@@ -760,7 +760,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
@@ -816,7 +816,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
@@ -872,7 +872,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
       1,
     );
@@ -923,7 +923,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
@@ -978,7 +978,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
@@ -1033,7 +1033,7 @@ export class MarketService {
       query,
     );
 
-    const mappedData = new IndusLiquidityResponse().mapToList(
+    const mappedData = new IndusLiquidityColResponse().mapToList(
       _.orderBy(data, 'date').filter((i) => i.date != startDate),
     );
 
