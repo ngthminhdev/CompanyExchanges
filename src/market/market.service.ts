@@ -891,7 +891,7 @@ export class MarketService {
     const redisData = await this.redis.get(
       `${RedisKeys.EPSInds}:${floor}:${inds}:${order}:${type}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(type, order);
     const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
@@ -924,7 +924,9 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityColResponse().mapToList(
-      _.orderBy(data, 'date').filter((i) => i.date != startDate),
+      _.orderBy(data, 'date').filter(
+        (i) => UtilCommonTemplate.toDate(i.date) != startDate,
+      ),
     );
 
     await this.redis.set(
@@ -979,7 +981,9 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityColResponse().mapToList(
-      _.orderBy(data, 'date').filter((i) => i.date != startDate),
+      _.orderBy(data, 'date').filter(
+        (i) => UtilCommonTemplate.toDate(i.date) != startDate,
+      ),
     );
 
     await this.redis.set(
@@ -1034,7 +1038,9 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityColResponse().mapToList(
-      _.orderBy(data, 'date').filter((i) => i.date != startDate),
+      _.orderBy(data, 'date').filter(
+        (i) => UtilCommonTemplate.toDate(i.date) != startDate,
+      ),
     );
 
     await this.redis.set(
