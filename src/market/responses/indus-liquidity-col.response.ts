@@ -29,7 +29,6 @@ export class IndusLiquidityColResponse {
 
   constructor(data?: IndusLiquidityInterface, type: number = 0) {
     this.industry = data?.industry || '';
-    this.color = UtilCommonTemplate.generateColor(data?.date) || '';
     this.date =
       type === 1
         ? data?.date.toString()
