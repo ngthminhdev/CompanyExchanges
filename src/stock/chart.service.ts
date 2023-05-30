@@ -19,6 +19,9 @@ import { SelectorTypeEnum } from '../enums/exchange.enum';
 import { MarketCashFlowResponse } from '../kafka/responses/MarketCashFlow.response';
 import { DB_SERVER } from '../constants';
 import { MarketBreadthByExResponse } from './responses/MarketBreadthByEx.response';
+import { MssqlService } from '../mssql/mssql.service';
+import { LineChartInterface } from '../kafka/interfaces/line-chart.interface';
+import { TickerContributeInterface } from './interfaces/ticker-contribute.interface';
 
 @Injectable()
 export class ChartService {
@@ -28,6 +31,7 @@ export class ChartService {
     @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly stockService: StockService,
+    private readonly mssqlService: MssqlService,
   ) {}
 
   timeCheck(): boolean {
@@ -109,30 +113,18 @@ export class ChartService {
   // Chỉ số các index
   async getLineChart(type: number, index: string): Promise<any> {
     try {
-      if (type === TransactionTimeTypeEnum.Latest) {
-        const data = await this.db.query(`
-                    SELECT comGroupCode, indexValue, tradingDate, indexChange, percentIndexChange,
-                        openIndex, closeIndex, highestIndex, lowestIndex, referenceIndex
-                    FROM [WEBSITE_SERVER].[dbo].[index_realtime]
-                    WHERE comGroupCode = '${index}'
-                    ORDER BY tradingDate ASC
-                `);
-
-        return new LineChartResponse().mapToList(data);
-      }
-      const redisData: VnIndexResponse[] = await this.redis.get(
-        `${RedisKeys.LineChart}:${type}:${index}`,
-      );
-      // if (redisData) return { lineChartData: redisData, industryFull };
-
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[marketTrade].[dbo].[indexTrade]',
+          '[tradeIntraday].[dbo].[indexTradeVNDIntraday]',
           'date',
           this.dbServer,
         );
+
       let startDate: Date | string;
       switch (type) {
+        case TransactionTimeTypeEnum.Latest:
+          startDate = latestDate;
+          break;
         case TransactionTimeTypeEnum.OneWeek:
           startDate = weekDate;
           break;
@@ -147,20 +139,24 @@ export class ChartService {
       }
 
       const query: string = `
-                select code as comGroupCode, closePrice as indexValue, date as tradingDate
-                from [marketTrade].[dbo].[indexTrade]
-                where code = '${index}' and date >= @0 and date <= @1
-                ORDER BY date
-            `;
+          select code      as comGroupCode,
+                timeInday  as tradingDate,
+                closePrice as indexValue,
+                change     as indexChange,
+                totalVol   as totalMatchVolume,
+                totalVal   as totalMatchValue,
+                perChange  as percentIndexChange
+          from [tradeIntraday].[dbo].[indexTradeVNDIntraday]
+          where code = '${index}'
+              and date >= '${startDate}' and date <= '${latestDate}'
+          order by code desc;
+        `;
 
       const mappedData = new VnIndexResponse().mapToList(
-        await this.dbServer.query(query, [startDate, latestDate]),
+        await this.mssqlService.query<LineChartInterface[]>(query),
         type,
       );
-      // await this.redis.set(
-      //   `${RedisKeys.LineChart}:${type}:${index}`,
-      //   mappedData,
-      // );
+
       return mappedData;
     } catch (e) {
       throw new CatchException(e);
@@ -169,11 +165,21 @@ export class ChartService {
 
   async getLineChartNow(index: string): Promise<any> {
     try {
-      const data = await this.db.query(`
-                    SELECT comGroupCode, indexValue, tradingDate FROM [WEBSITE_SERVER].[dbo].[index_realtime]
-                    WHERE comGroupCode = '${index}'
-                    ORDER BY tradingDate ASC
-                `);
+      const query: string = `
+          select code      as comGroupCode,
+                timeInday  as tradingDate,
+                closePrice as indexValue,
+                change     as indexChange,
+                totalVol   as totalMatchVolume,
+                totalVal   as totalMatchValue,
+                perChange  as percentIndexChange
+          from [tradeIntraday].[dbo].[indexTradeVNDIntraday]
+          where code = '${index}'
+              and date = (select max(date) from [tradeIntraday].[dbo].[indexTradeVNDIntraday])
+          order by code desc;
+        `;
+
+      const data = await this.mssqlService.query<LineChartInterface[]>(query);
       return new LineChartResponse().mapToList(data);
     } catch (e) {
       throw new CatchException(e);
@@ -183,15 +189,12 @@ export class ChartService {
   async getTickerContribute(q: GetLiquidityQueryDto): Promise<any> {
     try {
       const { exchange, order, type } = q;
-      // const redisData = await this.redis.get(
-      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-      // );
-      // if (redisData) return redisData;
 
       const { latestDate, weekDate, monthDate, firstDateYear } =
         await this.stockService.getSessionDate(
           `[WEBSITE_SERVER].[dbo].[CPAH]`,
           'date',
+          this.dbServer,
         );
       let endDate: Date | string;
 
@@ -224,8 +227,8 @@ export class ChartService {
                WITH temp AS (
                   SELECT ${industry} as symbol, sum(t.point) as contribute_price
                   FROM [WEBSITE_SERVER].[dbo].[CPAH] t
-                  JOIN [WEBSITE_SERVER].[dbo].[ICBID] c on c.TICKER = t.symbol
-                  WHERE ${dateRangeFilter} and ${industry} != '#N/A'
+                  JOIN [marketInfor].[dbo].[info] c on c.code = t.symbol
+                  WHERE ${dateRangeFilter} and ${industry} != ''
                   GROUP BY ${industry}
                 )
                 SELECT *
@@ -260,12 +263,11 @@ export class ChartService {
                 `;
       }
 
-      const data = await this.db.query(query);
+      const data = await this.mssqlService.query<TickerContributeInterface[]>(
+        query,
+      );
       const mappedData = new TickerContributeResponse().mapToList(data);
-      // await this.redis.set(
-      //   `${RedisKeys.TickerContribute}:${type}:${order}:${exchange}`,
-      //   mappedData,
-      // );
+
       return mappedData;
     } catch (e) {
       throw new CatchException(e);

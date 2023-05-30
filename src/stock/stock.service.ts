@@ -52,6 +52,7 @@ import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.respons
 import { TopRocResponse } from './responses/TopRoc.response';
 import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 import { MarketMapResponse } from './responses/market-map.response';
+import { MssqlService } from '../mssql/mssql.service';
 
 @Injectable()
 export class StockService {
@@ -60,6 +61,7 @@ export class StockService {
     private readonly redis: Cache,
     @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
+    private readonly mssqlService: MssqlService,
   ) {}
 
   public async getExchangesVolume(
@@ -570,26 +572,30 @@ export class StockService {
   //Chỉ số trong nước
   async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
     try {
-      // const redisData: DomesticIndexResponse[] = await this.redis.get(RedisKeys.DomesticIndex);
-      // if (redisData) return redisData
-
-      // If data is not available in Redis, retrieve the latest and previous dates for the index data
-      // using a custom method getSessionDate() that queries a SQL database
-
-      // Construct a SQL query that selects the ticker symbol, date time, close price, change in price,
-      // and percent change for all ticker symbols with data for the latest date and the previous date
       const query: string = `
-                SELECT *
-                FROM [WEBSITE_SERVER].[dbo].[index_table]
-            `;
-      // Execute the SQL query using a database object and pass the latest and previous dates as parameters
-      const dataToday: LineChartInterface[] = await this.db.query(query);
+        with DomesticIndex as (
+            SELECT code as comGroupCode,
+                  timeInday as time,
+                  closePrice as indexValue,
+                  change as indexChange,
+                  totalVol as totalMatchVolume,
+                  totalVal as totalMatchValue,
+                  perChange as percentIndexChange,
+                  rank() over (partition by code order by timeInday desc) as rank
+            FROM tradeIntraday.dbo.indexTradeVNDIntraday
+            WHERE code in ('VNINDEX', 'VN30', 'VNALL', 'HNX', 'HNX30', 'UPCOM')
+                and date = (select max(date) from tradeIntraday.dbo.indexTradeVNDIntraday)
+        ) select * from DomesticIndex
+        where rank = 1
+        order by comGroupCode desc;
+      `;
+      const dataToday: LineChartInterface[] = await this.mssqlService.query<
+        LineChartInterface[]
+      >(query);
 
-      // Map the retrieved data to a list of DomesticIndexResponse objects using the mapToList() method of the DomesticIndexResponse class
       const mappedData: DomesticIndexResponse[] =
         new DomesticIndexResponse().mapToList(dataToday);
 
-      // Cache the mapped data in Redis for faster retrieval in the future, using the same key as used earlier
       return mappedData;
     } catch (e) {
       throw new CatchException(e);

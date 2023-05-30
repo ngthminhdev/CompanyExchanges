@@ -57,7 +57,6 @@ export class DomesticIndexResponse {
     this.totalMatchVolume = data?.totalMatchVolume || 0;
     this.totalMatchValue = data?.totalMatchValue || 0;
     this.percentIndexChange = data?.percentIndexChange || 0;
-    // this.lastUpdated = UtilCommonTemplate.toDateTime(data?.) || "";
   }
 
   public mapToList(data?: LineChartInterface[] | any[]) {
