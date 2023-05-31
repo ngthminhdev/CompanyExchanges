@@ -220,7 +220,7 @@ export class StockService {
       [dataToday, dataYesterday, dataLastWeek, dataLastMonth, dataLastYear] =
         await Promise.all(
           Object.values(sessionDates).map((date: Date) => {
-            return this.db.query(query, [date]);
+            return this.dbServer.query(query, [date]);
           }),
         );
 
@@ -520,7 +520,7 @@ export class StockService {
                 ORDER BY date DESC
             `;
       return new NetTransactionValueResponse().mapToList(
-        await this.db.query(query, parameters),
+        await this.dbServer.query(query, parameters),
       );
     } catch (e) {
       throw new CatchException(e);
@@ -535,11 +535,11 @@ export class StockService {
       );
       if (redisData) return redisData;
       const query = `
-                SELECT TOP 80 * FROM [DULIEUVIMOVIETNAM].[dbo].[TinTuc]
+                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTuc]
                 ORDER BY Date DESC
             `;
       const data = new StockNewsResponse().mapToList(
-        await this.db.query(query),
+        await this.dbServer.query(query),
       );
       await this.redis.set(RedisKeys.StockNews, data);
       return data;
@@ -556,11 +556,11 @@ export class StockService {
       );
       if (redisData) return redisData;
       const query = `
-                SELECT TOP 80 * FROM [DULIEUVIMOTHEGIOI].[dbo].[TinTucViMo]
+                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTucViMo]
                 ORDER BY Date DESC
             `;
       const data = new StockNewsResponse().mapToList(
-        await this.db.query(query),
+        await this.dbServer.query(query),
       );
       await this.redis.set(RedisKeys.StockMacroNews, data);
       return data;
@@ -755,7 +755,7 @@ export class StockService {
                 SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
                     SUM(t1.net_value_foreign) AS net_value
                 FROM [PHANTICH].[dbo].[BCN_netvalue] t1
-                JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
+                JOIN [marketInfor].[dbo].[info] c
                 ON t1.ticker = c.TICKER
                 WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
                 AND t1.date_time >= @1
@@ -768,8 +768,8 @@ export class StockService {
         TopNetForeignByExInterface[],
         TopNetForeignByExInterface[],
       ] = await Promise.all([
-        this.db.query(query('DESC'), [latestDate, weekDate]),
-        this.db.query(query('ASC'), [latestDate, weekDate]),
+        this.dbServer.query(query('DESC'), [latestDate, weekDate]),
+        this.dbServer.query(query('ASC'), [latestDate, weekDate]),
       ]);
 
       const mappedData: TopNetForeignByExResponse[] =
@@ -798,16 +798,20 @@ export class StockService {
 
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[PHANTICH].[dbo].[data_chisoquocte]',
+        'date_time',
+        this.dbServer,
       );
       const date2: SessionDatesInterface = await this.getSessionDate(
-        `[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,
+        `[macroEconomic].[dbo].[HangHoa]`,
         'lastUpdated',
+        this.dbServer,
       );
 
-      const data3 = await this.db.query(`
-        select top 3 ticker, close_price as diemso, p_change as percent_d
-        from [PHANTICH].[dbo].[database_mkt]
-        order by date_time desc, p_change desc
+      const data3 = await this.dbServer.query(`
+        select top 3 code as ticker, 
+          closePrice as diemso, perChange as percent_d
+        from [marketTrade].[dbo].[tickerTradeVND]
+        order by date desc, perChange desc
       `);
 
       const query: string = `
@@ -815,17 +819,17 @@ export class StockService {
                 change1D AS percent_d,
                 change5D AS percent_w,
                 change1M AS percent_m, changeYTD AS percent_ytd
-                FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
+                FROM [macroEconomic].[dbo].[HangHoa]
                 WHERE lastUpdated >= @0 and (name like '%WTI%' OR name like 'USD/VND' OR name like 'Vàng')
             `;
       const data2 = new InternationalSubResponse().mapToList(
-        await this.db.query(query, [date2.latestDate]),
+        await this.dbServer.query(query, [date2.latestDate]),
       );
 
-      const data: InternationalIndexInterface[] = await this.db.query(
+      const data: InternationalIndexInterface[] = await this.dbServer.query(
         `
                 SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
-                WHERE date_time = @0
+                WHERE date = @0
             `,
         [latestDate],
       );
@@ -849,7 +853,7 @@ export class StockService {
       const redisData = await this.redis.get(RedisKeys.StockEvents);
       if (redisData) return redisData;
 
-      const data: StockEventsInterface[] = await this.db.query(`
+      const data: StockEventsInterface[] = await this.dbServer.query(`
                 SELECT TOP 50 * FROM [PHANTICH].[dbo].[LichSuKien]
                 ORDER BY NgayDKCC DESC
             `);
@@ -876,20 +880,22 @@ export class StockService {
       if (redisData) return redisData;
 
       const { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        `[DULIEUVIMOTHEGIOI].[dbo].[HangHoa]`,
+        `[macroEconomic].[dbo].[HangHoa]`,
         'lastUpdated',
+        this.dbServer,
       );
 
       const query: string = `
                 SELECT name, price, unit, change1D AS Day,
                 changeMTD AS MTD, changeYTD AS YTD
-                FROM [DULIEUVIMOTHEGIOI].[dbo].[HangHoa]
+                FROM [macroEconomic].[dbo].[HangHoa]
                 WHERE lastUpdated >= @0 and unit ${+type ? '=' : '!='} ''
             `;
 
-      const data: MerchandisePriceInterface[] = await this.db.query(query, [
-        latestDate,
-      ]);
+      const data: MerchandisePriceInterface[] = await this.dbServer.query(
+        query,
+        [latestDate],
+      );
       const mappedData: MerchandisePriceResponse[] =
         new MerchandisePriceResponse().mapToList(data);
       await this.redis.set(`${RedisKeys.MerchandisePrice}:${type}`, mappedData);
@@ -920,7 +926,7 @@ export class StockService {
       // const data = await this.db.query(query, [latestDate]);
 
       const mappedData = new MarketEvaluationResponse().mapToList(
-        await this.db.query(`
+        await this.dbServer.query(`
                  select top 6 *, [Date Time] as date from [PHANTICH].[dbo].[biendong-chiso-mainweb]
                  order by [Date Time] desc
             `),
@@ -1004,7 +1010,7 @@ export class StockService {
                 order by totalValueMil desc
             `;
 
-      const data = await this.db.query(query, [
+      const data = await this.dbServer.query(query, [
         startDate,
         UtilCommonTemplate.toDate(latestDate),
       ]);
@@ -1032,6 +1038,13 @@ export class StockService {
       const { exchange, order } = q;
       const ex = exchange.toUpperCase();
       const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+
+      const redisData = await this.redis.get(
+        `${RedisKeys.MarketMap}:${ex}:${order}`,
+      );
+      if (redisData) {
+        return redisData;
+      }
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
@@ -1080,6 +1093,11 @@ export class StockService {
           await this.dbServer.query(query, [date]),
         );
 
+        await this.redis.set(
+          `${RedisKeys.MarketMap}:${ex}:${order}`,
+          mappedData,
+        );
+
         return mappedData;
       }
 
@@ -1126,6 +1144,10 @@ export class StockService {
         `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
+        );
+        await this.redis.set(
+          `${RedisKeys.MarketMap}:${ex}:${order}`,
+          mappedData,
         );
 
         return mappedData;
@@ -1179,6 +1201,7 @@ export class StockService {
       const mappedData = new MarketMapResponse().mapToList(
         await this.dbServer.query(query, [date]),
       );
+      await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData);
 
       return mappedData;
     } catch (e) {

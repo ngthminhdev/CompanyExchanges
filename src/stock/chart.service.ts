@@ -66,7 +66,7 @@ export class ChartService {
       if (!timeCheck) return [];
 
       return new MarketLiquidityChartResponse().mapToList(
-        await this.db.query(`
+        await this.dbServer.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_yesterday]
                 ORDER BY time ASC
             `),
@@ -83,7 +83,7 @@ export class ChartService {
       if (!timeCheck) return [];
 
       return new MarketLiquidityChartResponse().mapToList(
-        await this.db.query(`
+        await this.dbServer.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[Liquidity_today]
                 ORDER BY time ASC
             `),
@@ -100,7 +100,7 @@ export class ChartService {
       if (!timeCheck) return [];
 
       return new MarketBreadthResponse().mapToList(
-        await this.db.query(`
+        await this.dbServer.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[MarketBreadth]
                 ORDER BY time ASC
             `),
@@ -285,7 +285,7 @@ export class ChartService {
         [WEBSITE_SERVER].[dbo].[stock_value]
         WHERE [index] != 'VN30' AND [index] != 'HNX30';
       `;
-      return new MarketCashFlowResponse((await this.db.query(query))![0]);
+      return new MarketCashFlowResponse((await this.dbServer.query(query))![0]);
     } catch (e) {
       throw new CatchException(e);
     }
@@ -300,7 +300,7 @@ export class ChartService {
         let ex = exchange == 'HOSE' ? 'MarketBreadth' : 'MarketBreadthHNX';
 
         return new MarketBreadthResponse().mapToList(
-          await this.db.query(`
+          await this.dbServer.query(`
                 SELECT * FROM [WEBSITE_SERVER].[dbo].[${ex}]
                 ORDER BY time ASC
             `),
