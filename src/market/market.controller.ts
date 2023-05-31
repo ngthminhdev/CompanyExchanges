@@ -3,14 +3,13 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { BaseResponse } from '../utils/utils.response';
 import { IndustryFilterDto } from './dto/industry-filter.dto';
-import { MarketService } from './market.service';
-import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
-import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
 import { MarketTimeQueryDto } from './dto/market-time-query.dto';
-import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
-import { IndsReportSwagger } from './responses/inds-report.response';
+import { MarketService } from './market.service';
 import { EquityChangeSwagger } from './responses/equity-change.response';
+import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
 import { LiabilitiesChangeSwagger } from './responses/liabilities-change.response';
+import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
+import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
