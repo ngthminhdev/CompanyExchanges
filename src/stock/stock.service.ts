@@ -752,15 +752,15 @@ export class StockService {
         await this.getSessionDate(`[PHANTICH].[dbo].[BCN_netvalue]`);
 
       const query = (order: string): string => `
-                SELECT TOP 10 t1.ticker, c.EXCHANGE AS exchange, 
+                SELECT TOP 10 t1.ticker, c.floor AS exchange, 
                     SUM(t1.net_value_foreign) AS net_value
                 FROM [PHANTICH].[dbo].[BCN_netvalue] t1
                 JOIN [marketInfor].[dbo].[info] c
-                ON t1.ticker = c.TICKER
+                ON t1.ticker = c.code
                 WHERE c.floor = '${exchange.toUpperCase()}'
                 AND t1.date_time >= @1
                 AND t1.date_time <= @0
-                GROUP BY t1.ticker, exchange
+                GROUP BY t1.ticker, c.floor
                 ORDER BY net_value ${order}
             `;
 
@@ -829,7 +829,7 @@ export class StockService {
       const data: InternationalIndexInterface[] = await this.dbServer.query(
         `
                 SELECT * FROM [PHANTICH].[dbo].[data_chisoquocte]
-                WHERE date = @0
+                WHERE date_time = @0
             `,
         [latestDate],
       );
@@ -950,8 +950,8 @@ export class StockService {
       let group: string = ` `;
       let select: string = ` t.Ticker as symbol, `;
       let select2: string = `
-                        sum(m.total_value_mil) as totalValueMil,
-                        sum(m.total_vol) as totalVolume,
+                        sum(m.totalVal) as totalValueMil,
+                        sum(m.totalVol) as totalVolume,
                         sum(t.Gia_tri_mua) - sum(t.Gia_tri_ban) as supplyDemandValueGap,
                         sum(t.Chenh_lech_cung_cau) as supplyDemandVolumeGap `;
       let ex: string =
@@ -973,8 +973,8 @@ export class StockService {
           break;
         default:
           select2 = ` 
-                       m.total_value_mil as totalValueMil,
-                       m.total_vol as totalVolume,
+                       m.totalVal as totalValueMil,
+                       m.totalVol as totalVolume,
                        t.Gia_tri_mua - t.Gia_tri_ban as supplyDemandValueGap,
                        t.Chenh_lech_cung_cau as supplyDemandVolumeGap `;
       }
@@ -1004,8 +1004,8 @@ export class StockService {
       const query: string = `
                 select top 30 ${select} ${select2} from PHANTICH.dbo.TICKER_AC_CC t
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
-                join PHANTICH.dbo.database_mkt m on c.TICKER = m.ticker
-                and t.[DateTime] = m.date_time 
+                join marketTrade.dbo.tickerTradeVND m on c.TICKER = m.code
+                and t.[DateTime] = m.date 
                 where t.[DateTime] >= @0 and t.[DateTime] <= @1  ${ex} ${group} 
                 order by totalValueMil desc
             `;
