@@ -757,7 +757,7 @@ export class StockService {
                 FROM [PHANTICH].[dbo].[BCN_netvalue] t1
                 JOIN [marketInfor].[dbo].[info] c
                 ON t1.ticker = c.TICKER
-                WHERE c.EXCHANGE = '${exchange.toUpperCase()}'
+                WHERE c.floor = '${exchange.toUpperCase()}'
                 AND t1.date_time >= @1
                 AND t1.date_time <= @0
                 GROUP BY t1.ticker, exchange
@@ -1039,12 +1039,12 @@ export class StockService {
       const ex = exchange.toUpperCase();
       const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-      const redisData = await this.redis.get(
-        `${RedisKeys.MarketMap}:${ex}:${order}`,
-      );
-      if (redisData) {
-        return redisData;
-      }
+      // const redisData = await this.redis.get(
+      //   `${RedisKeys.MarketMap}:${ex}:${order}`,
+      // );
+      // if (redisData) {
+      //   return redisData;
+      // }
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
@@ -1077,7 +1077,7 @@ export class StockService {
             FROM top10
             WHERE rn <= 10
             UNION ALL
-            SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.buyVal + c.sellVal) AS value
+            SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.buyVal + c.sellVal) AS value
             FROM [marketTrade].[dbo].[foreign] c
             INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
             WHERE i.floor IN ${floor}
@@ -1087,16 +1087,16 @@ export class StockService {
               AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
             GROUP BY i.floor, i.LV2
           ) AS result
-          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+          ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
         `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
 
-        await this.redis.set(
-          `${RedisKeys.MarketMap}:${ex}:${order}`,
-          mappedData,
-        );
+        // await this.redis.set(
+        //   `${RedisKeys.MarketMap}:${ex}:${order}`,
+        //   mappedData,
+        // );
 
         return mappedData;
       }
@@ -1130,7 +1130,7 @@ export class StockService {
               FROM top10
               WHERE rn <= 10
               UNION ALL
-              SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.value) AS value
+              SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.value) AS value
               FROM [RATIO].[dbo].[ratio] c
               INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
               WHERE i.floor IN ${floor}
@@ -1140,15 +1140,16 @@ export class StockService {
                 AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
               GROUP BY i.floor, i.LV2
           ) AS result
-          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+          ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
         `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
-        await this.redis.set(
-          `${RedisKeys.MarketMap}:${ex}:${order}`,
-          mappedData,
-        );
+
+        // await this.redis.set(
+        //   `${RedisKeys.MarketMap}:${ex}:${order}`,
+        //   mappedData,
+        // );
 
         return mappedData;
       }
@@ -1185,7 +1186,7 @@ export class StockService {
               FROM top10
               WHERE rn <= 10
               UNION ALL
-              SELECT i.floor AS global, i.LV2 AS industry, 'other' AS ticker, SUM(c.${field}) AS value
+              SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.${field}) AS value
               FROM [marketTrade].[dbo].[tickerTradeVND] c
               INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
               WHERE i.floor IN ${floor}
@@ -1195,13 +1196,14 @@ export class StockService {
                 AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
               GROUP BY i.floor, i.LV2
           ) AS result
-          ORDER BY industry, CASE WHEN ticker = 'other' THEN 1 ELSE 0 END, value DESC;
+          ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
       `;
 
       const mappedData = new MarketMapResponse().mapToList(
         await this.dbServer.query(query, [date]),
       );
-      await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData);
+
+      // await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData);
 
       return mappedData;
     } catch (e) {
