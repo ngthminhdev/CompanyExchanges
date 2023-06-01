@@ -1107,7 +1107,7 @@ export class StockService {
 
         date = (
           await this.getSessionDate(
-            '[marketRatio].[dbo].[ratio]',
+            '[RATIO].[dbo].[ratio]',
             'date',
             this.dbServer,
           )
@@ -1117,7 +1117,7 @@ export class StockService {
           WITH top10 AS (
               SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, c.value,
                     ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY c.value DESC) AS rn
-              FROM [marketRatio].[dbo].[ratio] c
+              FROM [RATIO].[dbo].[ratio] c
               INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
               WHERE i.floor IN ${floor}
                 AND c.date = @0 AND c.ratioCode = 'MARKETCAP'
@@ -1131,7 +1131,7 @@ export class StockService {
               WHERE rn <= 10
               UNION ALL
               SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.value) AS value
-              FROM [marketRatio].[dbo].[ratio] c
+              FROM [RATIO].[dbo].[ratio] c
               INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
               WHERE i.floor IN ${floor}
                 AND c.date = @0 AND c.ratioCode = 'MARKETCAP'

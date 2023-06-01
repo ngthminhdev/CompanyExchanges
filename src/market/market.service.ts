@@ -288,7 +288,7 @@ export class MarketService {
             [date],
             i.LV2 as industry,
             sum(value) as value
-          FROM [marketRatio].[dbo].[ratio] t
+          FROM [RATIO].[dbo].[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
           WHERE [date] in ${dateFilter}
@@ -304,7 +304,7 @@ export class MarketService {
             [date],
             i.LV2 as industry,
             sum(value) as value
-          FROM [marketRatio].[dbo].[ratio] t
+          FROM [RATIO].[dbo].[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
           WHERE [date] = '${startDate}'
@@ -902,7 +902,7 @@ export class MarketService {
             i.LV2 as industry,
             itemName as report,
             sum(value) as value
-          FROM [marketRatio].dbo.[ratio] t
+          FROM [RATIO].dbo.[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
           WHERE [date] IN ${dateFilter}
@@ -959,7 +959,7 @@ export class MarketService {
             i.LV2 as industry,
             itemName as report,
             sum(value) as value
-          FROM [marketRatio].dbo.[ratio] t
+          FROM [RATIO].dbo.[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
           WHERE [date] IN ${dateFilter}
@@ -1016,7 +1016,7 @@ export class MarketService {
             i.LV2 as industry,
             itemName as report,
             sum(value) as value
-          FROM [marketRatio].dbo.[ratio] t
+          FROM [RATIO].dbo.[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
           WHERE [date] IN ${dateFilter}

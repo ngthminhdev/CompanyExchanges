@@ -2,10 +2,9 @@ import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { BaseResponse } from '../utils/utils.response';
-import { IndustryFilterDto } from './dto/industry-filter.dto';
-import { FinanceHealthService } from './finance-health.service';
-import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
 import { MarketTimeQueryDto } from './dto/market-time-query.dto';
+import { FinanceHealthService } from './finance-health.service';
+import { IndusValueSwagger } from './responses/indus-value.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -16,7 +15,7 @@ export class FinanceHealthController {
   @ApiOperation({
     summary: 'Diễn biến P/E bình quân các nhóm ngành  (lần)',
   })
-  @ApiOkResponse({ type: PriceChangePerformanceSwagger })
+  @ApiOkResponse({ type: IndusValueSwagger })
   async PEIndustry(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
     const data = await this.fHealthService.PEIndustry(
       q.exchange.toUpperCase(),
@@ -31,7 +30,7 @@ export class FinanceHealthController {
   @ApiOperation({
     summary: 'Diễn biến P/B bình quân các nhóm ngành  (lần)',
   })
-  @ApiOkResponse({ type: PriceChangePerformanceSwagger })
+  @ApiOkResponse({ type: IndusValueSwagger })
   async PBIndustry(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
     const data = await this.fHealthService.PBIndustry(
       q.exchange.toUpperCase(),

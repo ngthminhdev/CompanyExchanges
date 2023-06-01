@@ -17,7 +17,7 @@ export class MarketTimeQueryDto extends IndustryFilterDto {
   })
   type: string;
 
-  @IsEnum(['0', '1'], { message: 'type not found' })
+  @IsEnum(['0', '1'], { message: 'order not found' })
   @ApiProperty({
     type: Number,
     example: '',

@@ -153,6 +153,7 @@ export class UtilCommonTemplate {
   }
 
   static getIndustryFilter(input: string[]): string {
+    if (!input[0]) return `(' ')`;
     return `(${input.map((name) => industryMapping[name]).join(', ')})`;
   }
 
