@@ -154,10 +154,9 @@ export class MarketController {
     summary: 'Hiệu suất tăng trưởng doanh thu thuần của các ngành (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async netRevenueInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+  async netRevenueInds(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.netRevenueInds(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -169,10 +168,9 @@ export class MarketController {
     summary: 'Hiệu suất tăng trưởng lợi nhuân gộp các ngành (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async profitInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+  async profitInds(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.profitInds(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -184,13 +182,9 @@ export class MarketController {
     summary: 'Hiệu suất tăng trưởng lợi nhuận hoạt động các ngành (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async activityProfitInds(
-    @Query() q: MarketTimeQueryDto,
-    @Res() res: Response,
-  ) {
+  async activityProfitInds(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.activityProfitInds(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -202,10 +196,9 @@ export class MarketController {
     summary: 'Hiệu suất tăng trưởng EPS các ngành (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async epsInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+  async epsInds(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.epsInds(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -217,10 +210,9 @@ export class MarketController {
     summary: 'Tăng trưởng EBITDA của các ngành qua từng kỳ (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async ebitdaInds(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+  async ebitdaInds(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.ebitdaInds(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -232,10 +224,9 @@ export class MarketController {
     summary: 'Tăng trưởng cổ tức tiền mặt của các ngành qua từng kỳ (%)',
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
-  async cashDividend(@Query() q: MarketTimeQueryDto, @Res() res: Response) {
+  async cashDividend(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.marketService.cashDividend(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
