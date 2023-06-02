@@ -64,8 +64,12 @@ export enum RedisKeys {
 
   TopHotIndustry = 'top-hot-industry',
 
+  PEPBIndustry = 'pe--pb-industry',
+
   PEIndustry = 'pe-industry',
-  PBIndustry = 'pbi-industry',
+  PETicker = 'pe-ticker',
+  PBIndustry = 'pb-industry',
+  PBTicker = 'pb-ticker',
 
   NearestDate = 'nearest-date',
 }
