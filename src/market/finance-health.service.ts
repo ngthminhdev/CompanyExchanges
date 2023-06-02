@@ -6,10 +6,10 @@ import { DB_SERVER } from '../constants';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
-import { IndusValueInterface } from './interfaces/indus-value.interface';
+import { IPayoutRatio } from './interfaces/payout-ratio.interface';
 import { ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
 import { MarketService } from './market.service';
-import { IndusValueResponse } from './responses/indus-value.response';
+import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
 import { PEPBIndustryResponse } from './responses/pepb-industry.response';
 
@@ -97,6 +97,10 @@ export class FinanceHealthService {
       date[0],
     );
 
+    const { latestDate } = await this.marketService.getSessionDate(
+      'marketTrade.dbo.proprietary',
+    );
+
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -122,7 +126,7 @@ export class FinanceHealthService {
                              inner join RATIO.dbo.ratio r
                                         on c.code = r.code
                     where r.ratioCode = 'PRICE_TO_EARNINGS'
-                      and r.date = '2023/03/31')
+                      and r.date = '${latestDate}')
       select top 50 c.code,
             c.date,
             e.epsVND as VND,
@@ -166,6 +170,10 @@ export class FinanceHealthService {
       date[0],
     );
 
+    const { latestDate } = await this.marketService.getSessionDate(
+      'marketTrade.dbo.proprietary',
+    );
+
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -185,13 +193,13 @@ export class FinanceHealthService {
                                   inner join RATIO.dbo.ratio r
                                               on c.code = r.code
                           where r.ratioCode = 'BVPS_CR'
-                            and r.date = '${date[0]}'),
+                            and r.date = '${latestDate}'),
           PData as (select c.date, c.code, r.value as pData
                     from codeData c
                              inner join RATIO.dbo.ratio r
                                         on c.code = r.code
                     where r.ratioCode = 'PRICE_TO_BOOK'
-                      and r.date = '2023/03/31')
+                      and r.date = '${latestDate}')
       select top 50 c.code,
             c.date,
             e.gtssVND as VND,
@@ -214,5 +222,55 @@ export class FinanceHealthService {
     return mappedData;
   }
 
-  async payoutRatio(ex: string, order: number) {}
+  async payoutRatio(ex: string, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.PayoutRato}:${ex}:${order}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDate(2, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with valueData as (
+          select
+              [code],
+              [date],
+              [ratioCode],
+              [value]
+          from RATIO.dbo.ratio
+          where
+          ratioCode in ('QUICK_RATIO_AQ', 'CURRENT_RATIO_AQ')
+          and date in ${dateFilter}
+      )
+      select  [LV2] as industry, [date], 
+              [QUICK_RATIO_AQ] as quickRatio, 
+              [CURRENT_RATIO_AQ] as currentRatio
+      from (
+          select [LV2], [date], [ratioCode], value
+          from valueData v
+          inner join marketInfor.dbo.info i
+                  on i.code = v.code
+              where i.LV2 != ''
+                  and i.floor in ${floor}
+                  and i.type in ('STOCK', 'ETF')
+                  and i.status = 'listed'
+      ) as srouces
+      pivot (
+          avg(value)
+          for ratioCode in ([QUICK_RATIO_AQ], [CURRENT_RATIO_AQ])
+      ) as pvTable
+        order by date
+    `;
+
+    const data = await this.mssqlService.query<IPayoutRatio[]>(query);
+
+    const mappedData = new PayoutRatioResponse().mapTolist(data);
+
+    await this.redis.set(`${RedisKeys.PayoutRato}:${ex}:${order}`, mappedData);
+
+    return mappedData;
+  }
 }
