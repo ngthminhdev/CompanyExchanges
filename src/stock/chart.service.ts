@@ -120,11 +120,11 @@ export class ChartService {
       const redisData: VnIndexResponse[] = await this.redis.get(
         `${RedisKeys.LineChart}:${type}:${index}`,
       );
-      if (redisData) return redisData;
+      // if (redisData) return redisData;
 
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
-          '[tradeIntraday].[dbo].[indexTradeVNDIntraday]',
+          '[marketTrade].[dbo].[indexTradeVND]',
           'date',
           this.dbServer,
         );
