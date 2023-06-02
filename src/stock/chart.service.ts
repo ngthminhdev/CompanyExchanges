@@ -141,12 +141,12 @@ export class ChartService {
       const query: string = `
           select code      as comGroupCode,
                 CONCAT(date, ' ', timeInday) AS tradingDate,
-                closePrice as indexValue,
+                highPrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
                 totalVal   as totalMatchValue,
                 perChange  as percentIndexChange
-          from [tradeIntraday].[dbo].[indexTradeVNDIntraday]
+          from [tradeIntraday].[dbo].[indexTradeVND]
           where code = '${index}'
               and date >= '${startDate}' and date <= '${latestDate}'
           order by code desc, timeInday;
@@ -168,7 +168,7 @@ export class ChartService {
       const query: string = `
           select code      as comGroupCode,
                 CONCAT(date, ' ', timeInday) AS tradingDate,
-                closePrice as indexValue,
+                highPrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
                 totalVal   as totalMatchValue,

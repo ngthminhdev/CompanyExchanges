@@ -782,7 +782,7 @@ export class MarketService {
           WHERE [year] IN ${dateFilter}
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in != ''
+            and i.LV2 != ''
             and t.reportName in (N'Lãi gộp')
           group by [year], i.LV2, t.reportName
       ) select [year] as [date],
@@ -933,7 +933,7 @@ export class MarketService {
           WHERE [date] IN ${dateFilter}
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in != ''
+            and i.LV2 != ''
             and t.ratioCode ='OPERATING_EBIT_MARGIN_QR'
           group by [date], i.LV2, t.itemName
       ) select [date],
@@ -984,7 +984,7 @@ export class MarketService {
           WHERE [date] IN ${dateFilter}
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in != ''
+            and i.LV2 != ''
             and t.ratioCode = N'DIVIDEND_PAID_TR'
           group by [date], i.LV2, t.itemName
       ) select [date],
