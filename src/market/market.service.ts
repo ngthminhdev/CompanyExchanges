@@ -339,7 +339,15 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDate(type, order);
+    const date = (await Promise.all(
+      UtilCommonTemplate.getPastDate(type, order).map(
+        async (date: string) =>
+          await this.getNearestDate(
+            '[marketTrade].[dbo].[tickerTradeVND]',
+            date,
+          ),
+      ),
+    )) as string[];
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
@@ -393,6 +401,7 @@ export class MarketService {
       `${RedisKeys.IndusLiquidity}:${floor}:${order}:${type}`,
       mappedData,
     );
+
     return mappedData;
   }
 
