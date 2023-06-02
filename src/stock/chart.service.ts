@@ -113,6 +113,15 @@ export class ChartService {
   // Chỉ số các index
   async getLineChart(type: number, index: string): Promise<any> {
     try {
+      if (type === TransactionTimeTypeEnum.Latest) {
+        return await this.getLineChartNow(index);
+      }
+
+      const redisData: VnIndexResponse[] = await this.redis.get(
+        `${RedisKeys.LineChart}:${type}:${index}`,
+      );
+      if (redisData) return redisData;
+
       const { latestDate, weekDate, monthDate }: SessionDatesInterface =
         await this.stockService.getSessionDate(
           '[tradeIntraday].[dbo].[indexTradeVNDIntraday]',
@@ -140,21 +149,26 @@ export class ChartService {
 
       const query: string = `
           select code      as comGroupCode,
-                CONCAT(date, ' ', timeInday) AS tradingDate,
+                date AS tradingDate,
                 highPrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
                 totalVal   as totalMatchValue,
                 perChange  as percentIndexChange
-          from [tradeIntraday].[dbo].[indexTradeVND]
+          from [marketTrade].[dbo].[indexTradeVND]
           where code = '${index}'
               and date >= '${startDate}' and date <= '${latestDate}'
-          order by code desc, timeInday;
+          order by code desc, date;
         `;
 
       const mappedData = new VnIndexResponse().mapToList(
         await this.mssqlService.query<LineChartInterface[]>(query),
         type,
+      );
+
+      await this.redis.set(
+        `${RedisKeys.LineChart}:${type}:${index}`,
+        mappedData,
       );
 
       return mappedData;
