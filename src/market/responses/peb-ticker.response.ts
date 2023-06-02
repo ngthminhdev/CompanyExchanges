@@ -30,7 +30,7 @@ export class PEBResponse {
     type: Number,
     example: 1.5,
   })
-  avgTotalVal: number;
+  pData: number;
 
   @ApiProperty({
     type: Number,
@@ -43,7 +43,7 @@ export class PEBResponse {
     this.date = UtilCommonTemplate.toDate(data?.date) || '';
     this.VND = data?.VND || 0;
     this.per = data?.per || 0;
-    this.avgTotalVal = data?.avgTotalVal || 0;
+    this.pData = data?.pData || 0;
     this.pricePerChange = data?.pricePerChange || 0;
   }
 

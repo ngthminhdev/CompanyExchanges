@@ -117,31 +117,22 @@ export class FinanceHealthService {
                                               on c.code = r.code
                           where r.ratioCode = 'EPS_TR'
                             and r.date = '${date[0]}'),
-          valData as (select t.code,
-                              t.date,
-                              t.totalVal,
-                              row_number() over (
-                                  partition by t.code
-                                  order by t.date desc
-                                  ) as rn
-                      from marketTrade.dbo.tickerTradeVND t
-                          inner join epsVNDData e
-                          on t.code = e.code
-                      ),
-          avgVal as (select code, avg(totalVal) as avgTotalVal
-                      from valData
-                      where rn <= 50
-                      group by code
-                      )
+          PData as (select c.date, c.code, r.value as pData
+                    from codeData c
+                             inner join RATIO.dbo.ratio r
+                                        on c.code = r.code
+                    where r.ratioCode = 'PRICE_TO_EARNINGS'
+                      and r.date = '2023/03/31')
       select top 50 c.code,
             c.date,
             e.epsVND as VND,
-            a.avgTotalVal,
-            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange
+            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange,
+            p.pData
       from codeData c
               inner join epsVNDData e
                           on c.code = e.code and c.date = e.date
-              inner join avgVal a on c.code = a.code
+              inner join PData p 
+                          on c.code = p.code and c.date = p.date
       order by 2 desc, 3 desc
     `;
 
@@ -195,31 +186,22 @@ export class FinanceHealthService {
                                               on c.code = r.code
                           where r.ratioCode = 'BVPS_CR'
                             and r.date = '${date[0]}'),
-          valData as (select t.code,
-                              t.date,
-                              t.totalVal,
-                              row_number() over (
-                                  partition by t.code
-                                  order by t.date desc
-                                  ) as rn
-                      from marketTrade.dbo.tickerTradeVND t
-                          inner join gtssVNDData e
-                          on t.code = e.code
-                      ),
-          avgVal as (select code, avg(totalVal) as avgTotalVal
-                      from valData
-                      where rn <= 50
-                      group by code
-                      )
+          PData as (select c.date, c.code, r.value as pData
+                    from codeData c
+                             inner join RATIO.dbo.ratio r
+                                        on c.code = r.code
+                    where r.ratioCode = 'PRICE_TO_BOOK'
+                      and r.date = '2023/03/31')
       select top 50 c.code,
             c.date,
             e.gtssVND as VND,
-            a.avgTotalVal,
-            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange
+            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange,
+            p.pData
       from codeData c
               inner join gtssVNDData e
                           on c.code = e.code and c.date = e.date
-              inner join avgVal a on c.code = a.code
+              inner join PData p 
+                          on c.code = p.code and c.date = p.date
       order by 2 desc, 3 desc
     `;
 
@@ -231,4 +213,6 @@ export class FinanceHealthService {
 
     return mappedData;
   }
+
+  async payoutRatio(ex: string, order: number) {}
 }
