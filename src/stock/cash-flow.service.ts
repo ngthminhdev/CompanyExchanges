@@ -890,7 +890,7 @@ export class CashFlowService {
             AND i.LV2 != ''
           GROUP BY f.[date]
       ) m ON t.date = m.date
-      ORDER BY t.date;
+      ORDER BY t.date, t.industry;
     `;
 
     const data: InvestorCashFlowByIndustryInterface[] =
