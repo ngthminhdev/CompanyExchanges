@@ -40,4 +40,17 @@ export class FinanceHealthController {
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('p-b-binh-quan-co-phieu')
+  @ApiOperation({
+    summary: 'Diễn biến P/B bình quân các co phieu',
+  })
+  @ApiOkResponse({ type: PEBSwagger })
+  async PBTicker(@Query() q: IndustryFilterDto, @Res() res: Response) {
+    const data = await this.fHealthService.PBTicker(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

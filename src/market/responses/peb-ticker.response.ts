@@ -18,13 +18,13 @@ export class PEBResponse {
     type: Number,
     example: 1.5,
   })
-  epsVND: number;
+  VND: number;
 
   @ApiProperty({
     type: Number,
     example: 1.5,
   })
-  epsPer: number;
+  per: number;
 
   @ApiProperty({
     type: Number,
@@ -41,8 +41,8 @@ export class PEBResponse {
   constructor(data?: any) {
     this.code = data?.code || '';
     this.date = UtilCommonTemplate.toDate(data?.date) || '';
-    this.epsVND = data?.epsVND || 0;
-    this.epsPer = data?.epsPer || 0;
+    this.VND = data?.VND || 0;
+    this.per = data?.per || 0;
     this.avgTotalVal = data?.avgTotalVal || 0;
     this.pricePerChange = data?.pricePerChange || 0;
   }
