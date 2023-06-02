@@ -261,16 +261,10 @@ export class MarketService {
     return result;
   }
 
-  async marketCapChangePerformance(
-    ex: string,
-    industries: string[],
-    type: number,
-    order: number,
-  ) {
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+  async marketCapChangePerformance(ex: string, type: number, order: number) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
-      `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.marketCapChange}:${floor}:${order}:${type}`,
     );
     if (redisData) return redisData;
 
@@ -294,7 +288,7 @@ export class MarketService {
           WHERE [date] in ${dateFilter}
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in ${inds}
+            and i.LV2 != ''
             and t.ratioCode = 'MARKETCAP'
           group by [date], i.LV2
         ) AS now
@@ -310,7 +304,7 @@ export class MarketService {
           WHERE [date] = '${startDate}'
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in ${inds}
+            and i.LV2 != ''
             and t.ratioCode = 'MARKETCAP'
           group by [date], i.LV2
         ) AS prev
@@ -328,7 +322,7 @@ export class MarketService {
     );
 
     await this.redis.set(
-      `${RedisKeys.marketCapChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.marketCapChange}:${floor}:${order}:${type}`,
       mappedData,
     );
     return mappedData;
@@ -336,14 +330,12 @@ export class MarketService {
 
   async indsLiquidityChangePerformance(
     ex: string,
-    industries: string[],
     type: number,
     order: number,
   ) {
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
-      `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.IndusLiquidity}:${floor}:${order}:${type}`,
     );
     if (redisData) return redisData;
 
@@ -367,7 +359,7 @@ export class MarketService {
           WHERE [date] in ${dateFilter}
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in ${inds}
+            and i.LV2 != ''
           group by [date], i.LV2
         ) AS now
       INNER JOIN
@@ -382,7 +374,7 @@ export class MarketService {
           WHERE [date] = '${startDate}'
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
-            and i.LV2 in ${inds}
+            and i.LV2 != ''
           group by [date], i.LV2
         ) AS prev
       ON now.[date] >= prev.[date] and now.industry = prev.industry
@@ -398,22 +390,16 @@ export class MarketService {
     );
 
     await this.redis.set(
-      `${RedisKeys.IndusLiquidity}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.IndusLiquidity}:${floor}:${order}:${type}`,
       mappedData,
     );
     return mappedData;
   }
 
-  async equityIndsChangePerformance(
-    ex: string,
-    industries: string[],
-    type: number,
-    order: number,
-  ) {
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
+  async equityIndsChangePerformance(ex: string, type: number, order: number) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
-      `${RedisKeys.EquityIndsChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.EquityIndsChange}:${floor}:${order}:${type}`,
     );
     if (redisData) return redisData;
 
@@ -436,7 +422,7 @@ export class MarketService {
             WHERE [year] in ${dateFilter}
               and i.floor in ${floor}
               and i.type in ('STOCK', 'ETF')
-              and i.LV2 in ${inds}
+              and i.LV2 != ''
               and t.reportName = N'VỐN CHỦ SỞ HỮU'
             group by [year], i.LV2
           ) AS now
@@ -452,7 +438,7 @@ export class MarketService {
             WHERE [year] = '${startDate}'
               and i.floor in ${floor}
               and i.type in ('STOCK', 'ETF')
-              and i.LV2 in ${inds}
+              and i.LV2 != ''
               and t.reportName = N'VỐN CHỦ SỞ HỮU'
             group by [year], i.LV2
           ) AS prev
@@ -471,7 +457,7 @@ export class MarketService {
     );
 
     await this.redis.set(
-      `${RedisKeys.EquityIndsChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.EquityIndsChange}:${floor}:${order}:${type}`,
       mappedData,
     );
 
@@ -480,14 +466,12 @@ export class MarketService {
 
   async liabilitiesIndsChangePerformance(
     ex: string,
-    industries: string[],
     type: number,
     order: number,
   ) {
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
-      `${RedisKeys.LiabilitiesIndsChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.LiabilitiesIndsChange}:${floor}:${order}:${type}`,
     );
     if (redisData) return redisData;
 
@@ -511,7 +495,7 @@ export class MarketService {
             WHERE [year] in ${dateFilter}
               and i.floor in ${floor}
               and i.type in ('STOCK', 'ETF')
-              and i.LV2 in ${inds}
+              and i.LV2 != ''
               and t.reportName in (N'NỢ PHẢI TRẢ', N'Tổng nợ phải trả')
             group by [year], i.LV2
           ) AS now
@@ -527,7 +511,7 @@ export class MarketService {
             WHERE [year] = '${startDate}'
               and i.floor in ${floor}
               and i.type in ('STOCK', 'ETF')
-              and i.LV2 in ${inds}
+              and i.LV2 != ''
               and t.reportName in (N'NỢ PHẢI TRẢ', N'Tổng nợ phải trả')
             group by [year], i.LV2
           ) AS prev
@@ -546,7 +530,7 @@ export class MarketService {
     );
 
     await this.redis.set(
-      `${RedisKeys.LiabilitiesIndsChange}:${floor}:${inds}:${order}:${type}`,
+      `${RedisKeys.LiabilitiesIndsChange}:${floor}:${order}:${type}`,
       mappedData,
     );
 
@@ -1068,6 +1052,7 @@ export class MarketService {
       on t.code = i.code
       where i.floor in ('HOSE', 'HNX', 'UPCOM')
       and i.type in ('STOCK', 'ETF')
+      and i.LV2 != ''
       and date = '${latestDate}'
       group by i.LV2
       ) select top 5 industry, rank() over (order by totalVal desc) as rank

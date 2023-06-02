@@ -10,6 +10,7 @@ import { IndusLiquiditySwagger } from './responses/indus-liquidity.response';
 import { LiabilitiesChangeSwagger } from './responses/liabilities-change.response';
 import { LiquidityChangePerformanceSwagger } from './responses/liquidity-change-performance.response';
 import { PriceChangePerformanceSwagger } from './responses/price-change-performance.response';
+import { TimeFrameDto } from './dto/time-frame.dto';
 
 @ApiTags('Thi Truong - API')
 @Controller('market')
@@ -54,12 +55,11 @@ export class MarketController {
   })
   @ApiOkResponse({ type: LiquidityChangePerformanceSwagger })
   async marketCapChangePerformance(
-    @Query() q: MarketTimeQueryDto,
+    @Query() q: TimeFrameDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.marketCapChangePerformance(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -72,12 +72,11 @@ export class MarketController {
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
   async indsLiquidityChangePerformance(
-    @Query() q: MarketTimeQueryDto,
+    @Query() q: TimeFrameDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.indsLiquidityChangePerformance(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -90,12 +89,11 @@ export class MarketController {
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
   async equityIndsChangePerformance(
-    @Query() q: MarketTimeQueryDto,
+    @Query() q: TimeFrameDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.equityIndsChangePerformance(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
@@ -124,12 +122,11 @@ export class MarketController {
   })
   @ApiOkResponse({ type: IndusLiquiditySwagger })
   async liabilitiesIndsChangePerformance(
-    @Query() q: MarketTimeQueryDto,
+    @Query() q: TimeFrameDto,
     @Res() res: Response,
   ) {
     const data = await this.marketService.liabilitiesIndsChangePerformance(
       q.exchange.toUpperCase(),
-      q.industry.split(','),
       parseInt(q.type),
       parseInt(q.order),
     );
