@@ -915,13 +915,13 @@ export class CashFlowService {
     let startDate!: any;
     switch (type) {
       case TransactionTimeTypeEnum.OneMonth:
-        startDate = monthDate;
+        startDate = moment().subtract(1, 'month').format('YYYY-MM-DD');
         break;
       case TransactionTimeTypeEnum.OneQuarter:
         startDate = moment().subtract(3, 'month').format('YYYY-MM-DD');
         break;
       case TransactionTimeTypeEnum.YearToYear:
-        startDate = yearDate;
+        startDate = moment().subtract(1, 'year').format('YYYY-MM-DD');
         break;
       default:
         throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'type not found');
