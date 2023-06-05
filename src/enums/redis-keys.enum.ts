@@ -71,7 +71,8 @@ export enum RedisKeys {
   PBIndustry = 'pb-industry',
   PBTicker = 'pb-ticker',
 
-  PayoutRato = 'payout-rato',
+  PayoutRatio = 'payout-ratio',
+  CashRatio = 'cash-ratio',
 
   NearestDate = 'nearest-date',
 }

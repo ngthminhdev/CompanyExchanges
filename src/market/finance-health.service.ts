@@ -12,6 +12,7 @@ import { MarketService } from './market.service';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
 import { PEPBIndustryResponse } from './responses/pepb-industry.response';
+import { CashRatioResponse } from './responses/cash-ratio.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -225,7 +226,7 @@ export class FinanceHealthService {
   async payoutRatio(ex: string, order: number) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
-      `${RedisKeys.PayoutRato}:${ex}:${order}`,
+      `${RedisKeys.PayoutRatio}:${ex}:${order}`,
     );
     if (redisData) return redisData;
 
@@ -269,7 +270,57 @@ export class FinanceHealthService {
 
     const mappedData = new PayoutRatioResponse().mapTolist(data);
 
-    await this.redis.set(`${RedisKeys.PayoutRato}:${ex}:${order}`, mappedData);
+    await this.redis.set(`${RedisKeys.PayoutRatio}:${ex}:${order}`, mappedData);
+
+    return mappedData;
+  }
+
+  async cashRatio(ex: string, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.CashRatio}:${ex}:${order}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(2, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with valueData as (select [code],
+                                [year],
+                                [reportName],
+                                [value]
+                        from financialReport.dbo.financialReport
+                        where reportName in
+                              (N'Tiền và tương đương tiền', N'Nợ ngắn hạn')
+                          and year in ${dateFilter})
+      select industry,
+            year as date,
+            sum([Tiền và tương đương tiền]) / sum([Nợ ngắn hạn]) as cashRatio
+      from (select i.lv2 as industry,
+                  reportName,
+                  year,
+                  value
+            from marketInfor.dbo.info i
+                    inner join valueData v on i.code = v.code
+            where i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.status = 'listed') as sources
+              pivot (
+              sum(value)
+              for reportName in ([Tiền và tương đương tiền]
+              , [Nợ ngắn hạn])
+              ) as pvtable
+      group by industry, year
+      order by year
+    `;
+
+    const data = await this.mssqlService.query<IPayoutRatio[]>(query);
+
+    const mappedData = new CashRatioResponse().mapTolist(data);
+
+    await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData);
 
     return mappedData;
   }

@@ -59,12 +59,26 @@ export class FinanceHealthController {
     summary: `
       Tỷ số thanh toán hiện hành (Lần),
       Tỷ số thanh toán nhanh (Lần),
-      Tỷ số thanh toán tiền mặt (Lần)
     `,
   })
   @ApiOkResponse({ type: PEBSwagger })
   async payoutRatio(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.payoutRatio(
+      q.exchange.toUpperCase(),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ty-so-thanh-toan-tien-mat')
+  @ApiOperation({
+    summary: `
+      Tỷ số thanh toán tiền mặt (Lần)
+    `,
+  })
+  @ApiOkResponse({ type: PEBSwagger })
+  async cashRatio(@Query() q: ExchangeOrderDto, @Res() res: Response) {
+    const data = await this.fHealthService.cashRatio(
       q.exchange.toUpperCase(),
       parseInt(q.order),
     );
