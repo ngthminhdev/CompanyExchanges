@@ -73,6 +73,7 @@ export enum RedisKeys {
 
   PayoutRatio = 'payout-ratio',
   CashRatio = 'cash-ratio',
+  RotaionRatio = 'rota-ratio',
 
   NearestDate = 'nearest-date',
 }

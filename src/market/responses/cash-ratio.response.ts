@@ -17,7 +17,7 @@ export class CashRatioResponse {
 
   @ApiProperty({
     type: Date,
-    example: '2023/03/31',
+    example: '20231',
   })
   date: Date | string;
 

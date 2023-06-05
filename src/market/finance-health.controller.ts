@@ -8,6 +8,9 @@ import { TimeFrameDto } from './dto/time-frame.dto';
 import { FinanceHealthService } from './finance-health.service';
 import { IndusValueSwagger } from './responses/indus-value.response';
 import { PEBSwagger } from './responses/peb-ticker.response';
+import { CashRatioSwagger } from './responses/cash-ratio.response';
+import { PayoutRatioSwagger } from './responses/payout-ratio.response';
+import { RotationRatioSwagger } from './responses/rotation.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -61,7 +64,7 @@ export class FinanceHealthController {
       Tỷ số thanh toán nhanh (Lần),
     `,
   })
-  @ApiOkResponse({ type: PEBSwagger })
+  @ApiOkResponse({ type: PayoutRatioSwagger })
   async payoutRatio(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.payoutRatio(
       q.exchange.toUpperCase(),
@@ -76,9 +79,27 @@ export class FinanceHealthController {
       Tỷ số thanh toán tiền mặt (Lần)
     `,
   })
-  @ApiOkResponse({ type: PEBSwagger })
+  @ApiOkResponse({ type: CashRatioSwagger })
   async cashRatio(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.cashRatio(
+      q.exchange.toUpperCase(),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ty-so-vong-xoay')
+  @ApiOperation({
+    summary: `
+      Vòng quay Tài sản cố định (Lần),
+      Vòng quay Tiền (Lần),
+      Vòng quay Tổng tài sản (Lần),
+      Vòng quay Vốn chủ sở hữu (Lần)
+    `,
+  })
+  @ApiOkResponse({ type: RotationRatioSwagger })
+  async rotationRatio(@Query() q: ExchangeOrderDto, @Res() res: Response) {
+    const data = await this.fHealthService.rotationRatio(
       q.exchange.toUpperCase(),
       parseInt(q.order),
     );

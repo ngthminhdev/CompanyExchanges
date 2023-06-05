@@ -13,6 +13,8 @@ import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
 import { PEPBIndustryResponse } from './responses/pepb-industry.response';
 import { CashRatioResponse } from './responses/cash-ratio.response';
+import { ISRotationRatio } from './interfaces/rotation-ratio.interface';
+import { RotationRatioResponse } from './responses/rotation.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -321,6 +323,84 @@ export class FinanceHealthService {
     const mappedData = new CashRatioResponse().mapTolist(data);
 
     await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData);
+
+    return mappedData;
+  }
+
+  async rotationRatio(ex: string, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.RotaionRatio}:${ex}:${order}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(2, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query: string = `
+      with valueData as (select [code],
+                                [year],
+                                [reportName],
+                                [value]
+                        from financialReport.dbo.financialReport
+                        where reportName in
+                              (N'Doanh số thuần', N'Thu nhập lãi thuần',
+                                N'Tài sản cố định', N'Tiền và tương đương tiền',
+                                N'TỔNG TÀI SẢN', N'VỐN CHỦ SỞ HỮU')
+                          and year in ${dateFilter}),
+      finalData as (
+          select industry,
+            year date,
+            case industry
+                when N'Dịch vụ tài chính' then [Thu nhập lãi thuần]
+                when N'Bảo hiểm' then [Thu nhập lãi thuần]
+                when N'Ngân hàng' then [Thu nhập lãi thuần]
+                else [Doanh số thuần]
+                end                    doanhThu,
+            [Tài sản cố định]          taiSanCoDinh,
+            [Tiền và tương đương tiền] tienVaTuongDuong,
+            [TỔNG TÀI SẢN]             tongTaiSan,
+            [VỐN CHỦ SỞ HỮU]           vonChuSoHuu
+      from (select i.lv2 as industry,
+                  reportName,
+                  year,
+                  value
+            from marketInfor.dbo.info i
+                    inner join valueData v on i.code = v.code
+            where i.floor in ${floor}
+              and i.type in ('STOCK', 'ETF')
+              and i.status = 'listed'
+              and i.LV2 not in (N'Ngân Hàng', N'Bảo hiểm')
+            ) as sources
+              pivot (
+              sum(value)
+              for reportName in (
+              [Doanh số thuần], [Thu nhập lãi thuần],
+              [Tài sản cố định], [Tiền và tương đương tiền],
+              [TỔNG TÀI SẢN], [VỐN CHỦ SỞ HỮU])
+              ) as pvtable
+      )
+      select
+          industry,
+          date,
+          sum(doanhThu) / sum(nullif(taiSanCoDinh, 0)) as FAT,
+          sum(doanhThu) / sum(nullif(tienVaTuongDuong, 0)) as CTR,
+          sum(doanhThu) / sum(nullif(tongTaiSan, 0)) as ATR,
+          sum(doanhThu) / sum(nullif(vonChuSoHuu, 0)) as CT
+      from finalData
+      group by industry, date
+      order by date
+    `;
+
+    const data = await this.mssqlService.query<ISRotationRatio[]>(query);
+
+    const mappedData = new RotationRatioResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.RotaionRatio}:${ex}:${order}`,
+      mappedData,
+    );
 
     return mappedData;
   }
