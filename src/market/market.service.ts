@@ -866,30 +866,24 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDate(type, order);
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
     const { dateFilter, startDate } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
-      with temp_data as (
-          SELECT
-            [date],
-            i.LV2 as industry,
-            itemName as report,
-            sum(value) as value
-          FROM [RATIO].dbo.[ratio] t
-          inner join marketInfor.dbo.info i
-          on t.code = i.code
-          WHERE [date] IN ${dateFilter}
-            and i.floor in ${floor}
-            and i.type in ('STOCK', 'ETF')
-            and i.LV2 != ''
-            and t.ratioCode ='EPS_TR'
-          group by [date], i.LV2, t.itemName
-      ) select [date],
-          [industry],
-          ([value] - lag([value]) over (PARTITION BY industry, report ORDER BY [date])) /
-          NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry, report ORDER BY [date])), 0) * 100 AS perChange
-      from [temp_data];
+      with temp as (
+          select lv2 industry,
+                date,
+                sum(value) as value
+          from VISUALIZED_DATA.dbo.EPS
+          where date in ${dateFilter}
+          group by lv2, date
+      )
+      select [date],
+                [industry],
+                ([value] - lag([value]) over (PARTITION BY industry ORDER BY [date])) /
+                NULLIF(ABS(LAG([value]) OVER (PARTITION BY industry ORDER BY [date])), 0) * 100 AS perChange
+      from temp
+      order by [date], industry
     `;
 
     const data = await this.mssqlService.query<IndusLiquidityInterface[]>(
@@ -897,9 +891,8 @@ export class MarketService {
     );
 
     const mappedData = new IndusLiquidityColResponse().mapToList(
-      _.orderBy(data, 'date').filter(
-        (i) => UtilCommonTemplate.toDate(i.date) != startDate,
-      ),
+      _.orderBy(data, 'date').filter((i) => i.date != startDate),
+      1,
     );
 
     await this.redis.set(
