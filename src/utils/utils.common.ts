@@ -153,6 +153,7 @@ export class UtilCommonTemplate {
   }
 
   static getIndustryFilter(input: string[]): string {
+    if (!input[0]) return `(' ')`;
     return `(${input.map((name) => industryMapping[name]).join(', ')})`;
   }
 
@@ -328,5 +329,23 @@ export class UtilCommonTemplate {
     });
 
     return transformedArr;
+  }
+
+  static generateColor(input: Date | string): string {
+    if (!input) return '';
+
+    const inputString = typeof input === 'string' ? input : input.toString();
+    let hash = 0;
+
+    for (let i = 0; i < inputString.length; i++) {
+      hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    const blueLevels = [100, 120, 140, 160, 180, 200, 220, 240, 255];
+    const blueLevelIndex = Math.abs(hash) % blueLevels.length;
+    const blueLevel = blueLevels[blueLevelIndex];
+
+    const color = blueLevel.toString(16).toUpperCase().padStart(2, '0');
+    return `#00${color}FF`;
   }
 }

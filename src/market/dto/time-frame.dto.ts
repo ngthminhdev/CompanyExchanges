@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNumberString } from 'class-validator';
-import { IndustryFilterDto } from './industry-filter.dto';
+import { GetExchangeQuery } from '../../stock/dto/getExchangeQuery.dto';
 
-export class MarketTimeQueryDto extends IndustryFilterDto {
+export class TimeFrameDto extends GetExchangeQuery {
   @IsNumberString({}, { message: 'type not found' })
   @ApiProperty({
     type: Number,

@@ -62,5 +62,18 @@ export enum RedisKeys {
   EBITDAInds = 'eBITDA-inds',
   CashDividend = 'cash-dividend',
 
+  TopHotIndustry = 'top-hot-industry',
+
+  PEPBIndustry = 'pe-pb-industry',
+
+  PEIndustry = 'pe-industry',
+  PETicker = 'pe-ticker',
+  PBIndustry = 'pb-industry',
+  PBTicker = 'pb-ticker',
+
+  PayoutRatio = 'payout-ratio',
+  CashRatio = 'cash-ratio',
+  RotaionRatio = 'rota-ratio',
+
   NearestDate = 'nearest-date',
 }
