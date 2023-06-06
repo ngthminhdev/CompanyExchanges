@@ -576,7 +576,7 @@ export class StockService {
         with DomesticIndex as (
             SELECT code as comGroupCode,
                   timeInday as time,
-                  closePrice as indexValue,
+                  highPrice as indexValue,
                   change as indexChange,
                   totalVol as totalMatchVolume,
                   totalVal as totalMatchValue,
