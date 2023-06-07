@@ -105,4 +105,19 @@ export class FinanceHealthController {
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('cac-chi-so-kha-nang-tra-no-nganh')
+  @ApiOperation({
+    summary: `
+      Các chỉ số khả năng trả nợ các ngành
+    `,
+  })
+  @ApiOkResponse({ type: RotationRatioSwagger })
+  async indsDebtSolvency(@Query() q: ExchangeOrderDto, @Res() res: Response) {
+    const data = await this.fHealthService.indsDebtSolvency(
+      q.exchange.toUpperCase(),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
