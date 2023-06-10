@@ -75,5 +75,7 @@ export enum RedisKeys {
   CashRatio = 'cash-ratio',
   RotaionRatio = 'rota-ratio',
 
+  IndsDebtSolvency = 'inds-debt-solvency',
+
   NearestDate = 'nearest-date',
 }
