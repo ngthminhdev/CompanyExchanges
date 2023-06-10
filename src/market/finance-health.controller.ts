@@ -11,6 +11,7 @@ import { PEBSwagger } from './responses/peb-ticker.response';
 import { CashRatioSwagger } from './responses/cash-ratio.response';
 import { PayoutRatioSwagger } from './responses/payout-ratio.response';
 import { RotationRatioSwagger } from './responses/rotation.response';
+import { DebtSolvencySwagger } from './responses/debt-solvency.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -112,7 +113,7 @@ export class FinanceHealthController {
       Các chỉ số khả năng trả nợ các ngành
     `,
   })
-  @ApiOkResponse({ type: RotationRatioSwagger })
+  @ApiOkResponse({ type: DebtSolvencySwagger })
   async indsDebtSolvency(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.indsDebtSolvency(
       q.exchange.toUpperCase(),
