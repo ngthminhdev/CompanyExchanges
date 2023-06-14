@@ -17,6 +17,8 @@ import { ISRotationRatio } from './interfaces/rotation-ratio.interface';
 import { RotationRatioResponse } from './responses/rotation.response';
 import { ISIndsDebtSolvency } from './interfaces/Inds-debt-solvency.interface';
 import { DebtSolvencyResponse } from './responses/debt-solvency.response';
+import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
+import { ProfitMarginResponse } from './responses/profit-margin.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -497,4 +499,174 @@ export class FinanceHealthService {
 
     return mappedData;
   }
+
+  async indsProfitMargins(ex: string, type: number, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.IndsProfitMargins}:${floor}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+      with valueData as (select [code],
+                                [year],
+                                [reportName],
+                                [value]
+                        from financialReport.dbo.financialReport
+                        where reportName in
+                              (
+                                N'Lợi nhuận gộp',
+                                N'Doanh số thuần', N'Thu nhập lãi thuần',
+                                N'Lãi trước thuế', N'Tổng lợi nhuận kế toán trước thuế',
+                                N'Tổng lợi nhuận trước thuế',
+                              N'Doanh thu thuần từ hoạt động kinh doanh bảo hiểm '
+                                  )
+                          and year in ${dateFilter}),
+          canculatedData as (select industry,
+                                    year,
+                                    case industry
+                                        when N'Dịch vụ tài chính' then [Thu nhập lãi thuần]
+                                        when N'Bảo hiểm' then [Doanh thu thuần từ hoạt động kinh doanh bảo hiểm ]
+                                        when N'Ngân hàng' then [Thu nhập lãi thuần]
+                                        else [Doanh số thuần]
+                                        end doanhThu,
+                                    case industry
+                                        when N'Bảo hiểm' then [Tổng lợi nhuận kế toán trước thuế]
+                                        when N'Dịch vụ tài chính' then [Tổng lợi nhuận kế toán trước thuế]
+                                        when N'Ngân hàng' then [Tổng lợi nhuận trước thuế]
+                                        else [Lãi trước thuế]
+                                        end loiNhuan
+                              from (select i.lv2 as industry,
+                                          reportName,
+                                          year,
+                                          value
+                                    from marketInfor.dbo.info i
+                                            inner join valueData v on i.code = v.code
+                                    where i.floor in ${floor}
+                                      and i.type in ('STOCK', 'ETF')
+                                      and i.status = 'listed') as sources
+                                      pivot (
+                                      sum(value)
+                                      for reportName in (
+                                      [Lợi nhuận gộp],
+                                      [Doanh số thuần],
+                                      [Thu nhập lãi thuần],
+                                      [Lãi trước thuế], [Tổng lợi nhuận kế toán trước thuế],
+                                      [Tổng lợi nhuận trước thuế],
+                                      [Doanh thu thuần từ hoạt động kinh doanh bảo hiểm ]
+                                      )
+                                      ) as pvtable)
+      select [industry],
+            [year] [date],
+            sum(loiNhuan) / sum(doanhThu) as GPM
+      from canculatedData
+      group by industry, year;
+    `;
+
+    const data = await this.mssqlService.query<ISIndsProfitMargins[]>(query);
+
+    const mappedData = new ProfitMarginResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.IndsProfitMargins}:${floor}:${order}:${type}`,
+      mappedData,
+    );
+
+    return mappedData;
+  }
+
+  // async indsProfitMarginsTable(ex: string, order: number) {
+  //   const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+  //   const redisData = await this.redis.get(
+  //     `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
+  //   );
+  //   if (redisData) return redisData;
+
+  //   const date = UtilCommonTemplate.getYearQuarters(1, order);
+
+  //   const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+  //   const query: string = `
+  //     with valueData as (select [code],
+  //                               [year],
+  //                               [reportName],
+  //                               [value]
+  //                       from financialReport.dbo.financialReport
+  //                       where reportName in
+  //                             (N'Lãi trước thuế', N'Tổng lợi nhuận kế toán trước thuế',
+  //                               N'Tổng lợi nhuận trước thuế', N'Chi phí lãi và các chi phí tương tự',
+  //                               N'Chi phí lãi vay', N'Chi phí hoạt động',
+  //                               N'Tổng nợ phải trả', N'Nợ phải trả',
+  //                               N'TỔNG TÀI SẢN', N'TỔNG CỘNG TÀI SẢN',
+  //                               N'VỐN CHỦ SỞ HỮU'
+  //                                 )
+  //                         and year in ${dateFilter}),
+  //         canculatedData as (select industry,
+  //                                   year,
+  //                                   case industry
+  //                                       when N'Bảo hiểm' then [Tổng lợi nhuận kế toán trước thuế]
+  //                                       when N'Dịch vụ tài chính' then [Tổng lợi nhuận kế toán trước thuế]
+  //                                       when N'Ngân hàng' then [Tổng lợi nhuận trước thuế]
+  //                                       else [Lãi trước thuế]
+  //                                       end             loiNhuan,
+  //                                   case industry
+  //                                       when N'Ngân hàng' then [Tổng nợ phải trả]
+  //                                       else [Nợ phải trả]
+  //                                       end             noPhaiTra,
+  //                                   case industry
+  //                                       when N'Bảo hiểm' then [TỔNG CỘNG TÀI SẢN]
+  //                                       else [TỔNG TÀI SẢN]
+  //                                       end             tongTaiSan,
+  //                                   case industry
+  //                                       when N'Ngân hàng' then [Chi phí lãi và các chi phí tương tự]
+  //                                       else [Chi phí lãi vay]
+  //                                       end             chiPhiLaiVay,
+  //                                   [Chi phí hoạt động] chiPhiHoatDong,
+  //                                   [VỐN CHỦ SỞ HỮU]    vonChuSoHuu
+  //                             from (select i.lv2 as industry,
+  //                                         reportName,
+  //                                         year,
+  //                                         value
+  //                                   from marketInfor.dbo.info i
+  //                                           inner join valueData v on i.code = v.code
+  //                                   where i.floor in ${floor}
+  //                                     and i.type in ('STOCK', 'ETF')
+  //                                     and i.status = 'listed') as sources
+  //                                     pivot (
+  //                                     sum(value)
+  //                                     for reportName in (
+  //                                     [Tổng lợi nhuận kế toán trước thuế], [Tổng lợi nhuận trước thuế],
+  //                                     [Chi phí hoạt động], [Lãi trước thuế],
+  //                                     [Chi phí lãi vay], [Chi phí lãi và các chi phí tương tự],
+  //                                     [Tổng nợ phải trả], [Nợ phải trả],
+  //                                     [TỔNG CỘNG TÀI SẢN],
+  //                                     [TỔNG TÀI SẢN],
+  //                                     [VỐN CHỦ SỞ HỮU]
+  //                                     )
+  //                                     ) as pvtable)
+  //     select [industry],
+  //           [year] [date],
+  //           (sum(loiNhuan) + sum(chiPhiLaiVay)) / sum(chiPhiLaiVay) ICR,
+  //           sum(noPhaiTra) / sum(tongTaiSan)                        TDTA,
+  //           sum(noPhaiTra) / sum(vonChuSoHuu)                       DE
+  //     from canculatedData
+  //     group by industry, year
+  //     order by year, industry
+  //   `;
+
+  //   const data = await this.mssqlService.query<ISIndsDebtSolvency[]>(query);
+
+  //   const mappedData = new DebtSolvencyResponse().mapToList(data);
+
+  //   await this.redis.set(
+  //     `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
+  //     mappedData,
+  //   );
+
+  //   return mappedData;
+  // }
 }
