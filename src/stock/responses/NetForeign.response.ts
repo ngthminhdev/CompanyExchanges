@@ -98,6 +98,9 @@ export class NetForeignResponse {
       case 'Xây dựng & Vật liệu':
         this.color = '#BDBDBD';
         break;
+      case 'Quỹ mở & Quỹ đóng':
+        this.color = '#CC521F';
+        break;
       default:
         this.color = '#90ed7d';
         break;
