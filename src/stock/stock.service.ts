@@ -1061,7 +1061,7 @@ export class StockService {
           )
         ).latestDate;
         const query: string = `
-          WITH top10 AS (
+          WITH top15 AS (
             SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, sum(c.buyVal) + sum(c.sellVal) AS value,
             ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY sum(c.buyVal) + sum(c.sellVal) DESC) AS rn
           FROM [marketTrade].[dbo].[foreign] c
@@ -1069,6 +1069,7 @@ export class StockService {
           WHERE i.floor IN ${floor}
             AND c.date = @0
             AND i.[type] IN ('STOCK', 'ETF')
+            AND I.status = 'listed'
             AND i.LV2 != ''
           GROUP BY i.floor, i.LV2, c.code
           )
@@ -1077,17 +1078,18 @@ export class StockService {
             FROM top10
             WHERE rn <= 10
             UNION ALL
-            SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.buyVal + c.sellVal) AS value
+            SELECT i.floor AS global, i.LV2 AS industry, 'KHÁC' AS ticker, SUM(c.buyVal + c.sellVal) AS value
             FROM [marketTrade].[dbo].[foreign] c
             INNER JOIN [marketInfor].[dbo].[info] i ON c.code = i.code
             WHERE i.floor IN ${floor}
               AND c.date = @0
               AND i.[type] IN ('STOCK', 'ETF')
               AND i.LV2 != ''
-              AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+              AND I.status = 'listed'
+              AND i.code NOT IN (SELECT ticker FROM top15 WHERE rn <= 15)
             GROUP BY i.floor, i.LV2
           ) AS result
-          ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
+          ORDER BY industry, CASE WHEN ticker = 'KHÁC' THEN 1 ELSE 0 END, value DESC;
         `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
