@@ -12,6 +12,7 @@ import { CashRatioSwagger } from './responses/cash-ratio.response';
 import { PayoutRatioSwagger } from './responses/payout-ratio.response';
 import { RotationRatioSwagger } from './responses/rotation.response';
 import { DebtSolvencySwagger } from './responses/debt-solvency.response';
+import { ProfitMarginSwagger } from './responses/profit-margin.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -121,4 +122,35 @@ export class FinanceHealthController {
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('ty-suat-loi-nhuan-gop-bien-cac-nhom-nganh')
+  @ApiOperation({
+    summary: `
+      Diễn biến Tỷ suất lợi nhuận gộp biên các nhóm ngành
+    `,
+  })
+  @ApiOkResponse({ type: ProfitMarginSwagger })
+  async indsProfitMargins(@Query() q: TimeFrameDto, @Res() res: Response) {
+    const data = await this.fHealthService.indsProfitMargins(
+      q.exchange.toUpperCase(),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  // @Get('ty-suat-loi-nhuan-cac-nhom-nganh-table')
+  // @ApiOperation({
+  //   summary: `
+  //     Diễn biến Tỷ suất lợi nhuận gộp biên các nhóm ngành
+  //   `,
+  // })
+  // @ApiOkResponse({ type: ProfitMarginSwagger })
+  // async indsProfitMarginsTable(@Query() q: TimeFrameDto, @Res() res: Response) {
+  //   const data = await this.fHealthService.indsProfitMarginsTable(
+  //     q.exchange.toUpperCase(),
+  //     parseInt(q.order),
+  //   );
+  //   return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  // }
 }

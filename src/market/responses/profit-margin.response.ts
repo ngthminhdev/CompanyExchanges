@@ -1,19 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UtilCommonTemplate } from '../../utils/utils.common';
-import { IndusValueInterface } from '../interfaces/indus-value.interface';
+import { ISIndsProfitMargins } from '../interfaces/inds-profit-margin.interface';
 
-export class IndusValueResponse {
+export class ProfitMarginResponse {
   @ApiProperty({
     type: String,
-    example: 'ACB',
+    example: 'Hóa chất',
   })
   industry: string;
-
-  @ApiProperty({
-    type: Date,
-    example: '2018/03/30',
-  })
-  date: Date | string;
 
   @ApiProperty({
     type: String,
@@ -23,11 +16,39 @@ export class IndusValueResponse {
 
   @ApiProperty({
     type: Number,
-    example: 1.5,
+    example: 0.609,
+    description: 'Hệ số thanh toán lãi vay',
   })
-  value: number;
+  GPM: number;
 
-  constructor(data?: IndusValueInterface, type: number = 0) {
+  @ApiProperty({
+    type: Number,
+    example: 0.609,
+    description: 'Chỉ số khả năng trả nợ ',
+  })
+  DSCR: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 0.609,
+    description: 'DE',
+  })
+  DE: number;
+
+  @ApiProperty({
+    type: Number,
+    example: 0.609,
+    description: 'Tỷ lệ nợ trên tổng tài sản ',
+  })
+  TDTA: number;
+
+  @ApiProperty({
+    type: Date,
+    example: '20231',
+  })
+  date: Date | string;
+
+  constructor(data?: ISIndsProfitMargins) {
     this.industry = data?.industry || '';
     switch (this.industry) {
       case 'Bảo hiểm':
@@ -91,22 +112,22 @@ export class IndusValueResponse {
         this.color = '#90ed7d';
         break;
     }
-    this.date =
-      type === 1
-        ? data?.date.toString()
-        : UtilCommonTemplate.toDate(data?.date) || '';
-    this.value = data?.value || 0;
+    this.GPM = data?.GPM || 0;
+    // this.DSCR = data?.DSCR || 0;
+    // this.DE = data?.DE || 0;
+    // this.TDTA = data?.TDTA || 0;
+    this.date = data?.date.toString() || '';
   }
 
-  public mapToList(data?: IndusValueInterface[], type: number = 0) {
-    return data?.map((item) => new IndusValueResponse(item, type));
+  public mapToList(data?: ISIndsProfitMargins[]) {
+    return data?.map((i) => new ProfitMarginResponse(i));
   }
 }
 
-export class IndusValueSwagger {
+export class ProfitMarginSwagger {
   @ApiProperty({
-    type: IndusValueResponse,
+    type: ProfitMarginResponse,
     isArray: true,
   })
-  data: IndusValueResponse[];
+  data: ProfitMarginResponse[];
 }
