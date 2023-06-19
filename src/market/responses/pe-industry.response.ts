@@ -97,10 +97,7 @@ export class PEIndustryResponse {
         this.color = '#90ed7d';
         break;
     }
-    this.date =
-      type === 1
-        ? data?.date.toString()
-        : UtilCommonTemplate.toDate(data?.date) || '';
+    this.date = data?.date.toString();
     this.PE = data?.PE || 0;
     this.floor = data?.floor || ''
   }
