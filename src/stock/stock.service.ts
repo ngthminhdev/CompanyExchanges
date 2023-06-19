@@ -1075,8 +1075,8 @@ export class StockService {
           )
           SELECT * FROM (
             SELECT global, industry, ticker, value
-            FROM top10
-            WHERE rn <= 10
+            FROM top15
+            WHERE rn <= 15
             UNION ALL
             SELECT i.floor AS global, i.LV2 AS industry, 'KHÁC' AS ticker, SUM(c.buyVal + c.sellVal) AS value
             FROM [marketTrade].[dbo].[foreign] c
@@ -1116,7 +1116,7 @@ export class StockService {
         ).latestDate;
 
         const query: string = `
-          WITH top10 AS (
+          WITH top15 AS (
               SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, c.value,
                     ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY c.value DESC) AS rn
               FROM [RATIO].[dbo].[ratio] c
@@ -1129,8 +1129,8 @@ export class StockService {
           )
           SELECT * FROM (
               SELECT global, industry, ticker, value
-              FROM top10
-              WHERE rn <= 10
+              FROM top15
+              WHERE rn <= 15
               UNION ALL
               SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.value) AS value
               FROM [RATIO].[dbo].[ratio] c
@@ -1139,7 +1139,7 @@ export class StockService {
                 AND c.date = @0 AND c.ratioCode = 'MARKETCAP'
                 AND i.[type] IN ('STOCK', 'ETF')
                 AND i.LV2 != ''
-                AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+                AND i.code NOT IN (SELECT ticker FROM top15 WHERE rn <= 15)
               GROUP BY i.floor, i.LV2
           ) AS result
           ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
@@ -1172,7 +1172,7 @@ export class StockService {
       }
 
       const query: string = `
-        WITH top10 AS (
+        WITH top15 AS (
               SELECT i.floor AS global, i.LV2 AS industry, c.code AS ticker, c.${field} as value,
                     ROW_NUMBER() OVER (PARTITION BY i.LV2 ORDER BY c.${field} DESC) AS rn
               FROM [marketTrade].[dbo].[tickerTradeVND] c
@@ -1185,8 +1185,8 @@ export class StockService {
           )
           SELECT * FROM (
               SELECT global, industry, ticker, value
-              FROM top10
-              WHERE rn <= 10
+              FROM top15
+              WHERE rn <= 15
               UNION ALL
               SELECT i.floor AS global, i.LV2 AS industry, 'khác' AS ticker, SUM(c.${field}) AS value
               FROM [marketTrade].[dbo].[tickerTradeVND] c
@@ -1195,7 +1195,7 @@ export class StockService {
                 AND c.date = @0
                 AND i.[type] IN ('STOCK', 'ETF')
                 AND i.LV2 != ''
-                AND i.code NOT IN (SELECT ticker FROM top10 WHERE rn <= 10)
+                AND i.code NOT IN (SELECT ticker FROM top15 WHERE rn <= 15)
               GROUP BY i.floor, i.LV2
           ) AS result
           ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
