@@ -17,6 +17,7 @@ import { IndusLiquidityResponse } from './responses/indus-liquidity.response';
 import { LiabilitiesChangeResponse } from './responses/liabilities-change.response';
 import { LiquidityChangePerformanceResponse } from './responses/liquidity-change-performance.response';
 import { PriceChangePerformanceResponse } from './responses/price-change-performance.response';
+import { TimeToLive } from '../enums/common.enum';
 
 @Injectable()
 export class MarketService {
@@ -324,6 +325,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.marketCapChange}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
     return mappedData;
   }
@@ -400,6 +402,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.IndusLiquidity}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -468,6 +471,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.EquityIndsChange}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -541,6 +545,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.LiabilitiesIndsChange}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -623,6 +628,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.EquityChange}:${floor}:${inds}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -703,6 +709,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.LiabilitiesChange}:${floor}:${inds}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -754,6 +761,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.netRevenueInds}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -804,6 +812,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.ProfitInds}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -854,6 +863,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.ActivityProfitInds}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -898,6 +908,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.EPSInds}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -949,6 +960,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.EBITDAInds}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -1000,6 +1012,7 @@ export class MarketService {
     await this.redis.set(
       `${RedisKeys.CashDividend}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -1032,7 +1045,9 @@ export class MarketService {
 
     const data = await this.mssqlService.query(query);
 
-    await this.redis.set(RedisKeys.TopHotIndustry, data);
+    await this.redis.set(RedisKeys.TopHotIndustry, data, {
+      ttl: TimeToLive.OneDay,
+    });
     return data;
   }
 }

@@ -80,6 +80,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
     );
 
     return mappedData;
@@ -140,7 +141,8 @@ export class FinanceHealthService {
 
     await this.redis.set(
       `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
-      mappedData, {ttl: TimeToLive.OneDay}
+      mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -214,7 +216,7 @@ export class FinanceHealthService {
 
     const mappedData = new PEBResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData);
+    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData, {ttl: TimeToLive.OneWeek});
 
     return mappedData;
   }
@@ -287,7 +289,9 @@ export class FinanceHealthService {
 
     const mappedData = new PEBResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.PBTicker}:${floor}:${inds}`, mappedData);
+    await this.redis.set(`${RedisKeys.PBTicker}:${floor}:${inds}`, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
 
     return mappedData;
   }
@@ -339,7 +343,11 @@ export class FinanceHealthService {
 
     const mappedData = new PayoutRatioResponse().mapTolist(data);
 
-    await this.redis.set(`${RedisKeys.PayoutRatio}:${ex}:${order}`, mappedData);
+    await this.redis.set(
+      `${RedisKeys.PayoutRatio}:${ex}:${order}`,
+      mappedData,
+      { ttl: TimeToLive.OneWeek },
+    );
 
     return mappedData;
   }
@@ -389,7 +397,9 @@ export class FinanceHealthService {
 
     const mappedData = new CashRatioResponse().mapTolist(data);
 
-    await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData);
+    await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
 
     return mappedData;
   }
@@ -467,6 +477,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.RotaionRatio}:${ex}:${order}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -558,6 +569,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -637,6 +649,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.IndsProfitMargins}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
