@@ -91,7 +91,7 @@ export class FinanceHealthService {
     const redisData = await this.redis.get(
       `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
 
@@ -124,16 +124,15 @@ export class FinanceHealthService {
                 ,[floor]
       )
       SELECT  b.[industry]
-            ,b.[floor]
             ,b.[date]
             ,SUM([giaBQGQ]) / SUM(NULLIF([EPS],0)) AS PE
       FROM bqgqData b
       INNER JOIN epsData e
       ON b.[industry] = e.[industry] AND b.[date] = e.[date] AND b.[floor] = e.[floor]
       GROUP BY  b.[industry]
-              ,b.[floor]
               ,b.[date]
     `;
+    console.log("🚀 ~ file: finance-health.service.ts:137 ~ FinanceHealthService ~ PEIndustry ~ query:", query)
 
     const data = await this.mssqlService.query<IPEIndustry[]>(query);
 

@@ -27,11 +27,6 @@ export class PEIndustryResponse {
   })
   PE: number;
 
-  @ApiProperty({
-    type: String,
-    example: 'HNX'
-  })
-  floor: string;
 
   constructor(data?: IPEIndustry, type: number = 0) {
     this.industry = data?.industry || '';
@@ -99,7 +94,6 @@ export class PEIndustryResponse {
     }
     this.date = data?.date.toString();
     this.PE = data?.PE || 0;
-    this.floor = data?.floor || ''
   }
 
   public mapToList(data?: IPEIndustry[], type: number = 0) {
