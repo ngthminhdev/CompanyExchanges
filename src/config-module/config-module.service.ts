@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtModuleOptions } from '@nestjs/jwt/dist/interfaces/jwt-module-options.interface';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { redisStore } from 'cache-manager-redis-store';
+import * as redisStore from 'cache-manager-redis-store';
 import { KafkaOptions, Transport } from '@nestjs/microservices';
 import { Partitioners } from 'kafkajs';
 import { TimeToLive } from '../enums/common.enum';
@@ -61,11 +61,9 @@ export class ConfigServiceProvider {
 
   async createRedisOptions(): Promise<any> {
     return {
-      store: await redisStore({
-        // url: process.env.REDIS_URL,
-        url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/${process.env.REDIS_DB}`,
-        ttl: TimeToLive.HaftHour,
-      }),
+      store: redisStore,
+      url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/${process.env.REDIS_DB}`,
+      ttl: TimeToLive.HaftHour,
     };
   }
 

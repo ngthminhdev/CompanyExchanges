@@ -1039,12 +1039,12 @@ export class StockService {
       const ex = exchange.toUpperCase();
       const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-      // const redisData = await this.redis.get(
-      //   `${RedisKeys.MarketMap}:${ex}:${order}`,
-      // );
-      // if (redisData) {
-      //   return redisData;
-      // }
+      const redisData = await this.redis.get(
+        `${RedisKeys.MarketMap}:${ex}:${order}`,
+      );
+      if (redisData) {
+        return redisData;
+      }
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
@@ -1088,17 +1088,17 @@ export class StockService {
               AND I.status = 'listed'
               AND i.code NOT IN (SELECT ticker FROM top15 WHERE rn <= 15)
             GROUP BY i.floor, i.LV2
-          ) AS result
+          ) AS resultredisData
           ORDER BY industry, CASE WHEN ticker = 'KHÁC' THEN 1 ELSE 0 END, value DESC;
         `;
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
 
-        // await this.redis.set(
-        //   `${RedisKeys.MarketMap}:${ex}:${order}`,
-        //   mappedData,
-        // );
+        await this.redis.set(
+          `${RedisKeys.MarketMap}:${ex}:${order}`,
+          mappedData, {ttl: TimeToLive.FiveMinutes}
+        );
 
         return mappedData;
       }
@@ -1148,10 +1148,10 @@ export class StockService {
           await this.dbServer.query(query, [date]),
         );
 
-        // await this.redis.set(
-        //   `${RedisKeys.MarketMap}:${ex}:${order}`,
-        //   mappedData,
-        // );
+        await this.redis.set(
+          `${RedisKeys.MarketMap}:${ex}:${order}`,
+          mappedData, {ttl: TimeToLive.FiveMinutes}
+        );
 
         return mappedData;
       }
@@ -1205,7 +1205,7 @@ export class StockService {
         await this.dbServer.query(query, [date]),
       );
 
-      // await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData);
+      await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData, {ttl: TimeToLive.FiveMinutes});
 
       return mappedData;
     } catch (e) {
