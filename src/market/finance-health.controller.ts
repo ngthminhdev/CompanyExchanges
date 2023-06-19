@@ -13,17 +13,19 @@ import { PayoutRatioSwagger } from './responses/payout-ratio.response';
 import { RotationRatioSwagger } from './responses/rotation.response';
 import { DebtSolvencySwagger } from './responses/debt-solvency.response';
 import { ProfitMarginSwagger } from './responses/profit-margin.response';
+import { PEIndustrySwagger } from './responses/pe-industry.response';
+import { PEPBIndustrySwagger } from './responses/pepb-industry.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
 export class FinanceHealthController {
   constructor(private readonly fHealthService: FinanceHealthService) {}
 
-  @Get('p-e-p-b-binh-quan-nganh')
+  @Get('p-b-binh-quan-nganh')
   @ApiOperation({
-    summary: 'Diễn biến P/E, P/B bình quân các nhóm ngành (lần)',
+    summary: 'P/B bình quân các nhóm ngành (lần)',
   })
-  @ApiOkResponse({ type: IndusValueSwagger })
+  @ApiOkResponse({ type: PEPBIndustrySwagger })
   async PEPBIndustry(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.fHealthService.PEPBIndustry(
       q.exchange.toUpperCase(),
@@ -37,7 +39,7 @@ export class FinanceHealthController {
   @ApiOperation({
     summary: 'Diễn biến P/E bình quân các nhóm ngành (lần)',
   })
-  @ApiOkResponse({ type: IndusValueSwagger })
+  @ApiOkResponse({ type: PEIndustrySwagger })
   async PEIndustry(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.fHealthService.PEIndustry(
       q.exchange.toUpperCase(),
