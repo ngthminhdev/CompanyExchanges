@@ -33,6 +33,20 @@ export class FinanceHealthController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
+  @Get('p-e-binh-quan-nganh')
+  @ApiOperation({
+    summary: 'Diễn biến P/E bình quân các nhóm ngành (lần)',
+  })
+  @ApiOkResponse({ type: IndusValueSwagger })
+  async PEIndustry(@Query() q: TimeFrameDto, @Res() res: Response) {
+    const data = await this.fHealthService.PEIndustry(
+      q.exchange.toUpperCase(),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
   @Get('p-e-binh-quan-co-phieu')
   @ApiOperation({
     summary: 'Diễn biến P/E bình quân các co phieu',

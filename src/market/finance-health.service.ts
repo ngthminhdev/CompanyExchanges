@@ -7,7 +7,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPayoutRatio } from './interfaces/payout-ratio.interface';
-import { ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
+import { IPEIndustry, ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
 import { MarketService } from './market.service';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
@@ -19,6 +19,8 @@ import { ISIndsDebtSolvency } from './interfaces/Inds-debt-solvency.interface';
 import { DebtSolvencyResponse } from './responses/debt-solvency.response';
 import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
 import { ProfitMarginResponse } from './responses/profit-margin.response';
+import { TimeToLive } from '../enums/common.enum';
+import { PEIndustryResponse } from './responses/pe-industry.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -78,6 +80,67 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
       mappedData,
+    );
+
+    return mappedData;
+  }
+
+  async PEIndustry(ex: string, type: number, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+      WITH epsData AS
+      (
+        SELECT  [industry]
+              ,[date]
+              ,[floor]
+              ,SUM([thuNhapRong4Quy]) / SUM(shareOut) AS EPS
+        FROM [VISUALIZED_DATA].[dbo].[EPS_code]
+        WHERE floor in ${floor}
+        AND [date] IN ${dateFilter}
+        GROUP BY  [industry]
+                ,[date]
+                ,[floor]
+      ), bqgqData AS
+      (
+        SELECT  b.[industry]
+              ,b.[date]
+              ,b.[floor]
+              ,SUM([giaBQGQ]) AS [giaBQGQ]
+        FROM VISUALIZED_DATA.dbo.BQGQ b
+        WHERE floor in ${floor}
+        AND [date] IN ${dateFilter}
+        GROUP BY  [industry]
+                ,[date]
+                ,[floor]
+      )
+      SELECT  b.[industry]
+            ,b.[floor]
+            ,b.[date]
+            ,SUM([giaBQGQ]) / SUM(NULLIF([EPS],0)) AS PE
+      FROM bqgqData b
+      INNER JOIN epsData e
+      ON b.[industry] = e.[industry] AND b.[date] = e.[date] AND b.[floor] = e.[floor]
+      GROUP BY  b.[industry]
+              ,b.[floor]
+              ,b.[date]
+    `;
+
+    const data = await this.mssqlService.query<IPEIndustry[]>(query);
+
+    const mappedData = new PEIndustryResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
+      mappedData, {ttl: TimeToLive.OneDay}
     );
 
     return mappedData;
