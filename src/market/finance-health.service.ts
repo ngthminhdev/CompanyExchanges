@@ -115,7 +115,7 @@ export class FinanceHealthService {
         SELECT  b.[industry]
               ,b.[date]
               ,b.[floor]
-              ,SUM([giaBQGQ]) AS [giaBQGQ]
+              ,SUM([marketCap]) / sum([shareOut]) AS [giaBQGQ]
         FROM VISUALIZED_DATA.dbo.BQGQ b
         WHERE floor in ${floor}
         AND [date] IN ${dateFilter}
