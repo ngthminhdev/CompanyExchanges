@@ -29,4 +29,14 @@ export class MacroController {
     const data = await this.macrosService.gdpPrice();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('gdp-dong-gop')
+  @ApiOperation({
+    summary: 'Tỷ trọng đóng góp GDP theo các nhóm ngành chính (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryGDPContibute(@Res() res: Response) {
+    const data = await this.macrosService.idustryGDPContibute();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

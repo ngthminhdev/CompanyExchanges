@@ -83,4 +83,5 @@ export enum RedisKeys {
   //Vi mo
   industryGDPValue = 'industry-GDP-value',
   gdpPrice = 'gdp-price',
+  idustryGDPContibute = 'idustry-GDP-contibute',
 }
