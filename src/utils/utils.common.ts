@@ -131,6 +131,43 @@ export class UtilCommonTemplate {
     return this.getPastDate(count - 1, type, previousEndDate, results);
   }
 
+  static getPastDateV2(
+    count: number,
+    type: number = TimeTypeEnum.Quarter,
+    date: moment.Moment | Date | string = new Date(),
+    results = [],
+  ): string[] {
+    if (count === 0) {
+      return results;
+    }
+    let previousEndDate: moment.Moment | Date | string;
+    if (type === TimeTypeEnum.Year) {
+      if (!results.length) {
+        count--
+        results.push(
+          moment(date)
+            .subtract(1, 'quarter')
+            .endOf('quarter')
+            .startOf('month')
+            .format('YYYY-MM-DD'),
+        );
+      }
+      previousEndDate = moment(date)
+        .subtract(5, 'quarter')
+        .endOf('quarter')
+        .startOf('month')
+    } else {
+      previousEndDate = moment(date)
+        .subtract(1, 'quarter')
+        .endOf('quarter')
+        .startOf('month')
+        
+    }
+    results.push(previousEndDate.format('YYYY-MM-DD'));
+
+    return this.getPastDateV2(count - 1, type, previousEndDate, results);
+  }
+
   static getYearQuarters(
     count: number,
     type: number = TimeTypeEnum.Quarter,
@@ -185,6 +222,17 @@ export class UtilCommonTemplate {
       startDate: filteredDates[filteredDates.length - 1],
       endDate: filteredDates[0],
       dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
+    };
+  }
+
+  static getDateFilterV2(input: string[]) {
+    const filteredDates = input.filter((date) => date !== '');
+    return {
+      startDate: filteredDates[filteredDates.length - 1],
+      endDate: filteredDates[0],
+      dateFilter: `(${filteredDates
+        .map((date) => `'${date} 00:00:00.000'`)
+        .join(', ')})`,
     };
   }
 

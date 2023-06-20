@@ -5,6 +5,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
+import { UtilCommonTemplate } from '../utils/utils.common';
 
 @Injectable()
 export class MacroService {
@@ -111,5 +112,40 @@ export class MacroService {
     });
 
     return mappedData;
+  }
+
+  async idustryGDPGrowth(order: number): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      `${RedisKeys.idustryGDPGrowth}:${order}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDateV2(2, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilterV2(date);
+
+    const query: string = `
+        SELECT  [chiTieu]     AS [name]
+            ,[thoiDiem]    AS [date]
+            ,AVG([giaTri]) AS [value]
+        FROM [macroEconomic].[dbo].[EconomicVN]
+        WHERE phanBang = 'GDP'
+        AND thoiDiem IN ${dateFilter}
+        AND nhomDulieu = N'Tăng trưởng GDP theo giá 2010'
+        GROUP BY  [chiTieu]
+                ,[thoiDiem]
+        ORDER BY [name]
+                ,[date]
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(`${RedisKeys.idustryGDPGrowth}:${order}`, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData as any;
   }
 }

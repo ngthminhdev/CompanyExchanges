@@ -1,6 +1,7 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
 import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
@@ -37,6 +38,16 @@ export class MacroController {
   @ApiOkResponse({ type: GDPSwagger })
   async idustryGDPContibute(@Res() res: Response) {
     const data = await this.macrosService.idustryGDPContibute();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('gdp-tang-truong')
+  @ApiOperation({
+    summary: 'Tăng trưởng GDP theo từng ngành nghề (Tỷ đồng)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryGDPGrowth(@Query() q: OrderDto, @Res() res: Response) {
+    const data = await this.macrosService.idustryGDPGrowth(parseInt(q.order));
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
