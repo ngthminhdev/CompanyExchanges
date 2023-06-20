@@ -79,4 +79,8 @@ export enum RedisKeys {
   IndsProfitMargins = 'inds-profit-margin',
 
   NearestDate = 'nearest-date',
+
+  //Vi mo
+  industryGDPValue = 'industry-GDP-value',
+  gdpPrice = 'gdp-price',
 }
