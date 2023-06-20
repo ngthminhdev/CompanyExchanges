@@ -1,10 +1,11 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { BaseResponse } from '../utils/utils.response';
 import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
 
+@ApiTags('API - macro')
 @Controller('macro')
 export class MacroController {
   constructor(private readonly macrosService: MacroService) {}
