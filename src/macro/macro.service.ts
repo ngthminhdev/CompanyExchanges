@@ -25,7 +25,7 @@ export class MacroService {
         SELECT  [chiTieu]   as [name]
                 ,[thoiDiem] as [date]
                 ,[giaTri]   as [value]
-        FROM [macroEconomic].[dbo].[EconomicVN]
+        FROM [macroEconomic].[dbo].[DuLieuViMo]
         WHERE chiTieu IN ( 
             N'Giá trị GDP (2010) : Công nghiệp (Tỷ VNĐ)', 
             N'Giá trị GDP (2010) : Dịch vụ (Tỷ VNĐ)', 
@@ -86,7 +86,7 @@ export class MacroService {
             SELECT  [chiTieu]  AS [name]
                 ,[thoiDiem] AS [date]
                 ,[giaTri]   AS [value]
-            FROM [macroEconomic].[dbo].[EconomicVN]
+            FROM [macroEconomic].[dbo].[DuLieuViMo]
             WHERE [chiTieu] IN ( N'Giá trị GDP (2010) : Công nghiệp (Tỷ VNĐ)', N'Giá trị GDP (2010) : Dịch vụ (Tỷ VNĐ)', N'Giá trị GDP (2010) : Nông nghiệp (Tỷ VNĐ)' )
             AND [thoiDiem] >= '2013-01-01' 
         ), cancultaedData AS
@@ -128,7 +128,7 @@ export class MacroService {
         SELECT  [chiTieu]     AS [name]
             ,[thoiDiem]    AS [date]
             ,AVG([giaTri]) AS [value]
-        FROM [macroEconomic].[dbo].[EconomicVN]
+        FROM [macroEconomic].[dbo].[DuLieuViMo]
         WHERE phanBang = 'GDP'
         AND thoiDiem IN ${dateFilter}
         AND nhomDulieu = N'Tăng trưởng GDP theo giá 2010'

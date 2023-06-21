@@ -21,6 +21,7 @@ import { RealIpMiddleware } from './middlewares/real-ip.middleware';
 import { DB_SERVER } from './constants';
 import { MarketModule } from './market/market.module';
 import { MssqlModule } from './mssql/mssql.module';
+import { MacroModule } from './macro/macro.module';
 
 @Module({
   imports: [
@@ -77,7 +78,8 @@ import { MssqlModule } from './mssql/mssql.module';
     QueueModule,
     SocketModule,
     MarketModule,
-    KafkaModule,
+    MacroModule,
+    // KafkaModule,
   ],
 })
 export class AppModule implements NestModule {
