@@ -148,4 +148,36 @@ export class MacroService {
 
     return mappedData as any;
   }
+
+  async idustryGDPGrowthPercent(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.idustryGDPGrowthPercent,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+        SELECT  [chiTieu]  AS [name]
+              ,[thoiDiem] AS [date]
+              ,([giaTri] - lag([giaTri]) over ( partition by [chiTieu] ORDER BY [thoiDiem] )) 
+                      / lag([giaTri]) over ( partition by [chiTieu] ORDER BY [thoiDiem] ) AS [value]
+        FROM [macroEconomic].[dbo].[DuLieuViMo]
+        WHERE [thoiDiem] >= '2013-03-01 00:00:00.000'
+        AND [chiTieu] IN ( 
+              N'Công nghiệp chế biến, chế tạo', 
+              N'Hoạt động kinh doanh bất động sản ', 
+              N'Vận tải, kho bãi', N'Xây dựng', 
+              N'Bán buôn và bán lẻ; sửa chữa ô tô, mô tô, xe máy và xe có động cơ khác ' )
+        ORDER BY [name] , [date];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.idustryGDPGrowthPercent, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
 }

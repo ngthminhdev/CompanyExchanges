@@ -85,4 +85,5 @@ export enum RedisKeys {
   gdpPrice = 'gdp-price',
   idustryGDPContibute = 'idustry-GDP-contibute',
   idustryGDPGrowth = 'idustry-GDP-growth',
+  idustryGDPGrowthPercent = 'idustry-GDP-growth-percent',
 }

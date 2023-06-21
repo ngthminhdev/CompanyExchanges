@@ -50,4 +50,14 @@ export class MacroController {
     const data = await this.macrosService.idustryGDPGrowth(parseInt(q.order));
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('per-gdp-tang-truong')
+  @ApiOperation({
+    summary: 'Tăng trưởng GDP theo từng ngành nghề (Tỷ đồng)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryGDPGrowthPercent(@Res() res: Response) {
+    const data = await this.macrosService.idustryGDPGrowthPercent();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
