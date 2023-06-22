@@ -11,6 +11,10 @@ import { GDPSwagger } from './responses/gdp.response';
 export class MacroController {
   constructor(private readonly macrosService: MacroService) {}
 
+  /**
+   * API site GDP
+   */
+
   @Get('gdp-theo-nganh')
   @ApiOperation({
     summary: 'Giá trị GDP theo các nhóm ngành chính (Tỷ đồng)',
@@ -53,11 +57,25 @@ export class MacroController {
 
   @Get('per-gdp-tang-truong')
   @ApiOperation({
-    summary: 'Tăng trưởng GDP theo từng ngành nghề (Tỷ đồng)',
+    summary: 'Tăng trưởng GDP theo từng ngành nghề (%)',
   })
   @ApiOkResponse({ type: GDPSwagger })
   async idustryGDPGrowthPercent(@Res() res: Response) {
     const data = await this.macrosService.idustryGDPGrowthPercent();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  /**
+   * API site CPI
+   */
+
+  @Get('per-cpi-theo-linh-vuc')
+  @ApiOperation({
+    summary: 'CPI theo các lĩnh vực của nền kinh tế (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryCPIPercent(@Res() res: Response) {
+    const data = await this.macrosService.idustryCPIPercent();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

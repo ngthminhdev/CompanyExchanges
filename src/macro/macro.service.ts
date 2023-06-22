@@ -180,4 +180,38 @@ export class MacroService {
 
     return mappedData;
   }
+
+  async idustryCPIPercent(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.idustryCPIPercent,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT  [chiTieu]  AS [name]
+            ,[thoiDiem] AS [date]
+            ,[giaTri]   AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ GIÁ TIÊU DÙNG'
+      AND [thoiDiem] >= '2018-01-01'
+      AND [chiTieu] in (
+          N'Tăng trưởng CPI :Hàng ăn và dịch vụ ăn uốngMoM (%)',
+          N'Tăng trưởng CPI :Nhà ở và vật liệu xây dựngMoM (%)',
+          N'Tăng trưởng CPI :Thiết bị và đồ dùng gia đìnhMoM (%)',
+          N'Tăng trưởng CPI :Giao thôngMoM (%)',
+          N'Tăng trưởng CPI :Giáo dụcMoM (%)'
+      )
+      ORDER BY [chiTieu], [thoiDiem];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.idustryCPIPercent, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
 }
