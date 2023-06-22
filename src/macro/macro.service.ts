@@ -6,6 +6,7 @@ import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
+import moment from 'moment';
 
 @Injectable()
 export class MacroService {
@@ -263,7 +264,12 @@ export class MacroService {
             ,[giaTri]   AS [value]
       FROM [macroEconomic].[dbo].[DuLieuViMo]
       WHERE phanBang = N'CHỈ SỐ GIÁ TIÊU DÙNG'
-      AND [thoiDiem] >= '${date[1]}' AND [thoiDiem] <= '${date[0]}'
+      AND [thoiDiem] >= '${moment(date[1])
+        .startOf('year')
+        .format('YYYY-MM-DD')}' 
+      AND [thoiDiem] <= '${moment(date[0])
+        .startOf('year')
+        .format('YYYY-MM-DD')}'
       AND [chiTieu] = 
         N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)'
       ORDER BY [chiTieu], [thoiDiem];
