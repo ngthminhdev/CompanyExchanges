@@ -108,4 +108,14 @@ export class MacroController {
     const data = await this.macrosService.idustryCPIChange(parseInt(q.order));
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('cpi-quyen-so')
+  @ApiOperation({
+    summary: 'Quyền số CPI theo rổ hàng hóa (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async cpiQuyenSo(@Res() res: Response) {
+    const data = await this.macrosService.cpiQuyenSo();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

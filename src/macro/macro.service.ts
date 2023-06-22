@@ -312,4 +312,30 @@ export class MacroService {
 
     return mappedData;
   }
+
+  async cpiQuyenSo(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.cpiQuyenSo,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+      select
+          [Các nhóm hàng và dịch vụ] as [name],
+          sum([Giai đoạn 2020-2025]) as value
+      from  [macroEconomic].[dbo].[quyenso]
+      where [Mã] is not null
+      group by [Các nhóm hàng và dịch vụ]
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.cpiQuyenSo, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
 }

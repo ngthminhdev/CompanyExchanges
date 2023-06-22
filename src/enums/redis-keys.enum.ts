@@ -92,4 +92,5 @@ export enum RedisKeys {
   idustryCPITable = 'idustry-CPITable',
   idustryCPISameQuater = 'idustry-CPISameQuater',
   idustryCPIChange = 'idustry-CPI-change',
+  cpiQuyenSo = 'cpi-quyen-so',
 }
