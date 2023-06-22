@@ -166,6 +166,7 @@ export class MacroService {
               N'Công nghiệp chế biến, chế tạo', 
               N'Hoạt động kinh doanh bất động sản ', 
               N'Vận tải, kho bãi', N'Xây dựng', 
+              N'Khai khoáng',
               N'Bán buôn và bán lẻ; sửa chữa ô tô, mô tô, xe máy và xe có động cơ khác ' )
         ORDER BY [name] , [date];
     `;
