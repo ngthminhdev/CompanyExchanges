@@ -6,7 +6,7 @@ import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
-import moment from 'moment';
+import * as moment from 'moment';
 
 @Injectable()
 export class MacroService {
