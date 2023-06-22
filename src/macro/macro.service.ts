@@ -268,7 +268,7 @@ export class MacroService {
         .startOf('year')
         .format('YYYY-MM-DD')}' 
       AND [thoiDiem] <= '${moment(date[0])
-        .startOf('year')
+        .endOf('year')
         .format('YYYY-MM-DD')}'
       AND [chiTieu] = 
         N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)'
