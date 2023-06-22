@@ -28,6 +28,7 @@ export class GDPResponse {
     this.date = UtilCommonTemplate.toDate(data?.date);
     this.value = data?.value || 0;
     switch (this.name) {
+      //GDP %
       case 'Bán buôn và bán lẻ; sửa chữa ô tô, mô tô, xe máy và xe có động cơ khác ':
         this.color = '#FF8700';
         break;
@@ -46,6 +47,25 @@ export class GDPResponse {
       case 'Khai khoáng':
         this.color = '#A1FF0A';
         break;
+
+      //Đồ thị CPI theo các lĩnh vực của nền kinh tế
+
+      case 'Tăng trưởng CPI :Hàng ăn và dịch vụ ăn uốngMoM (%)':
+        this.color = '#BE0AFF';
+        break;
+      case 'Tăng trưởng CPI :Nhà ở và vật liệu xây dựngMoM (%)':
+        this.color = '#FF6699';
+        break;
+      case 'Tăng trưởng CPI :Thiết bị và đồ dùng gia đìnhMoM (%)':
+        this.color = '#A1FF0A';
+        break;
+      case 'Tăng trưởng CPI :Giao thôngMoM (%)':
+        this.color = '#FF0000';
+        break;
+      case 'Tăng trưởng CPI :Giáo dụcMoM (%)':
+        this.color = '#0AEFFF';
+        break;
+
       default:
         this.color = '';
     }

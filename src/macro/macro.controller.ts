@@ -78,4 +78,34 @@ export class MacroController {
     const data = await this.macrosService.idustryCPIPercent();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('table-cpi-theo-linh-vuc')
+  @ApiOperation({
+    summary: 'Bảng CPI theo các lĩnh vực của nền kinh tế',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryCPITable(@Res() res: Response) {
+    const data = await this.macrosService.idustryCPITable();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('per-cpi-cung-ky')
+  @ApiOperation({
+    summary: 'CPI các tháng so với cùng kỳ năm trước (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryCPISameQuater(@Res() res: Response) {
+    const data = await this.macrosService.idustryCPISameQuater();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('cpi-thay-doi')
+  @ApiOperation({
+    summary: 'Thay đổi CPI các lĩnh vực của nền kinh tế ',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async idustryCPIChange(@Query() q: OrderDto, @Res() res: Response) {
+    const data = await this.macrosService.idustryCPIChange(parseInt(q.order));
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

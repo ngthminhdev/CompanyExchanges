@@ -3,9 +3,9 @@ import { Cache } from 'cache-manager';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
+import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
-import { UtilCommonTemplate } from '../utils/utils.common';
 
 @Injectable()
 export class MacroService {
@@ -159,9 +159,10 @@ export class MacroService {
         SELECT  [chiTieu]  AS [name]
               ,[thoiDiem] AS [date]
               ,([giaTri] - lag([giaTri]) over ( partition by [chiTieu] ORDER BY [thoiDiem] )) 
-                      / lag([giaTri]) over ( partition by [chiTieu] ORDER BY [thoiDiem] ) AS [value]
+                      / lag(ABS([giaTri])) over ( partition by [chiTieu] ORDER BY [thoiDiem] ) AS [value]
         FROM [macroEconomic].[dbo].[DuLieuViMo]
         WHERE [thoiDiem] >= '2013-03-01 00:00:00.000'
+        AND phanBang = 'GDP'
         AND [chiTieu] IN ( 
               N'Công nghiệp chế biến, chế tạo', 
               N'Hoạt động kinh doanh bất động sản ', 
@@ -210,6 +211,102 @@ export class MacroService {
     const mappedData = new GDPResponse().mapToList(data);
 
     await this.redis.set(RedisKeys.idustryCPIPercent, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async idustryCPITable(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.idustryCPITable,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT  [chiTieu]  AS [name]
+            ,[thoiDiem] AS [date]
+            ,[giaTri]   AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ GIÁ TIÊU DÙNG'
+      AND [thoiDiem] >= '2018-01-01'
+      AND [chiTieu] in (
+          N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)',
+          N'Tăng trưởng CPI :Lương thựcMoM (%)',
+          N'Tăng trưởng CPI :Thực phẩmMoM (%)'
+      )
+      ORDER BY [chiTieu], [thoiDiem];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.idustryCPITable, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async idustryCPISameQuater(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.idustryCPISameQuater,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDateV2(2, 1);
+
+    const query: string = `
+      SELECT  [chiTieu]  AS [name]
+            ,[thoiDiem] AS [date]
+            ,[giaTri]   AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ GIÁ TIÊU DÙNG'
+      AND [thoiDiem] >= '${date[1]}' AND [thoiDiem] <= '${date[0]}'
+      AND [chiTieu] = 
+        N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)'
+      ORDER BY [chiTieu], [thoiDiem];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.idustryCPISameQuater, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async idustryCPIChange(order: number): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(
+      `${RedisKeys.idustryCPIChange}:${order}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getPastDateV2(2, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilterV2(date);
+
+    const query: string = `
+      SELECT  [chiTieu]  AS [name]
+            ,[thoiDiem] AS [date]
+            ,[giaTri]   AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ GIÁ TIÊU DÙNG'
+      AND [thoiDiem] in ${dateFilter}
+      AND [chiTieu] !=
+          N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)'
+      ORDER BY [chiTieu], [thoiDiem];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(`${RedisKeys.idustryCPIChange}:${order}`, mappedData, {
       ttl: TimeToLive.OneWeek,
     });
 
