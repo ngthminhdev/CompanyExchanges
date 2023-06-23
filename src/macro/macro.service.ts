@@ -7,7 +7,7 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
 import * as moment from 'moment';
-import { IPPIndustyMapping } from './mapping/ipp-industry.mapping';
+import { IPPIndusProductionIndexMapping, IPPIndustyMapping } from './mapping/ipp-industry.mapping';
 
 @Injectable()
 export class MacroService {
@@ -343,7 +343,9 @@ export class MacroService {
   }
 
   async industrialIndex(): Promise<GDPResponse[]> {
-    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.industrialIndex);
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.industrialIndex,
+    );
     if (redisData) return redisData;
 
     const query: string = `
@@ -370,7 +372,9 @@ export class MacroService {
   }
 
   async industrialIndexTable(): Promise<GDPResponse[]> {
-    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.industrialIndexTable);
+    const redisData = await this.redis.get<GDPResponse[]>(
+      RedisKeys.industrialIndexTable,
+    );
     if (redisData) return redisData;
 
     const query: string = `
@@ -396,10 +400,91 @@ export class MacroService {
   }
 
   async ippConsumAndInventory(industry: string): Promise<GDPResponse[]> {
-
     const industryFilter = IPPIndustyMapping[industry] || '';
 
-    const redisData = await this.redis.get<GDPResponse[]>(`${RedisKeys.ippConsumAndInventory}:${industryFilter}`);
+    const redisData = await this.redis.get<GDPResponse[]>(
+      `${RedisKeys.ippConsumAndInventory}:${industryFilter}`,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT 
+          CASE 
+              WHEN nhomDuLieu = N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)' THEN [chiTieu] + ' - TT'
+              WHEN nhomDuLieu = N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)' THEN [chiTieu] + ' - TK'
+              ELSE [chiTieu]
+          END AS [name],
+          [thoiDiem] AS [date],
+          [giaTri] AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
+          AND nhomDuLieu IN (
+              N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)',
+              N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)'
+          )
+          AND thoiDiem >= '2013-01-01'
+      AND [chiTieu] = ${industryFilter}
+
+      ORDER BY [chiTieu], [thoiDiem];
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.ippConsumAndInventory}:${industryFilter}`,
+      mappedData,
+      {
+        ttl: TimeToLive.OneWeek,
+      },
+    );
+
+    return mappedData;
+  }
+
+  async ippIndusProductionIndex(industry: string): Promise<GDPResponse[]> {
+    const industryFilter = IPPIndusProductionIndexMapping[industry] || '';
+
+    const redisData = await this.redis.get<GDPResponse[]>(
+      `${RedisKeys.ippIndusProductionIndex}:${industryFilter}`,
+    );
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT 
+          [chiTieu] as [name],
+          [thoiDiem] AS [date],
+          [giaTri] AS [value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
+          AND nhomDuLieu = N'CHỈ SỐ SẢN XUẤT CÔNG NGHIỆP THEO NGÀNH CÔNG NGHIỆP (%)'
+          AND thoiDiem >= '2013-01-01'
+      ORDER BY [chiTieu] DESC, [thoiDiem];
+
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.ippIndusProductionIndex}:${industryFilter}`,
+      mappedData,
+      {
+        ttl: TimeToLive.OneWeek,
+      },
+    );
+
+    return mappedData;
+  }
+
+  async ippMostIndusProduction(industry: string): Promise<GDPResponse[]> {
+    const industryFilter = IPPIndustyMapping[industry] || '';
+
+    const redisData = await this.redis.get<GDPResponse[]>(
+      `${RedisKeys.ippMostIndusProduction}:${industryFilter}`,
+    );
     if (redisData) return redisData;
 
     const query: string = `
@@ -412,7 +497,7 @@ export class MacroService {
           N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)',
           N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)'
       )
-      AMD [chiTieu] = ${industryFilter}
+      AND [chiTieu] = ${industryFilter}
       and thoiDiem >= '2013-01-01'
       ORDER BY chiTieu desc, thoiDiem;
     `;
@@ -421,9 +506,13 @@ export class MacroService {
 
     const mappedData = new GDPResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.ippConsumAndInventory}:${industryFilter}`, mappedData, {
-      ttl: TimeToLive.OneWeek,
-    });
+    await this.redis.set(
+      `${RedisKeys.ippMostIndusProduction}:${industryFilter}`,
+      mappedData,
+      {
+        ttl: TimeToLive.OneWeek,
+      },
+    );
 
     return mappedData;
   }

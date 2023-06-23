@@ -146,11 +146,40 @@ export class MacroController {
 
   @Get('ipp-tieu-thu-va-ton-kho')
   @ApiOperation({
-    summary: 'Chỉ số sản xuất công nghiệp (%)',
+    summary: 'Chỉ số tiêu thụ & tồn kho SP công nghiệp (%))',
   })
   @ApiOkResponse({ type: GDPSwagger })
-  async ippConsumAndInventory(@Query() q: IPPIndustryDto, @Res() res: Response) {
+  async ippConsumAndInventory(
+    @Query() q: IPPIndustryDto,
+    @Res() res: Response,
+  ) {
     const data = await this.macrosService.ippConsumAndInventory(q.industry);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ipp-san-xuat-cong-nghiep')
+  @ApiOperation({
+    summary: 'Chỉ số sản xuất công nghiệp theo ngành công nghiệp (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async ippIndusProductionIndex(
+    @Query() q: IPPIndustryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.ippIndusProductionIndex(q.industry);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ipp-san-luong-cong-nghiep')
+  @ApiOperation({
+    summary: 'Sản lượng công nghiệp các sản phẩm chủ yếu',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async ippMostIndusProduction(
+    @Query() q: IPPIndustryDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.ippMostIndusProduction(q.industry);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

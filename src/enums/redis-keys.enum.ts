@@ -98,4 +98,6 @@ export enum RedisKeys {
   industrialIndex = 'idustry-industrial-index',
   industrialIndexTable = 'idustry-industrial-index-table',
   ippConsumAndInventory = 'ipp-consum-and-inventory',
+  ippMostIndusProduction = 'ipp-most-indus-production',
+  ippIndusProductionIndex = 'ipp-indus-production-index',
 }
