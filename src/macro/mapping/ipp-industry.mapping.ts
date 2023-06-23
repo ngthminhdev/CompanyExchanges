@@ -56,7 +56,7 @@ export const IPPIndusProductionIndexMapping = {
   thanCoc: `N'Sản xuất than cốc, sản phẩm dầu mỏ tinh chế'`,
   dien: `N'Sản xuất thiết bị điện'`,
   duocLieu: `N'Sản xuất thuốc, hoá dược và dược liệu'`,
-  tranhPhuc: `N'Sản xuất trang phục'`,
+  trangPhuc: `N'Sản xuất trang phục'`,
   dieuHoa: `N'Sản xuất và phân phối điện, khí đốt, nước nóng, hơi nước và điều hoà không khí'`,
   roMooc: `N'Sản xuất xe có động cơ, rơ moóc'`,
   thucPham: `N'Sản xuất, chế biến thực phẩm'`,
