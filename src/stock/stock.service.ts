@@ -507,16 +507,16 @@ export class StockService {
         exchange.toUpperCase(),
       ];
       const query: string = `
-                SELECT e.date_time AS date, e.close_price AS exchange_price, e.ticker AS exchange,
+                SELECT e.date AS date, e.closePrice AS exchange_price, e.code AS exchange,
                     SUM(n.net_value_td) AS net_proprietary,
                     SUM(n.net_value_canhan) AS net_retail,
                     SUM(n.net_value_foreign) AS net_foreign
-                FROM PHANTICH.dbo.database_chisotoday e
-                JOIN PHANTICH.dbo.BCN_netvalue n ON e.date_time = n.date_time
-                WHERE e.ticker = @2 
-                AND e.date_time <= @0 
-                AND e.date_time >= @1
-                GROUP BY e.date_time, e.close_price, e.ticker
+                FROM marketTrade.dbo.indexTradeVND e
+                JOIN PHANTICH.dbo.BCN_netvalue n ON e.date = n.date_time
+                WHERE e.code = @2 
+                AND e.date <= @0 
+                AND e.date >= @1
+                GROUP BY e.date, e.closePrice, e.code
                 ORDER BY date DESC
             `;
       return new NetTransactionValueResponse().mapToList(
