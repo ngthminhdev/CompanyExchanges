@@ -5,7 +5,7 @@ import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
 import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
-import { IPPIndustryDto } from './dto/ipp-industry.dto';
+import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -163,7 +163,7 @@ export class MacroController {
   })
   @ApiOkResponse({ type: GDPSwagger })
   async ippIndusProductionIndex(
-    @Query() q: IPPIndustryDto,
+    @Query() q: IPPProductionIndexDto,
     @Res() res: Response,
   ) {
     const data = await this.macrosService.ippIndusProductionIndex(q.industry);
@@ -176,7 +176,7 @@ export class MacroController {
   })
   @ApiOkResponse({ type: GDPSwagger })
   async ippMostIndusProduction(
-    @Query() q: IPPIndustryDto,
+    @Query() q: IPPMostIndusProductionDto,
     @Res() res: Response,
   ) {
     const data = await this.macrosService.ippMostIndusProduction(q.industry);
