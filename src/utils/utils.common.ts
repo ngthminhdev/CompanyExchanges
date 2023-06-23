@@ -3,6 +3,7 @@ import * as moment from 'moment';
 import * as _ from 'lodash';
 import { TimeTypeEnum } from '../enums/common.enum';
 import { industryMapping } from '../market/mapping/industry.mapping';
+import { IPPIndustyMapping } from '../macro/mapping/ipp-industry.mapping';
 export class UtilCommonTemplate {
   static toDateTime(value?: any): any | string {
     if (!value) {
@@ -143,7 +144,7 @@ export class UtilCommonTemplate {
     let previousEndDate: moment.Moment | Date | string;
     if (type === TimeTypeEnum.Year) {
       if (!results.length) {
-        count--
+        count--;
         results.push(
           moment(date)
             .subtract(1, 'quarter')
@@ -155,13 +156,12 @@ export class UtilCommonTemplate {
       previousEndDate = moment(date)
         .subtract(5, 'quarter')
         .endOf('quarter')
-        .startOf('month')
+        .startOf('month');
     } else {
       previousEndDate = moment(date)
         .subtract(1, 'quarter')
         .endOf('quarter')
-        .startOf('month')
-        
+        .startOf('month');
     }
     results.push(previousEndDate.format('YYYY-MM-DD'));
 
@@ -214,6 +214,11 @@ export class UtilCommonTemplate {
   static getIndustryFilter(input: string[]): string {
     if (!input[0]) return `(' ')`;
     return `(${input.map((name) => industryMapping[name]).join(', ')})`;
+  }
+
+  static getIPPIndustryFilter(input: string[]): string {
+    if (!input[0]) return `(' ')`;
+    return `(${input.map((name) => IPPIndustyMapping[name]).join(', ')})`;
   }
 
   static getDateFilter(input: string[]) {

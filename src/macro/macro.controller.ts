@@ -5,6 +5,7 @@ import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
 import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
+import { IPPIndustryDto } from './dto/ipp-industry.dto';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -148,8 +149,8 @@ export class MacroController {
     summary: 'Chỉ số sản xuất công nghiệp (%)',
   })
   @ApiOkResponse({ type: GDPSwagger })
-  async ippConsumAndInventory(@Res() res: Response) {
-    const data = await this.macrosService.ippConsumAndInventory();
+  async ippConsumAndInventory(@Query() q: IPPIndustryDto, @Res() res: Response) {
+    const data = await this.macrosService.ippConsumAndInventory(q.industry);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }

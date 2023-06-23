@@ -7,6 +7,7 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
 import * as moment from 'moment';
+import { IPPIndustyMapping } from './mapping/ipp-industry.mapping';
 
 @Injectable()
 export class MacroService {
@@ -394,8 +395,11 @@ export class MacroService {
     return mappedData;
   }
 
-  async ippConsumAndInventory(): Promise<GDPResponse[]> {
-    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.ippConsumAndInventory);
+  async ippConsumAndInventory(industry: string): Promise<GDPResponse[]> {
+
+    const industryFilter = IPPIndustyMapping[industry] || '';
+
+    const redisData = await this.redis.get<GDPResponse[]>(`${RedisKeys.ippConsumAndInventory}:${industryFilter}`);
     if (redisData) return redisData;
 
     const query: string = `
@@ -408,6 +412,7 @@ export class MacroService {
           N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)',
           N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)'
       )
+      AMD [chiTieu] = ${industryFilter}
       and thoiDiem >= '2013-01-01'
       ORDER BY chiTieu desc, thoiDiem;
     `;
@@ -416,7 +421,7 @@ export class MacroService {
 
     const mappedData = new GDPResponse().mapToList(data);
 
-    await this.redis.set(RedisKeys.ippConsumAndInventory, mappedData, {
+    await this.redis.set(`${RedisKeys.ippConsumAndInventory}:${industryFilter}`, mappedData, {
       ttl: TimeToLive.OneWeek,
     });
 
