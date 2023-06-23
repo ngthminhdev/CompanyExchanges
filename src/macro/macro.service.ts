@@ -496,7 +496,7 @@ export class MacroService {
       FROM [macroEconomic].[dbo].[DuLieuViMo]
       WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
           AND nhomDuLieu = N'Sản lượng công nghiệp một số sản phẩm'
-          AND thoiDiem >= '2013-01-01'
+          AND thoiDiem >= '2009-01-01'
           AND [chiTieu] = ${industryFilter}
       ORDER BY [chiTieu] DESC, [thoiDiem];
     `;
