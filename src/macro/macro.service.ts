@@ -7,7 +7,7 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
 import * as moment from 'moment';
-import { IPPIndusProductionIndexMapping, IPPIndustyMapping } from './mapping/ipp-industry.mapping';
+import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
 
 @Injectable()
 export class MacroService {
@@ -460,6 +460,7 @@ export class MacroService {
       WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
           AND nhomDuLieu = N'CHỈ SỐ SẢN XUẤT CÔNG NGHIỆP THEO NGÀNH CÔNG NGHIỆP (%)'
           AND thoiDiem >= '2013-01-01'
+      AND [chiTieu] = ${industryFilter}
       ORDER BY [chiTieu] DESC, [thoiDiem];
 
     `;
@@ -480,7 +481,7 @@ export class MacroService {
   }
 
   async ippMostIndusProduction(industry: string): Promise<GDPResponse[]> {
-    const industryFilter = IPPIndustyMapping[industry] || '';
+    const industryFilter = IPPMostIndustryProductionMapping[industry] || '';
 
     const redisData = await this.redis.get<GDPResponse[]>(
       `${RedisKeys.ippMostIndusProduction}:${industryFilter}`,
@@ -488,18 +489,16 @@ export class MacroService {
     if (redisData) return redisData;
 
     const query: string = `
-      SELECT  [chiTieu] as [name]
-            ,[thoiDiem] as [date]
-            ,[giaTri]    as[value]
+      SELECT 
+          [chiTieu] as [name],
+          [thoiDiem] AS [date],
+          [giaTri] AS [value]
       FROM [macroEconomic].[dbo].[DuLieuViMo]
       WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
-      AND nhomDuLieu in (
-          N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)',
-          N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)'
-      )
-      AND [chiTieu] = ${industryFilter}
-      and thoiDiem >= '2013-01-01'
-      ORDER BY chiTieu desc, thoiDiem;
+          AND nhomDuLieu = N'Sản lượng công nghiệp một số sản phẩm'
+          AND thoiDiem >= '2013-01-01'
+          AND [chiTieu] = ${industryFilter}
+      ORDER BY [chiTieu] DESC, [thoiDiem];
     `;
 
     const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
