@@ -93,4 +93,9 @@ export enum RedisKeys {
   idustryCPISameQuater = 'idustry-CPISameQuater',
   idustryCPIChange = 'idustry-CPI-change',
   cpiQuyenSo = 'cpi-quyen-so',
+
+  //IPP
+  industrialIndex = 'idustry-industrial-index',
+  industrialIndexTable = 'idustry-industrial-index-table',
+  ippConsumAndInventory = 'ipp-consum-and-inventory',
 }

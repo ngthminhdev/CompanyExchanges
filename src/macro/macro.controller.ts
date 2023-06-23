@@ -118,4 +118,38 @@ export class MacroController {
     const data = await this.macrosService.cpiQuyenSo();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  /**
+   * IPP
+   */
+
+  @Get('ipp-chi-so-cong-nghiep')
+  @ApiOperation({
+    summary: 'Chỉ số sản xuất công nghiệp (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async industrialIndex(@Res() res: Response) {
+    const data = await this.macrosService.industrialIndex();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ipp-chi-so-cong-nghiep-table')
+  @ApiOperation({
+    summary: 'Bảng chỉ số sản xuất công nghiệp',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async industrialIndexTable(@Res() res: Response) {
+    const data = await this.macrosService.industrialIndexTable();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ipp-tieu-thu-va-ton-kho')
+  @ApiOperation({
+    summary: 'Chỉ số sản xuất công nghiệp (%)',
+  })
+  @ApiOkResponse({ type: GDPSwagger })
+  async ippConsumAndInventory(@Res() res: Response) {
+    const data = await this.macrosService.ippConsumAndInventory();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }

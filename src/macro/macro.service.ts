@@ -267,9 +267,7 @@ export class MacroService {
       AND [thoiDiem] >= '${moment(date[1])
         .startOf('year')
         .format('YYYY-MM-DD')}' 
-      AND [thoiDiem] <= '${moment(date[0])
-        .endOf('year')
-        .format('YYYY-MM-DD')}'
+      AND [thoiDiem] <= '${moment(date[0]).endOf('year').format('YYYY-MM-DD')}'
       AND [chiTieu] = 
         N'Tăng trưởng CPI CPI :Chỉ số giá tiêu dùngMoM (%)'
       ORDER BY [chiTieu], [thoiDiem];
@@ -320,9 +318,7 @@ export class MacroService {
   }
 
   async cpiQuyenSo(): Promise<GDPResponse[]> {
-    const redisData = await this.redis.get<GDPResponse[]>(
-      RedisKeys.cpiQuyenSo,
-    );
+    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.cpiQuyenSo);
     if (redisData) return redisData;
 
     const query: string = `
@@ -339,6 +335,88 @@ export class MacroService {
     const mappedData = new GDPResponse().mapToList(data);
 
     await this.redis.set(RedisKeys.cpiQuyenSo, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async industrialIndex(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.industrialIndex);
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT  [chiTieu] as [name]
+            ,[thoiDiem] as [date]
+            ,[giaTri]    as[value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
+      AND chiTieu = N'Tăng trưởng: Toàn ngành công nghiệp (%)'
+      AND nhomDuLieu = N'Tăng trưởng chung - cập nhập (MoM%)'
+      AND thoiDiem >= '2013-01-01'
+      ORDER BY thoiDiem;
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.industrialIndex, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async industrialIndexTable(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.industrialIndexTable);
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT  [chiTieu] as [name]
+            ,[thoiDiem] as [date]
+            ,[giaTri]    as[value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
+      AND nhomDuLieu = N'Tăng trưởng chung - cập nhập (MoM%)'
+      AND thoiDiem >= '2013-01-01'
+      ORDER BY chiTieu desc, thoiDiem;
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.industrialIndexTable, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
+
+    return mappedData;
+  }
+
+  async ippConsumAndInventory(): Promise<GDPResponse[]> {
+    const redisData = await this.redis.get<GDPResponse[]>(RedisKeys.ippConsumAndInventory);
+    if (redisData) return redisData;
+
+    const query: string = `
+      SELECT  [chiTieu] as [name]
+            ,[thoiDiem] as [date]
+            ,[giaTri]    as[value]
+      FROM [macroEconomic].[dbo].[DuLieuViMo]
+      WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
+      AND nhomDuLieu in (
+          N'CHỈ SỐ TIÊU THỤ SP CÔNG NGHIỆP (%)',
+          N'CHỈ SỐ TỒN KHO SP CÔNG NGHIỆP (%)'
+      )
+      and thoiDiem >= '2013-01-01'
+      ORDER BY chiTieu desc, thoiDiem;
+    `;
+
+    const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
+
+    const mappedData = new GDPResponse().mapToList(data);
+
+    await this.redis.set(RedisKeys.ippConsumAndInventory, mappedData, {
       ttl: TimeToLive.OneWeek,
     });
 
