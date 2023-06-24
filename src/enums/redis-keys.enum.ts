@@ -79,4 +79,25 @@ export enum RedisKeys {
   IndsProfitMargins = 'inds-profit-margin',
 
   NearestDate = 'nearest-date',
+
+  //Vi mo
+  industryGDPValue = 'industry-GDP-value',
+  gdpPrice = 'gdp-price',
+  idustryGDPContibute = 'idustry-GDP-contibute',
+  idustryGDPGrowth = 'idustry-GDP-growth',
+  idustryGDPGrowthPercent = 'idustry-GDP-growth-percent',
+
+  //CPI
+  idustryCPIPercent = 'idustry-CPIPercent',
+  idustryCPITable = 'idustry-CPITable',
+  idustryCPISameQuater = 'idustry-CPISameQuater',
+  idustryCPIChange = 'idustry-CPI-change',
+  cpiQuyenSo = 'cpi-quyen-so',
+
+  //IPP
+  industrialIndex = 'idustry-industrial-index',
+  industrialIndexTable = 'idustry-industrial-index-table',
+  ippConsumAndInventory = 'ipp-consum-and-inventory',
+  ippMostIndusProduction = 'ipp-most-indus-production',
+  ippIndusProductionIndex = 'ipp-indus-production-index',
 }

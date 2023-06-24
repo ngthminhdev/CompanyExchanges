@@ -7,7 +7,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPayoutRatio } from './interfaces/payout-ratio.interface';
-import { ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
+import { IPEIndustry, ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
 import { MarketService } from './market.service';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
@@ -19,6 +19,8 @@ import { ISIndsDebtSolvency } from './interfaces/Inds-debt-solvency.interface';
 import { DebtSolvencyResponse } from './responses/debt-solvency.response';
 import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
 import { ProfitMarginResponse } from './responses/profit-margin.response';
+import { TimeToLive } from '../enums/common.enum';
+import { PEIndustryResponse } from './responses/pe-industry.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -78,6 +80,67 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneDay },
+    );
+
+    return mappedData;
+  }
+
+  async PEIndustry(ex: string, type: number, order: number) {
+    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const redisData = await this.redis.get(
+      `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
+    );
+    if (redisData) return redisData;
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+      WITH epsData AS
+      (
+        SELECT  [industry]
+              ,[date]
+              ,[floor]
+              ,SUM([thuNhapRong4Quy]) / SUM(shareOut) AS EPS
+        FROM [VISUALIZED_DATA].[dbo].[EPS_code]
+        WHERE floor in ${floor}
+        AND [date] IN ${dateFilter}
+        GROUP BY  [industry]
+                ,[date]
+                ,[floor]
+      ), bqgqData AS
+      (
+        SELECT  b.[industry]
+              ,b.[date]
+              ,b.[floor]
+              ,SUM([marketCap]) / sum([shareOut]) AS [giaBQGQ]
+        FROM VISUALIZED_DATA.dbo.BQGQ b
+        WHERE floor in ${floor}
+        AND [date] IN ${dateFilter}
+        GROUP BY  [industry]
+                ,[date]
+                ,[floor]
+      )
+      SELECT  b.[industry]
+            ,b.[date]
+            ,SUM([giaBQGQ]) / SUM(NULLIF([EPS],0)) AS PE
+      FROM bqgqData b
+      INNER JOIN epsData e
+      ON b.[industry] = e.[industry] AND b.[date] = e.[date] AND b.[floor] = e.[floor]
+      GROUP BY  b.[industry]
+              ,b.[date]
+    `;
+
+    const data = await this.mssqlService.query<IPEIndustry[]>(query);
+
+    const mappedData = new PEIndustryResponse().mapToList(data);
+
+    await this.redis.set(
+      `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
+      mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -151,7 +214,7 @@ export class FinanceHealthService {
 
     const mappedData = new PEBResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData);
+    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData, {ttl: TimeToLive.OneWeek});
 
     return mappedData;
   }
@@ -224,7 +287,9 @@ export class FinanceHealthService {
 
     const mappedData = new PEBResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.PBTicker}:${floor}:${inds}`, mappedData);
+    await this.redis.set(`${RedisKeys.PBTicker}:${floor}:${inds}`, mappedData, {
+      ttl: TimeToLive.OneDay,
+    });
 
     return mappedData;
   }
@@ -276,7 +341,11 @@ export class FinanceHealthService {
 
     const mappedData = new PayoutRatioResponse().mapTolist(data);
 
-    await this.redis.set(`${RedisKeys.PayoutRatio}:${ex}:${order}`, mappedData);
+    await this.redis.set(
+      `${RedisKeys.PayoutRatio}:${ex}:${order}`,
+      mappedData,
+      { ttl: TimeToLive.OneWeek },
+    );
 
     return mappedData;
   }
@@ -326,7 +395,9 @@ export class FinanceHealthService {
 
     const mappedData = new CashRatioResponse().mapTolist(data);
 
-    await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData);
+    await this.redis.set(`${RedisKeys.CashRatio}:${ex}:${order}`, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
 
     return mappedData;
   }
@@ -404,6 +475,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.RotaionRatio}:${ex}:${order}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -495,6 +567,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
@@ -574,99 +647,9 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.IndsProfitMargins}:${floor}:${order}:${type}`,
       mappedData,
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
   }
-
-  // async indsProfitMarginsTable(ex: string, order: number) {
-  //   const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
-  //   const redisData = await this.redis.get(
-  //     `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
-  //   );
-  //   if (redisData) return redisData;
-
-  //   const date = UtilCommonTemplate.getYearQuarters(1, order);
-
-  //   const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
-
-  //   const query: string = `
-  //     with valueData as (select [code],
-  //                               [year],
-  //                               [reportName],
-  //                               [value]
-  //                       from financialReport.dbo.financialReport
-  //                       where reportName in
-  //                             (N'Lãi trước thuế', N'Tổng lợi nhuận kế toán trước thuế',
-  //                               N'Tổng lợi nhuận trước thuế', N'Chi phí lãi và các chi phí tương tự',
-  //                               N'Chi phí lãi vay', N'Chi phí hoạt động',
-  //                               N'Tổng nợ phải trả', N'Nợ phải trả',
-  //                               N'TỔNG TÀI SẢN', N'TỔNG CỘNG TÀI SẢN',
-  //                               N'VỐN CHỦ SỞ HỮU'
-  //                                 )
-  //                         and year in ${dateFilter}),
-  //         canculatedData as (select industry,
-  //                                   year,
-  //                                   case industry
-  //                                       when N'Bảo hiểm' then [Tổng lợi nhuận kế toán trước thuế]
-  //                                       when N'Dịch vụ tài chính' then [Tổng lợi nhuận kế toán trước thuế]
-  //                                       when N'Ngân hàng' then [Tổng lợi nhuận trước thuế]
-  //                                       else [Lãi trước thuế]
-  //                                       end             loiNhuan,
-  //                                   case industry
-  //                                       when N'Ngân hàng' then [Tổng nợ phải trả]
-  //                                       else [Nợ phải trả]
-  //                                       end             noPhaiTra,
-  //                                   case industry
-  //                                       when N'Bảo hiểm' then [TỔNG CỘNG TÀI SẢN]
-  //                                       else [TỔNG TÀI SẢN]
-  //                                       end             tongTaiSan,
-  //                                   case industry
-  //                                       when N'Ngân hàng' then [Chi phí lãi và các chi phí tương tự]
-  //                                       else [Chi phí lãi vay]
-  //                                       end             chiPhiLaiVay,
-  //                                   [Chi phí hoạt động] chiPhiHoatDong,
-  //                                   [VỐN CHỦ SỞ HỮU]    vonChuSoHuu
-  //                             from (select i.lv2 as industry,
-  //                                         reportName,
-  //                                         year,
-  //                                         value
-  //                                   from marketInfor.dbo.info i
-  //                                           inner join valueData v on i.code = v.code
-  //                                   where i.floor in ${floor}
-  //                                     and i.type in ('STOCK', 'ETF')
-  //                                     and i.status = 'listed') as sources
-  //                                     pivot (
-  //                                     sum(value)
-  //                                     for reportName in (
-  //                                     [Tổng lợi nhuận kế toán trước thuế], [Tổng lợi nhuận trước thuế],
-  //                                     [Chi phí hoạt động], [Lãi trước thuế],
-  //                                     [Chi phí lãi vay], [Chi phí lãi và các chi phí tương tự],
-  //                                     [Tổng nợ phải trả], [Nợ phải trả],
-  //                                     [TỔNG CỘNG TÀI SẢN],
-  //                                     [TỔNG TÀI SẢN],
-  //                                     [VỐN CHỦ SỞ HỮU]
-  //                                     )
-  //                                     ) as pvtable)
-  //     select [industry],
-  //           [year] [date],
-  //           (sum(loiNhuan) + sum(chiPhiLaiVay)) / sum(chiPhiLaiVay) ICR,
-  //           sum(noPhaiTra) / sum(tongTaiSan)                        TDTA,
-  //           sum(noPhaiTra) / sum(vonChuSoHuu)                       DE
-  //     from canculatedData
-  //     group by industry, year
-  //     order by year, industry
-  //   `;
-
-  //   const data = await this.mssqlService.query<ISIndsDebtSolvency[]>(query);
-
-  //   const mappedData = new DebtSolvencyResponse().mapToList(data);
-
-  //   await this.redis.set(
-  //     `${RedisKeys.IndsDebtSolvency}:${ex}:${order}`,
-  //     mappedData,
-  //   );
-
-  //   return mappedData;
-  // }
 }
