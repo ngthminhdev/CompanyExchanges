@@ -79,7 +79,7 @@ import { MacroModule } from './macro/macro.module';
     SocketModule,
     MarketModule,
     MacroModule,
-    // KafkaModule,
+    KafkaModule,
   ],
 })
 export class AppModule implements NestModule {
