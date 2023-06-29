@@ -19,7 +19,7 @@ export class ConfigServiceProvider {
       schema: 'dbo',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
-      synchronize: false,
+      synchronize: true,
       options: { encrypt: false },
     };
   }
@@ -35,7 +35,7 @@ export class ConfigServiceProvider {
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
       synchronize: false,
-      // logging: true,
+      logging: true,
       options: { encrypt: false },
     };
   }
