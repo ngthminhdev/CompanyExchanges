@@ -14,8 +14,8 @@ export class RetailService {
   ) { }
 
   async retailValue(order: number) {
-    // const redisData = await this.redis.get(`${RedisKeys.retailValue}:${order}`)
-    // if(redisData) return redisData
+    const redisData = await this.redis.get(`${RedisKeys.retailValue}:${order}`)
+    if(redisData) return redisData
 
     let date: string = ''
     let group: string = ''
@@ -60,13 +60,13 @@ export class RetailService {
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
 
     const mappedData = RetailValueResponse.mapToList(data, order)
-    // await this.redis.set(`${RedisKeys.retailValue}:${order}`, mappedData, {ttl: TimeToLive.OneWeek})
+    await this.redis.set(`${RedisKeys.retailValue}:${order}`, mappedData, {ttl: TimeToLive.OneWeek})
     return mappedData
   }
 
   async retailPercentValue(order: number){
-    // const redisData = await this.redis.get(RedisKeys.retailPercentValue)
-    // if(redisData) return redisData
+    const redisData = await this.redis.get(`${RedisKeys.retailPercentValue}:${order}`)
+    if(redisData) return redisData
 
     const query: string = `
       SELECT  [chiTieu]  AS [name]
@@ -90,16 +90,16 @@ export class RetailService {
       return new RetailValueResponse({...item, value: !data[index - 1]?.value ? 0 : (item?.value - data[index - 1]?.value || 0) / (data[index - 1]?.value || 1) * 100, order})
     })
 
-    // await this.redis.set(RedisKeys.retailPercentValue, mappedData, {
-    //   ttl: TimeToLive.OneWeek
-    // })
+    await this.redis.set(`${RedisKeys.retailPercentValue}:${order}`, mappedData, {
+      ttl: TimeToLive.OneWeek
+    })
 
     return mappedData
   }
 
   async retailValueTotal() {
-    // const redisData = await this.redis.get(RedisKeys.retailValueTotal)
-    // if(redisData) return redisData
+    const redisData = await this.redis.get(RedisKeys.retailValueTotal)
+    if(redisData) return redisData
 
     const query = `
         WITH temp
@@ -143,11 +143,13 @@ export class RetailService {
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
     
     const mappedData = RetailValueResponse.mapToList(data, 2)
-    // await this.redis.set(RedisKeys.retailValueTotal, mappedData, {ttl: TimeToLive.OneWeek})
+    await this.redis.set(RedisKeys.retailValueTotal, mappedData, {ttl: TimeToLive.OneWeek})
     return mappedData
   }
 
   async totalExportImport(order: number){
+    const redisData = await this.redis.get(`${RedisKeys.exportImport}:${order}`)
+    if(redisData) return redisData
     let date: string = ''
     let group: string = ''
     switch (order) {
@@ -188,7 +190,14 @@ export class RetailService {
     `
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
     const mappedData = RetailValueResponse.mapToList(data, order)
-    // await this.redis.set(RedisKeys.retailValue, mappedData, {ttl: TimeToLive.OneWeek})
+    await this.redis.set(`${RedisKeys.exportImport}:${order}`, mappedData, {ttl: TimeToLive.OneWeek})
     return mappedData
+  }
+
+  async mainExportImport(order: number){
+    const query = `
+
+    `
+    const data = await this.mssqlService.query(query)
   }
 }
