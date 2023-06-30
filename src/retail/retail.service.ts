@@ -71,7 +71,7 @@ export class RetailService {
     const query: string = `
       SELECT  [chiTieu]  AS [name]
       ,${order == TimeTypeEnum.Month ? `[thoiDiem] AS [date], [giaTri] AS [value]` 
-      : `datepart(year, thoiDiem) as [date], sum(giaTri) as [value]`}
+      : `cast(datepart(year, thoiDiem) as varchar) + '/12/31' as [date], sum(giaTri) as [value]`}
       FROM [macroEconomic].[dbo].[DuLieuViMo]
       WHERE [thoiDiem] >= '2018-01-01 00:00:00.000'
       and phanBang = N'BÁN LẺ'
@@ -87,11 +87,11 @@ export class RetailService {
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
 
     const mappedData = data.map((item, index) => {
-      return new RetailValueResponse({...item, value: (item.value - data[index - 1]?.value || 0) / data[index - 1]?.value || 0 * 100, order})
+      return new RetailValueResponse({...item, value: !data[index - 1]?.value ? 0 : (item?.value - data[index - 1]?.value || 0) / (data[index - 1]?.value || 1) * 100, order})
     })
 
     // await this.redis.set(RedisKeys.retailPercentValue, mappedData, {
-    //   ttl: TimeToLive.OneWeek,
+    //   ttl: TimeToLive.OneWeek
     // })
 
     return mappedData
@@ -155,12 +155,18 @@ export class RetailService {
         date = `thoiDiem as date,`
         break
       case TimeTypeEnum.Quarter:
-        date = `datepart(qq, thoiDiem) as date,
-                datepart(year, thoiDiem) as year,`
-        group = `group by datepart(qq, thoiDiem), chiTieu` 
+        // date = `datepart(qq, thoiDiem) as date,
+        date = `case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date,`
+        // datepart(year, thoiDiem) as year,`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
         break
       case TimeTypeEnum.Year:
-        date = `datepart(year, thoiDiem) as date,`
+        date = `cast(datepart(year, thoiDiem) as varchar) + '/12/31' as date,`
         group = `group by datepart(year, thoiDiem), chiTieu`
         break
       default:
@@ -181,9 +187,8 @@ export class RetailService {
     ${group}
     `
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
-    return data
-    // const mappedData = RetailValueResponse.mapToList(data, order)
+    const mappedData = RetailValueResponse.mapToList(data, order)
     // await this.redis.set(RedisKeys.retailValue, mappedData, {ttl: TimeToLive.OneWeek})
-    // return mappedData
+    return mappedData
   }
 }
