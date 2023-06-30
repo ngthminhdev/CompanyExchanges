@@ -42,7 +42,7 @@ export class RetailValueResponse {
                 this.date = data?.date ? UtilCommonTemplate.toDate(data.date) : ''
                 break;
             case TimeTypeEnum.Quarter: 
-                this.date = data?.date ? `${data?.year}${data?.date}` : ''
+                this.date = data?.date || ''
                 break
             case TimeTypeEnum.Year:
                 this.date = data?.date.toString() || ''  
