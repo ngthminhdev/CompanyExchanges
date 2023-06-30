@@ -11,7 +11,7 @@ import { Logger, UseFilters } from '@nestjs/common';
 import { SocketErrorFilter } from '../filters/socket-error.filter';
 import { CatchSocketException } from '../exceptions/socket.exception';
 
-@WebSocketGateway({ cors: { origin: '*' }, namespace: 'socket' })
+@WebSocketGateway({ cors: { origin: '*' }, namespace: 'socket', transports: ['websocket'] })
 @UseFilters(SocketErrorFilter)
 export class SocketGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit

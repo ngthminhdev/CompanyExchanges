@@ -100,4 +100,11 @@ export enum RedisKeys {
   ippConsumAndInventory = 'ipp-consum-and-inventory',
   ippMostIndusProduction = 'ipp-most-indus-production',
   ippIndusProductionIndex = 'ipp-indus-production-index',
+
+  //Bán lẻ
+  retailValue = 'retail-value',
+  retailValueTotal = 'retail-value-total',
+  retailPercentValue = 'retail-percent-value',
+  exportImport = 'export-import',
+
 }

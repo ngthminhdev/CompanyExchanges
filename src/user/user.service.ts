@@ -6,6 +6,7 @@ import {ExceptionResponse} from "../exceptions/common.exception";
 import {Cache} from "cache-manager";
 import {UserResponse} from "./responses/UserResponse";
 import {RedisKeys} from "../enums/redis-keys.enum";
+import { DB_SERVER } from '../constants';
 
 @Injectable()
 export class UserService {

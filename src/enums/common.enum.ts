@@ -39,6 +39,7 @@ export enum QuarterTimeTypeEnum {
 export enum TimeTypeEnum {
   Quarter,
   Year,
+  Month,
 }
 
 export enum InvestorTypeEnum {
