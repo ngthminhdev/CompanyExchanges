@@ -29,6 +29,7 @@ export class RetailController {
   @Get('tang-truong-doanh-so-theo-nganh')
   @ApiOperation({
     summary: 'Tăng trưởng doanh số bán lẻ tại các lĩnh vực',
+    description: '1 - theo tháng, 2 - theo năm'
   })
   @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
   async retailPercentValue(@Query() q: RetailValueDto, @Res() res: Response) {
@@ -48,6 +49,20 @@ export class RetailController {
   async retailValueTotal(@Res() res: Response) {
     try {
       const data = await this.retailService.retailValueTotal();
+      return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
+
+  @Get('tong-xuat-nhap-khau')
+  @ApiOperation({
+    summary: 'Tổng giá trị xuất nhập khẩu qua từng kỳ',
+  })
+  @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
+  async exportImport(@Query() q: RetailValueDto, @Res() res: Response) {
+    try {
+      const data = await this.retailService.totalExportImport(parseInt(q.order));
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))
     } catch (error) {
       throw new CatchException(error)
