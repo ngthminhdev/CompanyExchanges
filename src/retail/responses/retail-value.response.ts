@@ -35,7 +35,7 @@ export class RetailValueResponse {
     color: string
 
     constructor(data: RetailValueResponse) {
-        this.name = data?.name || ''
+        this.name = data?.name == 'Tong' ? 'Tổng' : data.name
         this.value = data?.value || 0
         switch (data?.order) {
             case TimeTypeEnum.Month:
@@ -64,6 +64,7 @@ export class RetailValueResponse {
                 this.color = '#FF6699'
                 break;
             default:
+                this.color = ''
                 break;
         }
     }
