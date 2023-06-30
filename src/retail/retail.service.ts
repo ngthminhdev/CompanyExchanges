@@ -26,16 +26,16 @@ export class RetailService {
       case TimeTypeEnum.Quarter:
         // date = `datepart(qq, thoiDiem) as date,
         date = `case datepart(qq, thoiDiem)
-        when 1 then cast(datepart(year, thoiDiem) as varchar) + '-03-31'
-        when 2 then cast(datepart(year, thoiDiem) as varchar) + '-06-30'
-        when 3 then cast(datepart(year, thoiDiem) as varchar) + '-09-30'
-        when 4 then cast(datepart(year, thoiDiem) as varchar) + '-12-31'
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
         end as date,`
         // datepart(year, thoiDiem) as year,`
         group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
         break
       case TimeTypeEnum.Year:
-        date = `case (datepart(year, thoiDiem) as varchar) + '-12-31' as date,`
+        date = `cast(datepart(year, thoiDiem) as varchar) + '/12/31' as date,`
         group = `group by datepart(year, thoiDiem), chiTieu`
         break
       default:
@@ -57,13 +57,8 @@ export class RetailService {
       and thoiDiem >= '2018-01-01 00:00:00.000'
     ${group}
     `
-
-    console.log(query);
-    
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
 
-    console.log(data);
-    
     const mappedData = RetailValueResponse.mapToList(data, order)
     // await this.redis.set(`${RedisKeys.retailValue}:${order}`, mappedData, {ttl: TimeToLive.OneWeek})
     return mappedData
