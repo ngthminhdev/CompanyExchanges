@@ -29,7 +29,7 @@ export class RetailController {
   @Get('tang-truong-doanh-so-theo-nganh')
   @ApiOperation({
     summary: 'Tăng trưởng doanh số bán lẻ tại các lĩnh vực',
-    description: '1 - theo tháng, 2 - theo năm'
+    description: '1 - theo năm, 2 - theo tháng'
   })
   @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
   async retailPercentValue(@Query() q: RetailValueDto, @Res() res: Response) {
@@ -58,6 +58,7 @@ export class RetailController {
   @Get('tong-xuat-nhap-khau')
   @ApiOperation({
     summary: 'Tổng giá trị xuất nhập khẩu qua từng kỳ',
+    description: '0 - Quý, 1 - Năm, 2 - Tháng'
   })
   @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
   async exportImport(@Query() q: RetailValueDto, @Res() res: Response) {
@@ -68,4 +69,19 @@ export class RetailController {
       throw new CatchException(error)
     }
   }
+
+  // @Get('thi-truong-xuat-nhap-khau-chinh')
+  // @ApiOperation({
+  //   summary: 'Bảng thị trường xuất nhập khẩu chính',
+  //   description: '0 - Quý, 1 - Năm, 2 - Tháng'
+  // })
+  // @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
+  // async MainExportImport(@Query() q: RetailValueDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.retailService.mainExportImport(parseInt(q.order));
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  //   } catch (error) {
+  //     throw new CatchException(error)
+  //   }
+  // }
 }

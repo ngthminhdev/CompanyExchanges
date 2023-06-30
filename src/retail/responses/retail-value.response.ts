@@ -36,16 +36,16 @@ export class RetailValueResponse {
 
     constructor(data: RetailValueResponse) {
         this.name = data?.name == 'Tong' ? 'Tổng' : data.name
-        this.value = data?.value || 0
+        this.value = data?.value ?? data?.value | 0
         switch (data?.order) {
             case TimeTypeEnum.Month:
                 this.date = data?.date ? UtilCommonTemplate.toDate(data.date) : ''
                 break;
-            case TimeTypeEnum.Quarter: 
+            case TimeTypeEnum.Quarter:
                 this.date = data?.date || ''
                 break
             case TimeTypeEnum.Year:
-                this.date = data?.date.toString() || ''  
+                this.date = data?.date.toString() || ''
                 break
             default:
                 break;
@@ -63,6 +63,12 @@ export class RetailValueResponse {
             case 'Bán lẻ: Thương nghiệp (Tỷ VNĐ)':
                 this.color = '#FF6699'
                 break;
+            case 'Nhập khẩu: Tổng trị giá Nhập khẩu (triệu USD)':
+                this.color = '#E7C64F'
+                break;
+            case 'Xuất khẩu: Tổng trị giá Xuất khẩu (triệu USD)':
+                this.color = '#147DF5'
+                break;
             default:
                 this.color = ''
                 break;
@@ -70,7 +76,7 @@ export class RetailValueResponse {
     }
 
     static mapToList(data: RetailValueResponse[], order: number) {
-        return data.map(item => new RetailValueResponse({...item, order}))
+        return data.map(item => new RetailValueResponse({ ...item, order }))
     }
 }
 

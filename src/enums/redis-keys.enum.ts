@@ -105,5 +105,6 @@ export enum RedisKeys {
   retailValue = 'retail-value',
   retailValueTotal = 'retail-value-total',
   retailPercentValue = 'retail-percent-value',
+  exportImport = 'export-import',
 
 }
