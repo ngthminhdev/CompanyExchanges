@@ -69,4 +69,19 @@ export class RetailController {
       throw new CatchException(error)
     }
   }
+
+  // @Get('thi-truong-xuat-nhap-khau-chinh')
+  // @ApiOperation({
+  //   summary: 'Bảng thị trường xuất nhập khẩu chính',
+  //   description: '0 - Quý, 1 - Năm, 2 - Tháng'
+  // })
+  // @ApiResponse({type: RetailValueSwagger, status: HttpStatus.OK})
+  // async MainExportImport(@Query() q: RetailValueDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.retailService.mainExportImport(parseInt(q.order));
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  //   } catch (error) {
+  //     throw new CatchException(error)
+  //   }
+  // }
 }

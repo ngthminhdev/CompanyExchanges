@@ -64,7 +64,7 @@ export class RetailValueResponse {
                 this.color = '#FF6699'
                 break;
             case 'Nhập khẩu: Tổng trị giá Nhập khẩu (triệu USD)':
-                this.color = '#4B90DF'
+                this.color = '#E7C64F'
                 break;
             case 'Xuất khẩu: Tổng trị giá Xuất khẩu (triệu USD)':
                 this.color = '#147DF5'
