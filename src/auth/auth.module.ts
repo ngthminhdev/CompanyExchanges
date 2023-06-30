@@ -13,12 +13,17 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DeviceEntity } from './entities/device.entity';
 import { VerifyEntity } from './entities/verify.entity';
+import { DB_SERVER } from '../constants';
+import { UserModule } from '../user/user.module';
+import { UserService } from '../user/user.service';
 
 @Module({
   imports: [
+    
     TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
     //queue
     BullModule.registerQueue({ name: QueueEnum.MainProcessor }),
+    UserModule
   ],
   controllers: [AuthController],
   providers: [
@@ -26,16 +31,19 @@ import { VerifyEntity } from './entities/verify.entity';
       provide: APP_INTERCEPTOR,
       useClass: PhoneNumberInterceptor,
     },
+    UserService,
     AuthService,
     JwtService,
     SmsService,
     QueueService,
   ],
 })
-export class AuthModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(DeviceIdMiddleware).forRoutes('/auth/*');
-    // .apply(SignVerifyMiddleware)
-    // .forRoutes("*");
-  }
-}
+export class AuthModule {}
+
+// implements NestModule {
+//   configure(consumer: MiddlewareConsumer): void {
+//     consumer.apply(DeviceIdMiddleware).forRoutes('/auth/*');
+//     // .apply(SignVerifyMiddleware)
+//     // .forRoutes("*");
+//   }
+// }
