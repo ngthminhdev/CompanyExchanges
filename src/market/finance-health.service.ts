@@ -34,10 +34,10 @@ export class FinanceHealthService {
 
   async PEPBIndustry(ex: string, type: number, order: number) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
-    const redisData = await this.redis.get(
-      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
-    );
-    if (redisData) return redisData;
+    // const redisData = await this.redis.get(
+    //   `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
+    // );
+    // if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
 
@@ -78,6 +78,7 @@ export class FinanceHealthService {
         where date IN ${dateFilter}
         and floor IN ${floor}
         group by industry, date
+        order by industry, date
     `
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
