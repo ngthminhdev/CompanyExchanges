@@ -39,40 +39,46 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDate(type, order);
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
-    const query = `
-      with valueData as (
-          select
-              [code], 
-              [date],
-              [ratioCode],
-              [value]
-          from RATIO.dbo.ratio
-          where
-          ratioCode in ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS')
-          and date in ${dateFilter}
-      )
-      select [LV2] industry, [date], [PRICE_TO_BOOK] PB, [PRICE_TO_EARNINGS] PE
-      from (
-          select [LV2], [date], [ratioCode], value
-          from valueData v
-          inner join marketInfor.dbo.info i
-                  on i.code = v.code
-              where i.LV2 != ''
-                  and i.floor in ${floor}
-                  and i.type in ('STOCK', 'ETF')
-                  and i.status = 'listed'
-      --     group by LV2, ratioCode, [date]
-      ) as srouces
-      pivot (
-          avg(value)
-          for ratioCode in ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS])
-      ) as pvTable
-    `;
+    // const query = `
+    //   with valueData as (
+    //       select
+    //           [code], 
+    //           [date],
+    //           [ratioCode],
+    //           [value]
+    //       from RATIO.dbo.ratio
+    //       where
+    //       ratioCode in ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS')
+    //       and date in ${dateFilter}
+    //   )
+    //   select [LV2] industry, [date], [PRICE_TO_BOOK] PB, [PRICE_TO_EARNINGS] PE
+    //   from (
+    //       select [LV2], [date], [ratioCode], value
+    //       from valueData v
+    //       inner join marketInfor.dbo.info i
+    //               on i.code = v.code
+    //           where i.LV2 != ''
+    //               and i.floor in ${floor}
+    //               and i.type in ('STOCK', 'ETF')
+    //               and i.status = 'listed'
+    //   --     group by LV2, ratioCode, [date]
+    //   ) as srouces
+    //   pivot (
+    //       avg(value)
+    //       for ratioCode in ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS])
+    //   ) as pvTable
+    // `;
 
+    const query =  `
+        select industry, date, sum(PB) as PB from VISUALIZED_DATA.dbo.PB
+        where date IN ${dateFilter}
+        and floor IN ${floor}
+        group by industry, date
+    `
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
     const mappedData = new PEPBIndustryResponse().mapToList(data);
@@ -80,7 +86,7 @@ export class FinanceHealthService {
     await this.redis.set(
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
       mappedData,
-      { ttl: TimeToLive.OneDay },
+      { ttl: TimeToLive.OneWeek },
     );
 
     return mappedData;
