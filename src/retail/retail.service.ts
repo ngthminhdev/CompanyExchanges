@@ -356,6 +356,7 @@ export class RetailService {
       ${group}
       order by date asc
       `
+      
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
     const mapped_data = RetailValueResponse.mapToList(data, order)
     await this.redis.set(`${RedisKeys.importMainMH}:${order}`, mapped_data, {ttl: TimeToLive.OneWeek})
