@@ -178,6 +178,8 @@ export class FinanceHealthService {
       'marketTrade.dbo.proprietary',
     );
 
+    const ratioDate = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' order by date desc`)
+
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -197,7 +199,7 @@ export class FinanceHealthService {
                                   inner join RATIO.dbo.ratio r
                                               on c.code = r.code
                           where r.ratioCode = 'EPS_TR'
-                            and r.date = '${date[0]}'),
+                            and r.date = '${UtilCommonTemplate.toDate(ratioDate[0].date)}'),
           PData as (select c.date, c.code, r.value as pData
                     from codeData c
                              inner join RATIO.dbo.ratio r
