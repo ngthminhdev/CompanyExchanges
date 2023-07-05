@@ -161,12 +161,10 @@ export class FinanceHealthService {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
 
-    console.log(inds);
-
-    // const redisData = await this.redis.get(
-    //   `${RedisKeys.PETicker}:${floor}:${inds}`,
-    // );
-    // if (redisData) return redisData;
+    const redisData = await this.redis.get(
+      `${RedisKeys.PETicker}:${floor}:${inds}`,
+    );
+    if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(5);
 
@@ -232,11 +230,7 @@ export class FinanceHealthService {
       order by 2 desc, 3 desc
     `;
 
-    console.log(query);
-
     const data = await this.mssqlService.query<any[]>(query);
-
-    return data;
 
     const mappedData = new PEBResponse().mapToList(data);
 
@@ -285,6 +279,7 @@ export class FinanceHealthService {
                         where i.floor in ${floor}
                           and i.type in ('STOCK', 'ETF')
                           and i.status = 'listed'
+                          and i.LV2 in ${inds} 
                           and date in ('${startDate}', '${endDate}')),
           gtssVNDData as (select c.date, c.code, r.value as gtssVND
                           from codeData c
