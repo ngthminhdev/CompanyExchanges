@@ -7,7 +7,10 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IPayoutRatio } from './interfaces/payout-ratio.interface';
-import { IPEIndustry, ISPEPBIndustry } from './interfaces/pe-pb-industry-interface';
+import {
+  IPEIndustry,
+  ISPEPBIndustry,
+} from './interfaces/pe-pb-industry-interface';
 import { MarketService } from './market.service';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
 import { PEBResponse } from './responses/peb-ticker.response';
@@ -21,6 +24,7 @@ import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
 import { ProfitMarginResponse } from './responses/profit-margin.response';
 import { TimeToLive } from '../enums/common.enum';
 import { PEIndustryResponse } from './responses/pe-industry.response';
+import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -46,7 +50,7 @@ export class FinanceHealthService {
     // const query = `
     //   with valueData as (
     //       select
-    //           [code], 
+    //           [code],
     //           [date],
     //           [ratioCode],
     //           [value]
@@ -73,13 +77,13 @@ export class FinanceHealthService {
     //   ) as pvTable
     // `;
 
-    const query =  `
+    const query = `
         select industry, date, sum(PB) as PB from VISUALIZED_DATA.dbo.PB
         where date IN ${dateFilter}
         and floor IN ${floor}
         group by industry, date
         order by industry, date
-    `
+    `;
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
     const mappedData = new PEPBIndustryResponse().mapToList(data);
@@ -157,10 +161,12 @@ export class FinanceHealthService {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
     const inds: string = UtilCommonTemplate.getIndustryFilter(industries);
 
-    const redisData = await this.redis.get(
-      `${RedisKeys.PETicker}:${floor}:${inds}`,
-    );
-    if (redisData) return redisData;
+    console.log(inds);
+
+    // const redisData = await this.redis.get(
+    //   `${RedisKeys.PETicker}:${floor}:${inds}`,
+    // );
+    // if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getPastDate(5);
 
@@ -178,7 +184,11 @@ export class FinanceHealthService {
       'marketTrade.dbo.proprietary',
     );
 
-    const ratioDate = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' order by date desc`)
+    const ratioDate = await this.mssqlService.query(
+      `select top 2 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' group by date order by date desc`,
+    );
+
+    console.log({ startDate, endDate, ratioDate, latestDate });
 
     const query: string = `
       with codeData as (select t.code,
@@ -192,6 +202,7 @@ export class FinanceHealthService {
                                 inner join marketInfor.dbo.info i on t.code = i.code
                         where i.floor in ${floor}
                           and i.type in ('STOCK', 'ETF')
+                          and i.LV2 in ${inds}
                           and i.status = 'listed'
                           and date in ('${startDate}', '${endDate}')),
           epsVNDData as (select c.date, c.code, r.value as epsVND
@@ -199,7 +210,9 @@ export class FinanceHealthService {
                                   inner join RATIO.dbo.ratio r
                                               on c.code = r.code
                           where r.ratioCode = 'EPS_TR'
-                            and r.date = '${UtilCommonTemplate.toDate(ratioDate[0].date)}'),
+                            and r.date = '${UtilCommonTemplate.toDate(
+                              ratioDate[0].date,
+                            )}'),               
           PData as (select c.date, c.code, r.value as pData
                     from codeData c
                              inner join RATIO.dbo.ratio r
@@ -209,21 +222,27 @@ export class FinanceHealthService {
       select top 50 c.code,
             c.date,
             e.epsVND as VND,
-            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange,
+            ((c.closePrice - c.prevClosePrice) / c.prevClosePrice) * 100 as pricePerChange,
             p.pData
       from codeData c
               inner join epsVNDData e
                           on c.code = e.code and c.date = e.date
               inner join PData p 
-                          on c.code = p.code and c.date = p.date
+                          on c.code = p.code and c.date = p.date       
       order by 2 desc, 3 desc
     `;
 
+    console.log(query);
+
     const data = await this.mssqlService.query<any[]>(query);
+
+    return data;
 
     const mappedData = new PEBResponse().mapToList(data);
 
-    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData, {ttl: TimeToLive.OneWeek});
+    await this.redis.set(`${RedisKeys.PETicker}:${floor}:${inds}`, mappedData, {
+      ttl: TimeToLive.OneWeek,
+    });
 
     return mappedData;
   }
@@ -660,5 +679,28 @@ export class FinanceHealthService {
     );
 
     return mappedData;
+  }
+
+  async indsInterestCoverage(ex: string, industry: string[]) {
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industry);
+    const redisData = await this.redis.get(`${RedisKeys.IndsInterestCoverage}:${ex}:${inds}`)
+    if(redisData) return redisData
+
+    const query = `
+          SELECT
+              date,
+              industry,
+              floor,
+              result AS value
+          FROM VISUALIZED_DATA.dbo.hesothanhtoanlaivay
+          WHERE floor = '${ex}'
+              AND industry IN ${inds}
+        `;
+        
+    const data = await this.mssqlService.query<IndusInterestCoverageResponse[]>(query);
+
+    const dataMapped = IndusInterestCoverageResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.IndsInterestCoverage}:${ex}:${inds}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped;
   }
 }
