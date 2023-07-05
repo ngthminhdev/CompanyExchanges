@@ -15,6 +15,7 @@ import { DebtSolvencySwagger } from './responses/debt-solvency.response';
 import { ProfitMarginSwagger } from './responses/profit-margin.response';
 import { PEIndustrySwagger } from './responses/pe-industry.response';
 import { PEPBIndustrySwagger } from './responses/pepb-industry.response';
+import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -151,6 +152,24 @@ export class FinanceHealthController {
       q.exchange.toUpperCase(),
       parseInt(q.type),
       parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('he-so-thanh-toan-lai-vay')
+  @ApiOperation({
+    summary: `
+      Hệ số thanh toán lãi vay
+    `,
+  })
+  @ApiOkResponse({ type: IndusInterestCoverageResponse })
+  async indsInterestCoverage(
+    @Query() q: IndustryFilterDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.fHealthService.indsInterestCoverage(
+      q.exchange.toUpperCase(),
+      q.industry.split(','),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }

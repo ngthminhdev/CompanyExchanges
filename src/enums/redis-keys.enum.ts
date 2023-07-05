@@ -78,6 +78,8 @@ export enum RedisKeys {
   IndsDebtSolvency = 'inds-debt-solvency',
   IndsProfitMargins = 'inds-profit-margin',
 
+  IndsInterestCoverage = 'inds-coverage',
+  
   NearestDate = 'nearest-date',
 
   //Vi mo
