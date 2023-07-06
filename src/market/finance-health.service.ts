@@ -186,8 +186,6 @@ export class FinanceHealthService {
       `select top 2 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' group by date order by date desc`,
     );
 
-    console.log({ startDate, endDate, ratioDate, latestDate });
-
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -210,7 +208,13 @@ export class FinanceHealthService {
                           where r.ratioCode = 'EPS_TR'
                             and r.date = '${UtilCommonTemplate.toDate(
                               ratioDate[0].date,
-                            )}'),               
+                            )}'),  
+          epsVNDPer as (select pivotTable.code, [${UtilCommonTemplate.toDate(ratioDate[1].date)}], [${UtilCommonTemplate.toDate(ratioDate[0].date)}], date from (select distinct c.code, r.value as epsVND, r.date as ratioDate, c.date as date
+                            from codeData c
+                                    inner join RATIO.dbo.ratio r
+                                                on c.code = r.code
+                            where r.ratioCode = 'EPS_TR'
+                                and r.date IN ('2022/12/31', '2023/03/31')) as source pivot ( sum(epsVND) for ratioDate in ([${UtilCommonTemplate.toDate(ratioDate[1].date)}], [${UtilCommonTemplate.toDate(ratioDate[0].date)}])) as pivotTable),                               
           PData as (select c.date, c.code, r.value as pData
                     from codeData c
                              inner join RATIO.dbo.ratio r
@@ -221,12 +225,16 @@ export class FinanceHealthService {
             c.date,
             e.epsVND as VND,
             ((c.closePrice - c.prevClosePrice) / c.prevClosePrice) * 100 as pricePerChange,
-            p.pData
+            p.pData,
+            CASE WHEN ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}] = NULL THEN NULL
+              ELSE ((ep.[${UtilCommonTemplate.toDate(ratioDate[0].date)}] - ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}]) / ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}]) * 100 END AS per
       from codeData c
               inner join epsVNDData e
                           on c.code = e.code and c.date = e.date
               inner join PData p 
-                          on c.code = p.code and c.date = p.date       
+                          on c.code = p.code and c.date = p.date   
+              inner join epsVNDPer ep
+                          on c.code = ep.code and c.date = ep.date                
       order by 2 desc, 3 desc
     `;
 
@@ -676,10 +684,13 @@ export class FinanceHealthService {
     return mappedData;
   }
 
-  async indsInterestCoverage(ex: string, industry: string[]) {
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industry);
-    const redisData = await this.redis.get(`${RedisKeys.IndsInterestCoverage}:${ex}:${inds}`)
+  async indsInterestCoverage(ex: string, type: number, order: number) {
+    const redisData = await this.redis.get(`${RedisKeys.IndsInterestCoverage}:${ex}:${order}:${type}`)
     if(redisData) return redisData
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
     const query = `
           SELECT
@@ -689,13 +700,13 @@ export class FinanceHealthService {
               result AS value
           FROM VISUALIZED_DATA.dbo.hesothanhtoanlaivay
           WHERE floor = '${ex}'
-              AND industry IN ${inds}
+          and date IN ${dateFilter}
         `;
         
     const data = await this.mssqlService.query<IndusInterestCoverageResponse[]>(query);
 
     const dataMapped = IndusInterestCoverageResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.IndsInterestCoverage}:${ex}:${inds}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    await this.redis.set(`${RedisKeys.IndsInterestCoverage}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }
 }
