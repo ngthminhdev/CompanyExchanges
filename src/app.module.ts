@@ -23,6 +23,7 @@ import { MarketModule } from './market/market.module';
 import { MssqlModule } from './mssql/mssql.module';
 import { MacroModule } from './macro/macro.module';
 import { RetailModule } from './retail/retail.module';
+import { NewsModule } from './news/news.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { RetailModule } from './retail/retail.module';
     MacroModule,
     KafkaModule,
     RetailModule,
+    NewsModule,
   ],
 })
 export class AppModule implements NestModule {
