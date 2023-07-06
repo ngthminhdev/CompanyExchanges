@@ -79,7 +79,7 @@ export enum RedisKeys {
   IndsProfitMargins = 'inds-profit-margin',
 
   IndsInterestCoverage = 'inds-coverage',
-  
+
   NearestDate = 'nearest-date',
 
   //Vi mo
@@ -110,5 +110,9 @@ export enum RedisKeys {
   exportImport = 'export-import',
   exportImportMain = 'export-import-main',
   exportImportMainMH = 'export-import-main-mh',
-  importMainMH = 'import-main-mh'
+  importMainMH = 'import-main-mh',
+
+  //Tin tuc
+  newsEvent = 'news-event',
+  newsEnterprise = 'news-enterprise',
 }
