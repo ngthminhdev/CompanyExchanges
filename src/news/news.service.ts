@@ -4,8 +4,9 @@ import * as moment from 'moment';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
-import { UtilCommonTemplate } from '../utils/utils.common';
+import { PageLimitDto } from './dto/page-limit.dto';
 import { NewsEventResponse } from './response/event.response';
+import { MacroDomesticResponse } from './response/macro-domestic.response';
 import { NewsEnterpriseResponse } from './response/news-enterprise.response';
 
 @Injectable()
@@ -67,5 +68,48 @@ export class NewsService {
     return dataMapped
   }
 
+  async macroDomestic(q: PageLimitDto){
+    const limit = +q.limit || 20
+    const page = +q.page || 1
+
+    const query = `
+    SELECT
+        Date AS date,
+        Title AS title,
+        Href AS href,
+        Img AS img,
+        SubTitle AS sub_title
+    FROM macroEconomic.dbo.TinTucViMo
+    ORDER BY Date DESC
+    OFFSET ${(page - 1) * limit} ROWS
+    FETCH NEXT ${limit} ROWS ONLY;
+    `
+    const data = await this.mssqlService.query<MacroDomesticResponse[]>(query)
+    const dataMapped = MacroDomesticResponse.mapToList(data)
+    return dataMapped
+  }
+
+  async macroInternational(q: PageLimitDto){
+    const limit = +q.limit || 20
+    const page = +q.page || 1
+
+    const query = `
+    SELECT
+        Date AS date,
+        Title AS title,
+        Href AS href,
+        Img AS img,
+        SubTitle AS sub_title
+    FROM macroEconomic.dbo.TinTucQuocTe
+    ORDER BY Date DESC
+    OFFSET ${(page - 1) * limit} ROWS
+    FETCH NEXT ${limit} ROWS ONLY;
+    `
+    const data = await this.mssqlService.query<MacroDomesticResponse[]>(query)
+    const dataMapped = MacroDomesticResponse.mapToList(data)
+    return dataMapped
+  }
+
+  
 }
 
