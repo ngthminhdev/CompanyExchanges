@@ -42,6 +42,27 @@ export class LaborForceResponse {
             case 'Thanh niên thành thị':
                 this.color = '#2D8BBA'
                 break;
+            case 'Công nghiệp- Xây dựng':
+                this.color = '#6CE5E8'
+                break;
+            case 'Dịch vụ':
+                this.color = '#41B8D5'
+                break;
+            case 'Nông lâm ngư nghiệp':
+                this.color = '#2D8BBA'
+                break;
+            case 'Tỉ lệ lao động phi chính thức (%)':
+                this.color = '#2D8BBA'
+                break;
+            case 'Mức chung':
+                this.color = '#6CE5E8'
+                break;
+            case 'Nam giới':
+                this.color = '#41B8D5'
+                break;
+            case 'Nữ giới':
+                this.color = '#2D8BBA'
+                break;
             default:
                 break;
         }
