@@ -112,6 +112,10 @@ export enum RedisKeys {
   exportImportMainMH = 'export-import-main-mh',
   importMainMH = 'import-main-mh',
 
+  //Lao động
+  laborForce = 'labor-force',
+  unemployedRate = 'unemployed-rate',
+
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
@@ -119,6 +123,4 @@ export enum RedisKeys {
     
   //Filter
   filter = 'filter'
-
-
 }

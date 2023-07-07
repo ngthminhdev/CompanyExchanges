@@ -20,7 +20,7 @@ export class NewsEventResponse {
     @ApiProperty({
         type: String
     })
-    floor: string
+    exchange: string
 
     @ApiProperty({
         type: String
@@ -41,7 +41,7 @@ export class NewsEventResponse {
         this.date = UtilCommonTemplate.toDate(data?.date) || ''
         this.date_dkcc = UtilCommonTemplate.toDate(data?.date_dkcc) || ''
         this.date_gdkhq = UtilCommonTemplate.toDate(data?.date_gdkhq) || ''
-        this.floor = data?.floor || ''
+        this.exchange = data?.exchange || ''
         this.code = data?.code || ''
         this.content = data?.content || ''
         this.type = data?.type || ''

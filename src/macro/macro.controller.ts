@@ -6,6 +6,7 @@ import { BaseResponse } from '../utils/utils.response';
 import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
 import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
+import { LaborForceResponse } from './responses/labor-force.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -180,6 +181,30 @@ export class MacroController {
     @Res() res: Response,
   ) {
     const data = await this.macrosService.ippMostIndusProduction(q.industry);
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('luc-luong-lao-dong')
+  @ApiOperation({
+    summary: 'Lực lượng lao động',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async laborForce(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.laborForce();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ti-le-that-nghiep-cac-nhom-lao-dong')
+  @ApiOperation({
+    summary: 'Tỷ lệ thất nghiệp các nhóm lao động',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async unemployedRate(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.unemployedRate();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 }
