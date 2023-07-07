@@ -22,7 +22,7 @@ export class NewsService {
     const redisData = await this.redis.get(`${RedisKeys.newsEvent}`)
     if(redisData) return redisData
     const query = `
-    SELECT
+    SELECT 
       ticker AS code,
       san AS floor,
       NgayDKCC AS date_dkcc,
@@ -74,7 +74,7 @@ export class NewsService {
     const page = +q.page || 1
 
     const query = `
-    SELECT
+    SELECT distinct
         Date AS date,
         Title AS title,
         Href AS href,
@@ -96,7 +96,7 @@ export class NewsService {
     const page = +q.page || 1
 
     const query = `
-    SELECT
+    SELECT distinct
         Date AS date,
         Title AS title,
         Href AS href,
@@ -108,6 +108,7 @@ export class NewsService {
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
+
     const data = await this.mssqlService.query<MacroDomesticResponse[]>(query)
     const dataMapped = MacroDomesticResponse.mapToList(data)
     return dataMapped
@@ -165,7 +166,7 @@ export class NewsService {
     if(redisData) return redisData
 
     const query = `
-    select Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
+    select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
     ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
     ORDER BY Date DESC
