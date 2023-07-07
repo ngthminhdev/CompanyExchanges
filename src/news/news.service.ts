@@ -24,7 +24,7 @@ export class NewsService {
     const query = `
     SELECT 
       ticker AS code,
-      san AS floor,
+      san AS exchange,
       NgayDKCC AS date_dkcc,
       NgayThucHien AS date,
       NgayGDKHQ AS date_gdkhq,

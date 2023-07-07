@@ -8,6 +8,7 @@ import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
 import * as moment from 'moment';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { LaborForceResponse } from './responses/labor-force.response';
 
 @Injectable()
 export class MacroService {
@@ -514,5 +515,45 @@ export class MacroService {
     );
 
     return mappedData;
+  }
+
+  async laborForce(){
+    const redisData = await this.redis.get(RedisKeys.laborForce)
+    if(redisData) return redisData
+    const query = `
+        SELECT
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE chiTieu IN (N'Lao động có việc ( triệu người)', N'Lực lượng lao động ( triệu người)')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+        ORDER BY date ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.laborForce, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async unemployedRate(){
+    const redisData = await this.redis.get(RedisKeys.unemployedRate)
+    if(redisData) return redisData
+    const query = `
+      SELECT
+        chiTieu AS name,
+        thoiDiem AS date,
+        giaTri AS value
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (N'Tỷ lệ chung', N'Thanh niên', N'Thanh niên thành thị')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+      ORDER BY date ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.unemployedRate, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
   }
 }
