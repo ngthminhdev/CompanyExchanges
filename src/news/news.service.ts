@@ -10,6 +10,7 @@ import { MacroDomesticResponse } from './response/macro-domestic.response';
 import { NewsEnterpriseResponse } from './response/news-enterprise.response';
 import { NewsFilterDto } from './dto/news-filter.dto';
 import { NewsFilterResponse } from './response/news-filter.response';
+import { EventDto } from './dto/event.dto';
 
 @Injectable()
 export class NewsService {
@@ -18,9 +19,15 @@ export class NewsService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache
   ){}
-  async getEvent(ex: string){
-    const redisData = await this.redis.get(`${RedisKeys.newsEvent}`)
+  async getEvent(q: EventDto){
+    const limit = +q.limit || 20
+    const page = +q.page || 1
+
+    const exchange = q.exchange.toLowerCase() != 'all' ? `('${q.exchange}')` : `('HOSE', 'UPCOM', 'HNX')` 
+
+    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`)
     if(redisData) return redisData
+
     const query = `
     SELECT 
       ticker AS code,
@@ -37,11 +44,15 @@ export class NewsService {
         N'Thưởng cổ phiếu',
         N'Phát hành thêm'
     )
+    and san IN ${exchange}
     ORDER BY NgayDKCC desc
+    OFFSET ${(page - 1) * limit} ROWS
+    FETCH NEXT ${limit} ROWS ONLY;
     `
+
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
     const dataMapped = NewsEventResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsEvent}`, dataMapped, {ttl: TimeToLive.OneHour})
+    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`, dataMapped, {ttl: TimeToLive.OneHour})
     return dataMapped
   }
 

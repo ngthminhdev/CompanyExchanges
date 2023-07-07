@@ -2,15 +2,15 @@ import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
-import { GetExchangeQuery } from '../stock/dto/getExchangeQuery.dto';
 import { BaseResponse } from '../utils/utils.response';
+import { EventDto } from './dto/event.dto';
+import { NewsFilterDto } from './dto/news-filter.dto';
 import { PageLimitDto } from './dto/page-limit.dto';
 import { NewsService } from './news.service';
 import { NewsEventResponse } from './response/event.response';
 import { FilterResponse } from './response/filer.response';
 import { MacroDomesticResponse } from './response/macro-domestic.response';
 import { NewsEnterpriseResponse } from './response/news-enterprise.response';
-import { NewsFilterDto } from './dto/news-filter.dto';
 import { NewsFilterResponse } from './response/news-filter.response';
 
 @Controller('news')
@@ -21,9 +21,9 @@ export class NewsController {
   @ApiOperation({summary: 'Tin doanh nghiệp - Lịch sự kiện'})
   @ApiOkResponse({type: NewsEventResponse})
   @Get('event')
-  async event(@Query() q: GetExchangeQuery,@Res() res: Response){
+  async event(@Query() q: EventDto,@Res() res: Response){
     try {
-      const data = await this.newsService.getEvent(q.exchange)
+      const data = await this.newsService.getEvent(q)
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))
     } catch (error) {
       throw new CatchException(error)
