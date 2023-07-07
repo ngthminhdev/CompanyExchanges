@@ -115,4 +115,10 @@ export enum RedisKeys {
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
+  newsFilter = 'news-filter',
+    
+  //Filter
+  filter = 'filter'
+
+
 }

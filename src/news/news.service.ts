@@ -8,6 +8,8 @@ import { PageLimitDto } from './dto/page-limit.dto';
 import { NewsEventResponse } from './response/event.response';
 import { MacroDomesticResponse } from './response/macro-domestic.response';
 import { NewsEnterpriseResponse } from './response/news-enterprise.response';
+import { NewsFilterDto } from './dto/news-filter.dto';
+import { NewsFilterResponse } from './response/news-filter.response';
 
 @Injectable()
 export class NewsService {
@@ -17,8 +19,7 @@ export class NewsService {
     private readonly redis: Cache
   ){}
   async getEvent(ex: string){
-    const exchange = ex ? `'${ex}'` : `'HNX', 'HSX', 'UPCOM'`
-    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${exchange}`)
+    const redisData = await this.redis.get(`${RedisKeys.newsEvent}`)
     if(redisData) return redisData
     const query = `
     SELECT
@@ -36,11 +37,11 @@ export class NewsService {
         N'Thưởng cổ phiếu',
         N'Phát hành thêm'
     )
-    AND san IN (${exchange})
+    ORDER BY NgayDKCC desc
     `
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
     const dataMapped = NewsEventResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsEvent}:${exchange}`, dataMapped, {ttl: TimeToLive.OneHour})
+    await this.redis.set(`${RedisKeys.newsEvent}`, dataMapped, {ttl: TimeToLive.OneHour})
     return dataMapped
   }
 
@@ -110,6 +111,69 @@ export class NewsService {
     return dataMapped
   }
 
+  async filter(){
+    const redisData = await this.redis.get(RedisKeys.filter)
+    if(redisData) return redisData
+
+    const query = `
+      select code, floor, LV2, LV4 from marketInfor.dbo.info
+      where type IN ('STOCK', 'ETF')
+      and floor IN ('HOSE', 'HNX', 'UPCOM')
+      and status = 'listed'
+      and LV4 != ''
+      and LV2 != ''
+      order by floor desc
+    `
+    const data = await this.mssqlService.query<any[]>(query)
+
+    const result = data.reduce((acc, cur) => {
+      const index_floor = acc.findIndex(item => item.name == cur.floor)
+      
+      if(acc.length == 0 || index_floor == -1){
+        acc.push({name: cur.floor, LV2: [{name: cur.LV2, LV4: [{name: cur.LV4, code: [cur.code]}]}]})
+        return acc
+      }
+      const index_lv2 = acc[index_floor].LV2.findIndex(item => item.name == cur.LV2)
+      
+      if(index_lv2 == -1){
+         acc[index_floor].LV2.push({name: cur.LV2, LV4: [{name: cur.LV4, code: [cur.code]}]})
+         return acc
+      }
+      
+      const index_lv4 = acc[index_floor].LV2[index_lv2].LV4.findIndex(item => item.name == cur.LV4)
+      if(index_lv4 == -1){
+        acc[index_floor].LV2[index_lv2].LV4.push({name: cur.LV4, code: [cur.code]})
+        return acc
+      }
+      acc[index_floor].LV2[index_lv2].LV4[index_lv4].code.push(cur.code)
+
+      return acc
+    }, [])
+
+    await this.redis.set(RedisKeys.filter, result, {ttl: TimeToLive.OneWeek})
+    return result
+  }
   
+  async newsFilter(q: NewsFilterDto){
+    const limit = +q.limit || 20
+    const page = +q.page || 1
+    const code = q.code.split(',')
+    
+    const redisData = await this.redis.get(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`)
+    if(redisData) return redisData
+
+    const query = `
+    select Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
+    ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
+    ORDER BY Date DESC
+    OFFSET ${(page - 1) * limit} ROWS
+    FETCH NEXT ${limit} ROWS ONLY;
+    `
+
+    const data = await this.mssqlService.query<NewsFilterResponse[]>(query)
+    const dataMapped = NewsFilterResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
+    return dataMapped
+  }
 }
 
