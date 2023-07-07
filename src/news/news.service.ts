@@ -81,6 +81,7 @@ export class NewsService {
         Img AS img,
         SubTitle AS sub_title
     FROM macroEconomic.dbo.TinTucViMo
+    WHERE Href NOT LIKE 'https://cafef.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
@@ -102,6 +103,7 @@ export class NewsService {
         Img AS img,
         SubTitle AS sub_title
     FROM macroEconomic.dbo.TinTucQuocTe
+    WHERE Href NOT LIKE 'https://cafef.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
@@ -153,7 +155,7 @@ export class NewsService {
     await this.redis.set(RedisKeys.filter, result, {ttl: TimeToLive.OneWeek})
     return result
   }
-  
+
   async newsFilter(q: NewsFilterDto){
     const limit = +q.limit || 20
     const page = +q.page || 1
@@ -165,11 +167,11 @@ export class NewsService {
     const query = `
     select Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
     ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
+    AND Href NOT LIKE 'https://cafef.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
-
     const data = await this.mssqlService.query<NewsFilterResponse[]>(query)
     const dataMapped = NewsFilterResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
