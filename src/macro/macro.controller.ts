@@ -184,6 +184,10 @@ export class MacroController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
+  /**
+   * Lao động
+   */
+
   @Get('luc-luong-lao-dong')
   @ApiOperation({
     summary: 'Lực lượng lao động',
@@ -207,4 +211,54 @@ export class MacroController {
     const data = await this.macrosService.unemployedRate();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
+
+  @Get('ti-le-lao-dong-theo-linh-vuc')
+  @ApiOperation({
+    summary: 'Tỷ lệ lao động theo lĩnh vực (%)',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async laborRate(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.laborRate();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('ti-le-lao-dong-phi-chinh-thuc')
+  @ApiOperation({
+    summary: 'Tỷ lệ lao động phi chính thức (%)',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async informalLaborRate(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.informalLaborRate();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('muc-luong-binh-quan-thi-truong-lao-dong')
+  @ApiOperation({
+    summary: 'Mức lương bình quân trên thị trường lao động ',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async averageSalary(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.averageSalary();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  @Get('bien-dong-viec-lam-so-voi-cung-ky')
+  @ApiOperation({
+    summary: 'Biến động việc làm so với cùng kỳ',
+  })
+  @ApiOkResponse({type: LaborForceResponse})
+  async employmentFluctuations(
+    @Res() res: Response,
+  ) {
+    const data = await this.macrosService.employmentFluctuations();
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  
 }

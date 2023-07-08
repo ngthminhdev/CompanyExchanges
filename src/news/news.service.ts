@@ -72,6 +72,8 @@ export class NewsService {
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON ticker = t.code
       AND t.date = '${moment().format('YYYY-MM-DD')}'
+    WHERE Href NOT LIKE 'https://cafef.vn%'  
+    AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY n.date DESC
     `
     const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(query)
@@ -93,6 +95,7 @@ export class NewsService {
         SubTitle AS sub_title
     FROM macroEconomic.dbo.TinTucViMo
     WHERE Href NOT LIKE 'https://cafef.vn%'
+    AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
@@ -115,6 +118,7 @@ export class NewsService {
         SubTitle AS sub_title
     FROM macroEconomic.dbo.TinTucQuocTe
     WHERE Href NOT LIKE 'https://cafef.vn%'
+    AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
@@ -180,6 +184,7 @@ export class NewsService {
     select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
     ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
+    AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;

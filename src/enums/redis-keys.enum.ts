@@ -115,6 +115,10 @@ export enum RedisKeys {
   //Lao động
   laborForce = 'labor-force',
   unemployedRate = 'unemployed-rate',
+  laborRate = 'labor-rate',
+  informalLaborRate = 'informal-labor-rate',
+  averageSalary = 'average-salary',
+  employmentFluctuations = 'employment-fluctuations',
 
   //Tin tuc
   newsEvent = 'news-event',
