@@ -4,6 +4,7 @@ import { Cache } from 'cache-manager';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { RetailValueResponse } from './responses/retail-value.response';
+import { MainExportImportResponse } from './responses/main-import-export.response';
 
 @Injectable()
 export class RetailService {
@@ -24,14 +25,12 @@ export class RetailService {
         date = `thoiDiem as date,`
         break
       case TimeTypeEnum.Quarter:
-        // date = `datepart(qq, thoiDiem) as date,
         date = `case datepart(qq, thoiDiem)
         when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
         when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
         when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
         when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
         end as date,`
-        // datepart(year, thoiDiem) as year,`
         group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
         break
       case TimeTypeEnum.Year:
@@ -56,6 +55,7 @@ export class RetailService {
       )
       and thoiDiem >= '2018-01-01 00:00:00.000'
     ${group}
+    order by date asc
     `
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
 
@@ -82,6 +82,7 @@ export class RetailService {
           N'Bán lẻ: Dịch vụ (Tỷ VNĐ)', 
           N'Bán lẻ: Du lịch (Tỷ VNĐ)')
       ${order == TimeTypeEnum.Year ? 'group by datepart(year, thoiDiem), chiTieu' : ``}
+      order by date asc
     `
     
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
@@ -109,7 +110,7 @@ export class RetailService {
           ROW_NUMBER() OVER (PARTITION BY thoiDiem ORDER BY thoiDiem) AS rn
         
         FROM [macroEconomic].[dbo].[DuLieuViMo]
-        WHERE [thoiDiem] >= '2018-01-01 00:00:00.000'
+        WHERE [thoiDiem] >= '2018-02-01 00:00:00.000'
         AND phanBang = N'BÁN LẺ'
         AND nhomDulieu = N'GIÁ TRỊ DOANH THU BÁN LẺ ( TỶ VNĐ)'
         AND [chiTieu] IN (
@@ -137,7 +138,7 @@ export class RetailService {
         N'Bán lẻ: Dịch vụ (Tỷ VNĐ)',
         N'Bán lẻ: Du lịch (Tỷ VNĐ)'
         )
-        AND thoiDiem >= '2018-01-01 00:00:00.000'
+        AND thoiDiem >= '2018-02-01 00:00:00.000'
     `
     
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
@@ -157,14 +158,12 @@ export class RetailService {
         date = `thoiDiem as date,`
         break
       case TimeTypeEnum.Quarter:
-        // date = `datepart(qq, thoiDiem) as date,
         date = `case datepart(qq, thoiDiem)
         when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
         when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
         when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
         when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
         end as date,`
-        // datepart(year, thoiDiem) as year,`
         group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
         break
       case TimeTypeEnum.Year:
@@ -187,6 +186,7 @@ export class RetailService {
       )
       and thoiDiem >= '2018-01-01 00:00:00.000'
     ${group}
+    order by date asc
     `
     const data = await this.mssqlService.query<RetailValueResponse[]>(query)
     const mappedData = RetailValueResponse.mapToList(data, order)
@@ -194,10 +194,172 @@ export class RetailService {
     return mappedData
   }
 
-  async mainExportImport(order: number){
+  async mainExportImport(){
+    const redisData = await this.redis.get(RedisKeys.exportImportMain)
+    if(redisData) return redisData
     const query = `
-
+        WITH temp
+        AS (SELECT
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value,
+          phanBang
+        
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE (phanBang = N'NHẬP KHẨU')
+        AND nhomDulieu = N'Thị trường nhập khẩu chính'
+        AND thoiDiem >= '2018-01-01 00:00:00.000'
+        UNION ALL
+        SELECT
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value,
+          phanBang
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE (phanBang = N'XUẤT KHẨU')
+        AND nhomDulieu = N'Thị trường xuất khẩu chính'
+        AND thoiDiem >= '2018-01-01 00:00:00.000'
+        ),
+        data
+        AS (SELECT
+          name,
+          date,
+          [XUẤT KHẨU] AS xk,
+          [NHẬP KHẨU] AS nk
+        FROM (SELECT
+          LTRIM(SUBSTRING(name, 21, LEN(name))) AS name,
+          date,
+          value,
+          phanBang
+        FROM temp) AS source
+        PIVOT (
+        SUM(value)
+        FOR phanBang IN ([XUẤT KHẨU], [NHẬP KHẨU])
+        ) AS pvtable)
+        SELECT
+          *,
+          xk - nk AS net_xnk
+        FROM data
+        GROUP BY name,
+                date,
+                xk,
+                nk
+        ORDER BY name, date
     `
-    const data = await this.mssqlService.query(query)
+    const data = await this.mssqlService.query<MainExportImportResponse[]>(query)
+    const mapped_data = MainExportImportResponse.mapToList(data)
+    await this.redis.set(RedisKeys.exportImportMain, mapped_data, {ttl: TimeToLive.OneWeek})
+    return mapped_data
   }
+
+  async mainExportImportMH(order: number){
+    const redisData = await this.redis.get(`${RedisKeys.exportImportMainMH}:${order}`)
+    if(redisData) return redisData
+
+    let date: string = ''
+    let group: string = ''
+    switch (order) {
+      case TimeTypeEnum.Month:
+        date = `thoiDiem as date,`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date,`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
+        break
+      case TimeTypeEnum.Year:
+        date = `cast(datepart(year, thoiDiem) as varchar) + '/12/31' as date,`
+        group = `group by datepart(year, thoiDiem), chiTieu`
+        break
+      default:
+        date = `thoiDiem as date,`
+    }
+    const query = 
+    `
+      select chiTieu as name,
+            ${date}
+            ${order == TimeTypeEnum.Month ? `giaTri as value` : `sum(giaTri) as value`}
+      from macroEconomic.dbo.DuLieuViMo
+      where phanBang = N'XUẤT NHẬP KHẨU'
+      and nhomDulieu = N'Giá trị xuất nhập khẩu hàng hóa'
+      and chiTieu IN (
+        N'Xuất khẩu: Điện tử máy tính (triệu USD)',
+        N'Xuất khẩu: Máy móc thiết bị (triệu USD)',
+        N'Xuất khẩu: Dệt may (triệu USD)',
+        N'Xuất khẩu: Giày da (triệu USD)',
+        N'Xuất khẩu: Gỗ và sản phẩm gỗ (triệu USD)',
+        N'Xuất khẩu: Thủy sản (triệu USD)',
+        N'Xuất khẩu: Gạo (triệu USD)',
+        N'Xuất khẩu: Café (triệu USD)',
+        N'Xuất khẩu: Dầu thô (triệu USD)'
+      )
+      and thoiDiem >= '2018-01-01 00:00:00.000'
+      ${group}
+      order by date asc
+      `
+    const data = await this.mssqlService.query<RetailValueResponse[]>(query)
+    const mapped_data = RetailValueResponse.mapToList(data, order)
+    await this.redis.set(`${RedisKeys.exportImportMainMH}:${order}`, mapped_data, {ttl: TimeToLive.OneWeek})
+    return mapped_data
+  }
+
+  async mainImportMH(order: number){
+    const redisData = await this.redis.get(`${RedisKeys.importMainMH}:${order}`)
+    if(redisData) return redisData
+
+    let date: string = ''
+    let group: string = ''
+    switch (order) {
+      case TimeTypeEnum.Month:
+        date = `thoiDiem as date,`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date,`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu` 
+        break
+      case TimeTypeEnum.Year:
+        date = `cast(datepart(year, thoiDiem) as varchar) + '/12/31' as date,`
+        group = `group by datepart(year, thoiDiem), chiTieu`
+        break
+      default:
+        date = `thoiDiem as date,`
+    }
+    const query = 
+    `
+      select chiTieu as name,
+            ${date}
+            ${order == TimeTypeEnum.Month ? `giaTri as value` : `sum(giaTri) as value`}
+      from macroEconomic.dbo.DuLieuViMo
+      where phanBang = N'XUẤT NHẬP KHẨU'
+      and nhomDulieu = N'Giá trị xuất nhập khẩu hàng hóa'
+      and chiTieu IN (
+        N'Nhập khẩu: Điện tử, máy tính và linh kiện (triệu USD)',
+        N'Nhập khẩu: Máy móc thiết bị, phụ tùng (triệu USD)',
+        N'Nhập khẩu: Sắt thép (triệu USD)',
+        N'Nhập khẩu: Vải (triệu USD)',
+        N'Nhập khẩu: Hóa chất (triệu USD)',
+        N'Nhập khẩu: Ô tô (triệu USD)',
+        N'Nhập khẩu: Sản phẩm hóa chất (triệu USD)',
+        N'Nhập khẩu: Xăng dầu (triệu USD)',
+        N'Nhập khẩu: Thức ăn gia súc (triệu USD)'
+      )
+      and thoiDiem >= '2018-01-01 00:00:00.000'
+      ${group}
+      order by date asc
+      `
+      
+    const data = await this.mssqlService.query<RetailValueResponse[]>(query)
+    const mapped_data = RetailValueResponse.mapToList(data, order)
+    await this.redis.set(`${RedisKeys.importMainMH}:${order}`, mapped_data, {ttl: TimeToLive.OneWeek})
+    return mapped_data
+  } 
 }

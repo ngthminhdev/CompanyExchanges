@@ -560,9 +560,13 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getYearQuarters(2);
+    // const date = UtilCommonTemplate.getYearQuarters(2);
 
-    const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+    // const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+
+    const date = await this.mssqlService.query(`select top 2 year from financialReport.dbo.financialReport group by year ORDER BY year DESC`)
+    const startDate = date[1].year
+    const endDate = date[0].year
 
     const query: string = `
       SELECT
@@ -643,9 +647,13 @@ export class MarketService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getYearQuarters(2);
-
-    const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+    // const date = UtilCommonTemplate.getYearQuarters(8);
+    
+    // const { startDate, endDate } = UtilCommonTemplate.getDateFilter(date);
+    
+    const date = await this.mssqlService.query(`select top 2 year from financialReport.dbo.financialReport group by year ORDER BY year DESC`)
+    const startDate = date[1].year
+    const endDate = date[0].year
 
     const query: string = `
       SELECT

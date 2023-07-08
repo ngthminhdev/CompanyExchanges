@@ -8,6 +8,7 @@ import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { GDPResponse } from './responses/gdp.response';
 import * as moment from 'moment';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { LaborForceResponse } from './responses/labor-force.response';
 
 @Injectable()
 export class MacroService {
@@ -514,5 +515,127 @@ export class MacroService {
     );
 
     return mappedData;
+  }
+
+  async laborForce(){
+    const redisData = await this.redis.get(RedisKeys.laborForce)
+    if(redisData) return redisData
+    const query = `
+        SELECT
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE chiTieu IN (N'Lao động có việc ( triệu người)', N'Lực lượng lao động ( triệu người)')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+        ORDER BY date ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.laborForce, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async unemployedRate(){
+    const redisData = await this.redis.get(RedisKeys.unemployedRate)
+    if(redisData) return redisData
+    const query = `
+      SELECT
+        chiTieu AS name,
+        thoiDiem AS date,
+        giaTri AS value
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (N'Tỷ lệ chung', N'Thanh niên', N'Thanh niên thành thị')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+      ORDER BY date ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.unemployedRate, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async laborRate(){
+    const redisData = await this.redis.get(RedisKeys.laborRate)
+    if(redisData) return redisData
+    const query = `
+        SELECT TOP 3
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE chiTieu IN (N'Công nghiệp- Xây dựng', N'Dịch vụ', N'Nông lâm ngư nghiệp')
+          AND phanBang = N'LAO ĐỘNG'
+          AND nhomDulieu = N'Chỉ tiêu lao động'
+        ORDER BY date desc
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.laborRate, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async informalLaborRate(){
+    const redisData = await this.redis.get(RedisKeys.informalLaborRate)
+    if(redisData) return redisData
+    const query = `
+        SELECT top 1
+          chiTieu AS name,
+          thoiDiem AS date,
+          giaTri AS value
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE chiTieu IN (N'Tỉ lệ lao động phi chính thức (%)')
+          AND phanBang = N'LAO ĐỘNG'
+          AND nhomDulieu = N'Chỉ tiêu lao động'
+        ORDER BY date desc
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.informalLaborRate, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async averageSalary(){
+    const redisData = await this.redis.get(RedisKeys.averageSalary)
+    if(redisData) return redisData
+    const query = `
+      SELECT
+        chiTieu AS name,
+        thoiDiem AS date,
+        giaTri AS value
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (N'Mức chung', N'Nam giới', N'Nữ giới')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+      ORDER BY date ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.averageSalary, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async employmentFluctuations(){
+    const redisData = await this.redis.get(RedisKeys.employmentFluctuations)
+    if(redisData) return redisData
+    const query = `
+      SELECT top 10
+        chiTieu AS name,
+        thoiDiem AS date,
+        giaTri AS value
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (
+            N'Bán buôn/Bán lẻ', 
+            N'Chế biến/Chế tạo', N'Dịch vụ', N'F&B', N'Giáo dục', N'Khai khoáng', N'Khối Nhà nước', N'Xây dựng', N'Sản xuất, phân phối nước', N'Nghệ thuật')
+        AND phanBang = N'LAO ĐỘNG'
+        AND nhomDulieu = N'Chỉ tiêu lao động'
+      ORDER BY date desc
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.employmentFluctuations, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
   }
 }

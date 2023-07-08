@@ -78,6 +78,8 @@ export enum RedisKeys {
   IndsDebtSolvency = 'inds-debt-solvency',
   IndsProfitMargins = 'inds-profit-margin',
 
+  IndsInterestCoverage = 'inds-coverage',
+
   NearestDate = 'nearest-date',
 
   //Vi mo
@@ -106,5 +108,23 @@ export enum RedisKeys {
   retailValueTotal = 'retail-value-total',
   retailPercentValue = 'retail-percent-value',
   exportImport = 'export-import',
+  exportImportMain = 'export-import-main',
+  exportImportMainMH = 'export-import-main-mh',
+  importMainMH = 'import-main-mh',
 
+  //Lao động
+  laborForce = 'labor-force',
+  unemployedRate = 'unemployed-rate',
+  laborRate = 'labor-rate',
+  informalLaborRate = 'informal-labor-rate',
+  averageSalary = 'average-salary',
+  employmentFluctuations = 'employment-fluctuations',
+
+  //Tin tuc
+  newsEvent = 'news-event',
+  newsEnterprise = 'news-enterprise',
+  newsFilter = 'news-filter',
+    
+  //Filter
+  filter = 'filter'
 }
