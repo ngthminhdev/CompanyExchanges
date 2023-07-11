@@ -36,17 +36,19 @@ export class FinanceHealthService {
     private readonly marketService: MarketService,
   ) {}
 
-  async PEPBIndustry(ex: string, type: number, order: number) {
+  async PEPBIndustry(ex: string, type: number, order: number, industries: string) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
-    // const redisData = await this.redis.get(
-    //   `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
-    // );
-    // if (redisData) return redisData;
+    const inds: string = UtilCommonTemplate.getIndustryFilter(industries.split(','));
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
+    );
+    if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
-
+    
     // const query = `
     //   with valueData as (
     //       select
@@ -78,18 +80,17 @@ export class FinanceHealthService {
     // `;
 
     const query = `
-        select industry, date, sum(PB) as PB from VISUALIZED_DATA.dbo.PB
-        where date IN ${dateFilter}
-        and floor IN ${floor}
-        group by industry, date
-        order by industry, date
-    `;
+      select *, pb as PB from VISUALIZED_DATA.dbo.pb_nganh
+      where industry IN ${inds}
+      and floor IN ${floor}
+      and date IN ${dateFilter}
+    `
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
     const mappedData = new PEPBIndustryResponse().mapToList(data);
 
     await this.redis.set(
-      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
+      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
       mappedData,
       { ttl: TimeToLive.OneWeek },
     );

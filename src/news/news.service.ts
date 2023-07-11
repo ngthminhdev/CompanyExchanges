@@ -61,21 +61,22 @@ export class NewsService {
     if(redisData) return redisData
     const query = `
     SELECT
-        n.date,
-        title,
-        href,
-        ticker as code,
+        n.Date as date,
+        Title as title,
+        Href as href,
+        TickerTitle as code,
         closePrice,
         perChange,
         change
-    FROM PHANTICH.dbo.TinTuc n
+    FROM macroEconomic.dbo.TinTuc n
     INNER JOIN marketTrade.dbo.tickerTradeVND t
-      ON ticker = t.code
+      ON TickerTitle = t.code
       AND t.date = '${moment().format('YYYY-MM-DD')}'
     WHERE Href NOT LIKE 'https://cafef.vn%'  
     AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY n.date DESC
     `
+    
     const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(query)
     const dataMapped = NewsEnterpriseResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.newsEnterprise}`, dataMapped, {ttl: TimeToLive.OneHour})

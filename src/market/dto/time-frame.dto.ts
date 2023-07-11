@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNumberString } from 'class-validator';
 import { GetExchangeQuery } from '../../stock/dto/getExchangeQuery.dto';
 
@@ -27,4 +27,9 @@ export class TimeFrameDto extends GetExchangeQuery {
     `,
   })
   order: string;
+
+  @ApiPropertyOptional({
+    type: String
+  })
+  industry: string
 }

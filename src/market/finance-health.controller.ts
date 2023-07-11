@@ -32,6 +32,7 @@ export class FinanceHealthController {
       q.exchange.toUpperCase(),
       parseInt(q.type),
       parseInt(q.order),
+      q.industry
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
