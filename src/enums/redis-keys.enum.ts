@@ -120,6 +120,14 @@ export enum RedisKeys {
   averageSalary = 'average-salary',
   employmentFluctuations = 'employment-fluctuations',
 
+  //Tín dụng
+  totalPayment = 'total-payment',
+  totalPaymentPercent = 'total-payment-percent',
+  balancePaymentInternational = 'balance-payment-international',
+  creditDebt = 'credit-debt',
+  creditDebtPercent = 'credit-debt-percent',
+  creditInstitution = 'credit-institution',
+
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
