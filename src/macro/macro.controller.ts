@@ -261,11 +261,69 @@ export class MacroController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('tong-phuong-tien-thanh-tona')
+  //Tín dụng
+
+  @Get('tong-phuong-tien-thanh-toan')
   @ApiOperation({summary: 'Tổng phương tiện thanh toán'})
-  async totalPayment(){
+  async totalPayment(@Res() res: Response){
     try {
       const data = await this.macrosService.totalPayment()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tang-truong-tong-phuong-tien-thanh-toan')
+  @ApiOperation({summary: 'Tổng phương tiện thanh toán tăng trưởng'})
+  async totalPaymentPercent(@Res() res: Response){
+    try {
+      const data = await this.macrosService.totalPaymentPercent()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('can-can-thanh-toan-quoc-te')
+  @ApiOperation({summary: 'Cán cân thanh toán quốc tế'})
+  async balancePaymentInternational(@Res() res: Response){
+    try {
+      const data = await this.macrosService.balancePaymentInternational()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('du-no-tin-dung')
+  @ApiOperation({summary: 'Dư nợ tín dụng đối với nền kinh tế (tỷ VNĐ)'})
+  async creditDebt(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditDebt()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tang-truong-du-no-tin-dung')
+  @ApiOperation({summary: 'Tăng trưởng dư nợ tín dụng đối với nền kinh tế (%)'})
+  async creditDebtPercent(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditDebtPercent()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('thong-ke-theo-loai-hinh-to-chuc-tin-dung')
+  @ApiOperation({summary: 'Thống kê theo loại hình tổ chức tín dụng'})
+  async creditInstitution(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditInstitution()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
     }

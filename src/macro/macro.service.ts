@@ -1,13 +1,13 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import * as moment from 'moment';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
-import { GDPResponse } from './responses/gdp.response';
-import * as moment from 'moment';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
 
 @Injectable()
@@ -640,5 +640,176 @@ export class MacroService {
   }
 
   async totalPayment(){
+    const redisData = await this.redis.get(RedisKeys.totalPayment)
+    if(redisData) return redisData
+    const query = `
+      SELECT
+        chiTieu AS name,
+        giaTri AS value,
+        thoiDiem AS date
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (
+        N'Cung tiền M2 (Tỷ đồng)',
+        N'Tiền gửi của các TCKT (Tỷ đồng)',
+        N'Tiền gửi của dân cư (Tỷ đồng)'
+        )
+      AND phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+    `
+
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.totalPayment, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async totalPaymentPercent(){
+    const redisData = await this.redis.get(RedisKeys.totalPaymentPercent)
+    if(redisData) return redisData
+    const query = `
+      WITH tindung
+      AS (SELECT
+          'Tin dung (Ty dong)' AS name,
+          SUM(giaTri) AS value,
+          thoiDiem AS date
+        FROM macroEconomic.dbo.DuLieuViMo
+        WHERE chiTieu IN (
+          N'Tiền gửi của các TCKT (Tỷ đồng)',
+          N'Tiền gửi của dân cư (Tỷ đồng)'
+      )
+      AND phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      GROUP BY thoiDiem)
+      SELECT
+        chiTieu AS name,
+        giaTri AS value,
+        thoiDiem AS date
+      FROM macroEconomic.dbo.DuLieuViMo
+      WHERE chiTieu IN (
+      N'Cung tiền M2 (Tỷ đồng)',
+      N'Cung tiền M2 (%)'
+      )
+      AND phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      UNION ALL
+      SELECT
+        name,
+        value,
+        date
+      FROM tindung
+      UNION ALL
+      SELECT
+        'Tin dung (%)' AS name,
+        ((value - LEAD(value) OVER (ORDER BY date DESC)) / LEAD(value) OVER (ORDER BY date DESC)) * 100 AS value,
+        date
+      FROM tindung
+      ORDER BY date ASC
+    `
+
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.totalPaymentPercent, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async balancePaymentInternational(){
+    const redisData = await this.redis.get(RedisKeys.balancePaymentInternational)
+    if(redisData) return redisData
+    const query = `
+    SELECT
+      chiTieu AS name,
+      thoiDiem AS date,
+      giaTri AS value
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      AND chiTieu IN (
+      N'Cán cân vãng lai (Triệu USD)',
+      N'Cán cân tài chính (Triệu USD)',
+      N'Cán cân tổng thể (Triệu USD)',
+      N'Dự trữ (Triệu USD)'
+    )
+    ORDER BY thoiDiem ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.balancePaymentInternational, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async creditDebt(){
+    const redisData = await this.redis.get(RedisKeys.creditDebt)
+    if(redisData) return redisData
+    const query = `
+    SELECT
+      chiTieu AS name,
+      thoiDiem AS date,
+      giaTri AS value
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      AND chiTieu IN (
+      N'Công nghiệp (Tỷ đồng)',
+      N'Xây dựng (Tỷ đồng)',
+      N'Vận tải và Viễn thông (Tỷ đồng)',
+      N'Nông nghiệp, lâm nghiệp và thuỷ sản (Tỷ đồng)',
+      N'Các hoạt động dịch vụ khác (Tỷ đồng)'
+      )
+    ORDER BY thoiDiem ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.creditDebt, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async creditDebtPercent(){
+    const redisData = await this.redis.get(RedisKeys.creditDebtPercent)
+    if(redisData) return redisData
+    const query = `
+    SELECT
+      chiTieu AS name,
+      thoiDiem AS date,
+      giaTri AS value
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      AND chiTieu IN (
+      N'Công nghiệp (%)',
+      N'Xây dựng (%)',
+      N'Vận tải và Viễn thông (%)',
+      N'Nông nghiệp, lâm nghiệp và thuỷ sản (%)',
+      N'Các hoạt động dịch vụ khác (%)'
+      )
+    ORDER BY thoiDiem ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.creditDebtPercent, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async creditInstitution(){
+    const redisData = await this.redis.get(RedisKeys.creditInstitution)
+    if(redisData) return redisData
+    const query = `
+    SELECT
+      chiTieu AS name,
+      thoiDiem AS date,
+      giaTri AS value
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'TÍN DỤNG'
+      AND nhomDulieu = N'Chỉ số tín dụng'
+      AND chiTieu IN (
+      N'NHTM Nhà nước (%)',
+      N'NHTM Cổ phần (%)',
+      N'NH Liên doanh, nước ngoài (%)'
+      )
+    ORDER BY thoiDiem ASC
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(RedisKeys.creditInstitution, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
   }
 }
