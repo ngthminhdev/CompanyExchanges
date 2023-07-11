@@ -132,6 +132,7 @@ export enum RedisKeys {
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
   newsFilter = 'news-filter',
+  infoStock = 'info-stock',
     
   //Filter
   filter = 'filter'
