@@ -8,7 +8,7 @@ import { NewsFilterDto } from './dto/news-filter.dto';
 import { PageLimitDto } from './dto/page-limit.dto';
 import { NewsService } from './news.service';
 import { NewsEventResponse } from './response/event.response';
-import { FilterResponse } from './response/filer.response';
+import { FilterResponse, InfoStockResponse } from './response/filer.response';
 import { MacroDomesticResponse } from './response/macro-domestic.response';
 import { NewsEnterpriseResponse } from './response/news-enterprise.response';
 import { NewsFilterResponse } from './response/news-filter.response';
@@ -72,6 +72,18 @@ export class NewsController {
   async filter(@Res() res: Response){
     try {
       const data = await this.newsService.filter();
+      return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('info-stock')
+  @ApiOperation({summary: 'Thông tin cổ phiếu'})
+  @ApiOkResponse({type: InfoStockResponse})
+  async getInfoStock(@Res() res: Response){
+    try {
+      const data = await this.newsService.getInfoStock();
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))
     } catch (e) {
       throw new CatchException(e)

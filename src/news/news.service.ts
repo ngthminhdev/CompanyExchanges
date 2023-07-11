@@ -195,5 +195,28 @@ export class NewsService {
     await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
     return dataMapped
   }
+
+  async getInfoStock(){
+    const redisData = await this.redis.get(RedisKeys.infoStock)
+    if(redisData) return redisData
+    const query = `
+    SELECT
+      code,
+      companyName as company_name,
+      shortName as short_name,
+      CASE
+        WHEN SUBSTRING(shortName, 0, 5) = 'CTCP' THEN shortName
+        WHEN SUBSTRING(companyName, 0, 5) = N'Ngân' AND
+          SUBSTRING(shortName, 0, 5) = N'Ngân' THEN 'NH ' + SUBSTRING(shortName, 11, 100)
+        WHEN SUBSTRING(companyName, 0, 5) = N'Ngân' THEN 'NH ' + info.shortName
+        ELSE 'CTCP ' + shortName
+      END AS name
+    FROM marketInfor.dbo.info
+    WHERE shortName != ''
+    `
+    const data = await this.mssqlService.query(query)
+    await this.redis.set(RedisKeys.infoStock, data, {ttl: TimeToLive.OneDay})
+    return data
+  }
 }
 

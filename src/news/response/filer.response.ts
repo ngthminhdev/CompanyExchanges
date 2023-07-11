@@ -38,3 +38,26 @@ export class FilterResponse {
     })
     LV2: FilterV2Response[]
 }
+
+export class InfoStockResponse {
+    @ApiProperty({
+        type: String
+    })
+    name: string
+
+    @ApiProperty({
+        type: String
+    })
+    company_name: string
+
+    @ApiProperty({
+        type: String
+    })
+    short_name: string
+
+    @ApiProperty({
+        type: String
+    })
+    code: string
+
+}
