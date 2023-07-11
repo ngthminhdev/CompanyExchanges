@@ -37,7 +37,7 @@ export class FinanceHealthService {
   ) {}
 
   async PEPBIndustry(ex: string, type: number, order: number, industries: string) {
-    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const floor = ex == 'ALL' ? ` ('ALL') ` : ` ('${ex}') `;
     const inds: string = industries ? UtilCommonTemplate.getIndustryFilter(industries.split(',')) : '';
 
     const redisData = await this.redis.get(
