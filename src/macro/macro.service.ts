@@ -638,4 +638,7 @@ export class MacroService {
     await this.redis.set(RedisKeys.employmentFluctuations, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped
   }
+
+  async totalPayment(){
+  }
 }

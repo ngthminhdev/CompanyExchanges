@@ -38,7 +38,7 @@ export class FinanceHealthService {
 
   async PEPBIndustry(ex: string, type: number, order: number, industries: string) {
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
-    const inds: string = UtilCommonTemplate.getIndustryFilter(industries.split(','));
+    const inds: string = industries ? UtilCommonTemplate.getIndustryFilter(industries.split(',')) : '';
 
     const redisData = await this.redis.get(
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
@@ -81,8 +81,8 @@ export class FinanceHealthService {
 
     const query = `
       select *, pb as PB from VISUALIZED_DATA.dbo.pb_nganh
-      where industry IN ${inds}
-      and floor IN ${floor}
+      where floor IN ${floor}
+      ${inds != '' ? 'and industry IN' : ''}
       and date IN ${dateFilter}
     `
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);

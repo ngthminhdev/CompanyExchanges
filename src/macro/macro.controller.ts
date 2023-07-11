@@ -7,6 +7,7 @@ import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
 import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
 import { LaborForceResponse } from './responses/labor-force.response';
+import { CatchException } from '../exceptions/common.exception';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -260,5 +261,13 @@ export class MacroController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  
+  @Get('tong-phuong-tien-thanh-tona')
+  @ApiOperation({summary: 'Tổng phương tiện thanh toán'})
+  async totalPayment(){
+    try {
+      const data = await this.macrosService.totalPayment()
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
