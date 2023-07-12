@@ -230,6 +230,23 @@ export class UtilCommonTemplate {
     };
   }
 
+  static getPreviousMonth(date: Date, order: number) {
+    var currentMonth = date.getMonth();
+    var currentYear = date.getFullYear();
+
+    var threeMonthsAgo = new Date(currentYear, currentMonth - (order - 1), 1);
+
+    var previousThreeMonths = [];
+
+    for (var i = 0; i < order; i++) {
+      previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01'))
+      
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() + 1);
+    }
+
+    return previousThreeMonths;
+  }
+
   static getDateFilterV2(input: string[]) {
     const filteredDates = input.filter((date) => date !== '');
     return {
