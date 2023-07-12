@@ -141,7 +141,7 @@ export class NewsService {
       and status = 'listed'
       and LV4 != ''
       and LV2 != ''
-      order by floor desc
+      order by floor desc, LV2 asc
     `
     const data = await this.mssqlService.query<any[]>(query)
 

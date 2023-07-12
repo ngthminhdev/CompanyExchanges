@@ -111,6 +111,7 @@ export enum RedisKeys {
   exportImportMain = 'export-import-main',
   exportImportMainMH = 'export-import-main-mh',
   importMainMH = 'import-main-mh',
+  mapImportMain = 'map-import-main',
 
   //Lao động
   laborForce = 'labor-force',
