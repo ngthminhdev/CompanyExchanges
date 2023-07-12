@@ -118,6 +118,7 @@ export class RetailController {
 
   @Get('map-xuat-nhap-khau')
   @ApiOperation({summary: 'Map xuất nhập khẩu'})
+  @ApiResponse({type: MainExportImportResponse})
   async mapExportImport(@Res() res: Response, @Query() q: MapExportImportDto){
     try {
       const data = await this.retailService.mapExportImport(+q.order)
