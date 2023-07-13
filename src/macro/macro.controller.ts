@@ -8,6 +8,7 @@ import { GDPSwagger } from './responses/gdp.response';
 import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
 import { LaborForceResponse } from './responses/labor-force.response';
 import { CatchException } from '../exceptions/common.exception';
+import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -131,8 +132,8 @@ export class MacroController {
     summary: 'Chỉ số sản xuất công nghiệp (%)',
   })
   @ApiOkResponse({ type: GDPSwagger })
-  async industrialIndex(@Res() res: Response) {
-    const data = await this.macrosService.industrialIndex();
+  async industrialIndex(@Res() res: Response, @Query() q: IndustrialIndexDto) {
+    const data = await this.macrosService.industrialIndex(+q.industry);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
