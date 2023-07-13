@@ -19,13 +19,14 @@ export class NewsService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache
   ){}
+  private newsEventType = [`N'Trả cổ tức bằng tiền mặt'`, `N'Trả cổ tức bằng cổ phiếu'`, `N'Thưởng cổ phiếu'`, `N'Phát hành thêm'`]
   async getEvent(q: EventDto){
     const limit = +q.limit || 20
     const page = +q.page || 1
 
     const exchange = q.exchange.toLowerCase() != 'all' ? `('${q.exchange}')` : `('HOSE', 'UPCOM', 'HNX')` 
 
-    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`)
+    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}:${q.type}`)
     if(redisData) return redisData
 
     const query = `
@@ -39,18 +40,17 @@ export class NewsService {
       NoiDungSuKien AS content,
       LoaiSuKien AS type
     FROM PHANTICH.dbo.LichSukien
-    WHERE LoaiSuKien IN (
-        N'Trả cổ tức bằng tiền mặt',
-        N'Trả cổ tức bằng cổ phiếu',
-        N'Thưởng cổ phiếu',
-        N'Phát hành thêm'
-    )
+    WHERE ${!q.type || +q.type == 0 ? `LoaiSuKien IN (
+      N'Trả cổ tức bằng tiền mặt',
+      N'Trả cổ tức bằng cổ phiếu',
+      N'Thưởng cổ phiếu',
+      N'Phát hành thêm'
+  )` : `LoaiSuKien = ${this.newsEventType[+q.type - 1]}`} 
     and san IN ${exchange}
     ORDER BY NgayDKCC desc
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
-      
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
     const dataMapped = NewsEventResponse.mapToList(data)
     const res = {
@@ -58,7 +58,7 @@ export class NewsService {
       total_record: data[0]?.total_record || 0,
       list: dataMapped
     }
-    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`, res, {ttl: TimeToLive.OneHour})
+    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}:${q.type}`, res, {ttl: TimeToLive.OneHour})
     return res
   }
 
