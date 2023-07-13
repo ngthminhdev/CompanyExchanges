@@ -536,6 +536,8 @@ export class FinanceHealthService {
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
+    const lastDate = await this.mssqlService.query(`select top 1 year from financialReport.dbo.financialReport order by year desc`)
+
     const query: string = `
       with valueData as (select [code],
                                 [year],
@@ -550,7 +552,7 @@ export class FinanceHealthService {
                                 N'TỔNG TÀI SẢN', N'TỔNG CỘNG TÀI SẢN',
                                 N'VỐN CHỦ SỞ HỮU'
                                   )
-                          and year in ${dateFilter}),
+                          and year in ${order == 0 ? `('${lastDate[0].year}')` : dateFilter}),
           canculatedData as (select industry,
                                     year,
                                     case industry
@@ -603,7 +605,7 @@ export class FinanceHealthService {
       group by industry, year
       order by year, industry
     `;
-
+    
     const data = await this.mssqlService.query<ISIndsDebtSolvency[]>(query);
 
     const mappedData = new DebtSolvencyResponse().mapToList(data);

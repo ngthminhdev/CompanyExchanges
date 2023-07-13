@@ -37,6 +37,9 @@ export class NewsEventResponse {
     })
     type: string
 
+    total_record: number
+
+
     constructor(data: NewsEventResponse){
         this.date = UtilCommonTemplate.toDate(data?.date) || ''
         this.date_dkcc = UtilCommonTemplate.toDate(data?.date_dkcc) || ''

@@ -30,6 +30,7 @@ export class NewsService {
 
     const query = `
     SELECT 
+      count(*) over (  ) as total_record,
       ticker AS code,
       san AS exchange,
       NgayDKCC AS date_dkcc,
@@ -49,11 +50,16 @@ export class NewsService {
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
-
+      
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
     const dataMapped = NewsEventResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`, dataMapped, {ttl: TimeToLive.OneHour})
-    return dataMapped
+    const res = {
+      limit,
+      total_record: data[0]?.total_record || 0,
+      list: dataMapped
+    }
+    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`, res, {ttl: TimeToLive.OneHour})
+    return res
   }
 
   async newsEnterprise(){
