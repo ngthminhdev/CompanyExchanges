@@ -343,10 +343,29 @@ export class MacroService {
     return mappedData;
   }
 
-  async industrialIndex(): Promise<GDPResponse[]> {
+  private genIndustry(q: number){
+    switch (q) {
+      case 0:
+        return 'Tăng trưởng: Toàn ngành công nghiệp (%)'
+        case 1:
+        return 'Tăng trưởng: Sản xuất và Phân phối điện (%)'
+        case 2:
+        return 'Tăng trưởng: Khai khoáng (%)'
+        case 3:
+        return 'Tăng trưởng: Cung cấp nước, hoạt động quản lý và xử lý rác thải, nước thải (%)'
+        case 4:
+        return 'Tăng trưởng: Công nghiệp chế biến, chế tạo (%)'
+      default:
+        break;
+    }
+  }
+
+  async industrialIndex(q: number): Promise<GDPResponse[]> {
+    const chiTieu = this.genIndustry(q)
     const redisData = await this.redis.get<GDPResponse[]>(
-      RedisKeys.industrialIndex,
+      `${RedisKeys.industrialIndex}:${q}`,
     );
+
     if (redisData) return redisData;
 
     const query: string = `
@@ -355,7 +374,7 @@ export class MacroService {
             ,[giaTri]    as[value]
       FROM [macroEconomic].[dbo].[DuLieuViMo]
       WHERE phanBang = N'CHỈ SỐ CÔNG NGHIỆP'
-      AND chiTieu = N'Tăng trưởng: Toàn ngành công nghiệp (%)'
+      AND chiTieu = N'${chiTieu}'
       AND nhomDuLieu = N'Tăng trưởng chung - cập nhập (MoM%)'
       AND thoiDiem >= '2013-01-01'
       ORDER BY thoiDiem;
@@ -365,7 +384,7 @@ export class MacroService {
 
     const mappedData = new GDPResponse().mapToList(data);
 
-    await this.redis.set(RedisKeys.industrialIndex, mappedData, {
+    await this.redis.set(`${RedisKeys.industrialIndex}:${q}`, mappedData, {
       ttl: TimeToLive.OneWeek,
     });
 
