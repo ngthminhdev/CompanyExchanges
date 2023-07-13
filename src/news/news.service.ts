@@ -34,7 +34,7 @@ export class NewsService {
       ticker AS code,
       san AS exchange,
       NgayDKCC AS date_dkcc,
-      NgayThucHien AS date,
+      case when NgayThucHien = '1900-01-01' then '' else NgayThucHien end AS date,
       NgayGDKHQ AS date_gdkhq,
       NoiDungSuKien AS content,
       LoaiSuKien AS type
