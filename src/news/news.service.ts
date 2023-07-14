@@ -183,25 +183,27 @@ export class NewsService {
   async newsFilter(q: NewsFilterDto){
     const limit = +q.limit || 20
     const page = +q.page || 1
-    const code = q.code.split(',')
+    const code = q.code != 'all' ? q.code.split(',') : ''
     
     const redisData = await this.redis.get(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`)
     if(redisData) return redisData
 
     const query = `
     select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
-    ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
+    ${code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
     AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
+
     const data = await this.mssqlService.query<NewsFilterResponse[]>(query)
     const dataMapped = NewsFilterResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
     return dataMapped
   }
+  
 
   async getInfoStock(){
     const redisData = await this.redis.get(RedisKeys.infoStock)
