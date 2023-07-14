@@ -35,7 +35,7 @@ export class NewsService {
       ticker AS code,
       san AS exchange,
       NgayDKCC AS date_dkcc,
-      case when NgayThucHien = '1900-01-01' then '' else NgayThucHien end AS date,
+      case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date,
       NgayGDKHQ AS date_gdkhq,
       NoiDungSuKien AS content,
       LoaiSuKien AS type
@@ -52,6 +52,7 @@ export class NewsService {
     FETCH NEXT ${limit} ROWS ONLY;
     `
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
+    
     const dataMapped = NewsEventResponse.mapToList(data)
     const res = {
       limit,
