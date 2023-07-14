@@ -129,6 +129,9 @@ export enum RedisKeys {
   creditDebtPercent = 'credit-debt-percent',
   creditInstitution = 'credit-institution',
 
+  //FDI
+  totalInvestmentProjects = 'total-investment-projects',
+
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',

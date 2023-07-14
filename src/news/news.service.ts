@@ -189,7 +189,7 @@ export class NewsService {
     if(redisData) return redisData
 
     const query = `
-    select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
+    select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code, count(*) over (  ) as total_record from macroEconomic.dbo.TinTuc
     ${code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
     AND Href NOT LIKE 'https://ndh.vn%'
@@ -200,8 +200,13 @@ export class NewsService {
 
     const data = await this.mssqlService.query<NewsFilterResponse[]>(query)
     const dataMapped = NewsFilterResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
-    return dataMapped
+    const res = {
+      limit,
+      total_record: data[0]?.total_record,
+      list: dataMapped
+    }
+    await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, res, {ttl: TimeToLive.HaftHour})
+    return res
   }
   
 
@@ -209,7 +214,7 @@ export class NewsService {
     const redisData = await this.redis.get(RedisKeys.infoStock)
     if(redisData) return redisData
     const query = `
-    SELECT
+    SELECT    
       code,
       companyName as company_name,
       shortName as short_name,
