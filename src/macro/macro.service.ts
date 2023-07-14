@@ -1,14 +1,16 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
-import { TimeToLive } from '../enums/common.enum';
+import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
+import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 
 @Injectable()
 export class MacroService {
@@ -830,5 +832,58 @@ export class MacroService {
     const dataMapped = LaborForceResponse.mapToList(data)
     await this.redis.set(RedisKeys.creditInstitution, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped
+  }
+
+  async totalInvestmentProjects(order: number){
+    const redisData = await this.redis.get(`${RedisKeys.totalInvestmentProjects}:${order}`)
+    if(redisData) return redisData
+    let date = ''
+    let group = ''
+    switch (order) {
+      case TimeTypeEnum.Month:
+        date = `thoiDiem as date,`
+        group = `group by thoiDiem, RIGHT(chiTieu, 4)`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date,`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), RIGHT(chiTieu, 4)`
+        break 
+        default:
+    }
+    const query = `
+    SELECT
+      ${date}
+      SUM(giaTri) AS value,
+      CASE
+        WHEN RIGHT(chiTieu, 4) = '(CM)' THEN 'CM'
+        WHEN RIGHT(chiTieu, 4) = '(TV)' THEN 'TV'
+        WHEN RIGHT(chiTieu, 4) = '(GV)' THEN 'GV'
+      END AS name
+
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+      AND chiTieu LIKE '%(CM)'
+      or chiTieu LIKE '%(TV)'
+      or chiTieu LIKE '%(GV)'
+      AND nhomDulieu = N'Chỉ số FDI'
+    ${group}
+    ORDER BY date ASC
+    `
+    
+    const data = await this.mssqlService.query<TotalInvestmentProjectsResponse[]>(query)
+    const dataMapped = TotalInvestmentProjectsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.totalInvestmentProjects}:${order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async foreignInvestmentIndex(q: ForeignInvestmentIndexDto){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
   }
 }

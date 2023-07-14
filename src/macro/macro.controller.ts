@@ -1,5 +1,5 @@
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
@@ -9,6 +9,9 @@ import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from
 import { LaborForceResponse } from './responses/labor-force.response';
 import { CatchException } from '../exceptions/common.exception';
 import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
+import { FDIOrderDto } from './dto/fdi-order.dto';
+import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
+import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -324,6 +327,31 @@ export class MacroController {
   async creditInstitution(@Res() res: Response){
     try {
       const data = await this.macrosService.creditInstitution()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  //FDI
+  @ApiOperation({summary: 'Tổng số dự án đầu tư'})
+  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  @Get('tong-so-du-an-dau-tu')
+  async totalInvestmentProjects(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.totalInvestmentProjects(+q.order)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('chi-so-dau-tu-nuoc-ngoai')
+  @ApiOperation({summary: 'Chỉ số đầu tư nước ngoài'})
+  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  async foreignInvestmentIndex(@Res() res: Response, @Query() q: ForeignInvestmentIndexDto){
+    try {
+      const data = await this.macrosService.foreignInvestmentIndex(q)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
