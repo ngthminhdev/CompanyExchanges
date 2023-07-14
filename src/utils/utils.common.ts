@@ -40,6 +40,13 @@ export class UtilCommonTemplate {
     return moment(value).utcOffset(420).format('YYYY/MM/DD');
   }
 
+  static toDateV2(value: any): any {
+    if (!value) {
+      return '';
+    }
+    return moment(value).utcOffset(420).format('DD-MM-YYYY');
+  }
+
   static getMessageValidator(errors: ValidationError[]) {
     return errors
       .map((item) => {
