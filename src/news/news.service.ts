@@ -11,6 +11,7 @@ import { NewsEnterpriseResponse } from './response/news-enterprise.response';
 import { NewsFilterDto } from './dto/news-filter.dto';
 import { NewsFilterResponse } from './response/news-filter.response';
 import { EventDto } from './dto/event.dto';
+import { UtilCommonTemplate } from '../utils/utils.common';
 
 @Injectable()
 export class NewsService {
@@ -66,6 +67,8 @@ export class NewsService {
   async newsEnterprise(){
     const redisData = await this.redis.get(`${RedisKeys.newsEnterprise}`)
     if(redisData) return redisData
+    const date = await this.mssqlService.query(`select top 1 Date as date from marketTrade.dbo.tickerTradeVND order by Date desc`)
+    
     const query = `
     SELECT
         n.Date as date,
@@ -78,7 +81,7 @@ export class NewsService {
     FROM macroEconomic.dbo.TinTuc n
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON TickerTitle = t.code
-      AND t.date = '${moment().format('YYYY-MM-DD')}'
+      AND t.date = '${UtilCommonTemplate.toDate(date[0].date)}'
     WHERE Href NOT LIKE 'https://cafef.vn%'  
     AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY n.date DESC
