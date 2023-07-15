@@ -40,6 +40,13 @@ export class UtilCommonTemplate {
     return moment(value).utcOffset(420).format('YYYY/MM/DD');
   }
 
+  static toDateV2(value: any): any {
+    if (!value) {
+      return '';
+    }
+    return moment(value).utcOffset(420).format('DD-MM-YYYY');
+  }
+
   static getMessageValidator(errors: ValidationError[]) {
     return errors
       .map((item) => {
@@ -228,6 +235,23 @@ export class UtilCommonTemplate {
       endDate: filteredDates[0],
       dateFilter: `(${filteredDates.map((date) => `'${date}'`).join(', ')})`,
     };
+  }
+
+  static getPreviousMonth(date: Date, order: number) {
+    var currentMonth = date.getMonth();
+    var currentYear = date.getFullYear();
+
+    var threeMonthsAgo = new Date(currentYear, currentMonth - (order - 1), 1);
+
+    var previousThreeMonths = [];
+
+    for (var i = 0; i < order; i++) {
+      previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01'))
+      
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() + 1);
+    }
+
+    return previousThreeMonths;
   }
 
   static getDateFilterV2(input: string[]) {

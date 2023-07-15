@@ -111,6 +111,7 @@ export enum RedisKeys {
   exportImportMain = 'export-import-main',
   exportImportMainMH = 'export-import-main-mh',
   importMainMH = 'import-main-mh',
+  mapImportMain = 'map-import-main',
 
   //Lao động
   laborForce = 'labor-force',
@@ -120,10 +121,22 @@ export enum RedisKeys {
   averageSalary = 'average-salary',
   employmentFluctuations = 'employment-fluctuations',
 
+  //Tín dụng
+  totalPayment = 'total-payment',
+  totalPaymentPercent = 'total-payment-percent',
+  balancePaymentInternational = 'balance-payment-international',
+  creditDebt = 'credit-debt',
+  creditDebtPercent = 'credit-debt-percent',
+  creditInstitution = 'credit-institution',
+
+  //FDI
+  totalInvestmentProjects = 'total-investment-projects',
+
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
   newsFilter = 'news-filter',
+  infoStock = 'info-stock',
     
   //Filter
   filter = 'filter'

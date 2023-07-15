@@ -36,17 +36,19 @@ export class FinanceHealthService {
     private readonly marketService: MarketService,
   ) {}
 
-  async PEPBIndustry(ex: string, type: number, order: number) {
-    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
-    // const redisData = await this.redis.get(
-    //   `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
-    // );
-    // if (redisData) return redisData;
+  async PEPBIndustry(ex: string, type: number, order: number, industries: string) {
+    const floor = ex == 'ALL' ? ` ('ALL') ` : ` ('${ex}') `;
+    const inds: string = industries ? UtilCommonTemplate.getIndustryFilter(industries.split(',')) : '';
+
+    const redisData = await this.redis.get(
+      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
+    );
+    if (redisData) return redisData;
 
     const date = UtilCommonTemplate.getYearQuarters(type, order);
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
-
+    
     // const query = `
     //   with valueData as (
     //       select
@@ -78,18 +80,17 @@ export class FinanceHealthService {
     // `;
 
     const query = `
-        select industry, date, sum(PB) as PB from VISUALIZED_DATA.dbo.PB
-        where date IN ${dateFilter}
-        and floor IN ${floor}
-        group by industry, date
-        order by industry, date
-    `;
+      select *, pb as PB from VISUALIZED_DATA.dbo.pb_nganh
+      where floor IN ${floor}
+      ${inds != '' ? 'and industry IN' : ''}
+      and date IN ${dateFilter}
+    `
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
     const mappedData = new PEPBIndustryResponse().mapToList(data);
 
     await this.redis.set(
-      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}`,
+      `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
       mappedData,
       { ttl: TimeToLive.OneWeek },
     );
@@ -186,6 +187,10 @@ export class FinanceHealthService {
       `select top 2 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' group by date order by date desc`,
     );
 
+    const peDate = await this.mssqlService.query(
+      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'PRICE_TO_EARNINGS' group by date order by date desc`,
+    );
+
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -220,7 +225,7 @@ export class FinanceHealthService {
                              inner join RATIO.dbo.ratio r
                                         on c.code = r.code
                     where r.ratioCode = 'PRICE_TO_EARNINGS'
-                      and r.date = '${latestDate}')
+                      and r.date = '${UtilCommonTemplate.toDate(peDate[0].date)}')
       select top 50 c.code,
             c.date,
             e.epsVND as VND,
@@ -274,6 +279,14 @@ export class FinanceHealthService {
       'marketTrade.dbo.proprietary',
     );
 
+    const gtssDate = await this.mssqlService.query(
+      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'BVPS_CR' group by date order by date desc`,
+    );
+
+    const pbDate = await this.mssqlService.query(
+      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'PRICE_TO_BOOK' group by date order by date desc`,
+    );
+
     const query: string = `
       with codeData as (select t.code,
                               date,
@@ -294,13 +307,13 @@ export class FinanceHealthService {
                                   inner join RATIO.dbo.ratio r
                                               on c.code = r.code
                           where r.ratioCode = 'BVPS_CR'
-                            and r.date = '${latestDate}'),
+                            and r.date = '${UtilCommonTemplate.toDate(gtssDate[0].date)}'),
           PData as (select c.date, c.code, r.value as pData
                     from codeData c
                              inner join RATIO.dbo.ratio r
                                         on c.code = r.code
                     where r.ratioCode = 'PRICE_TO_BOOK'
-                      and r.date = '${latestDate}')
+                      and r.date = '${UtilCommonTemplate.toDate(pbDate[0].date)}')
       select top 50 c.code,
             c.date,
             e.gtssVND as VND,
@@ -523,6 +536,8 @@ export class FinanceHealthService {
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
+    const lastDate = await this.mssqlService.query(`select top 1 year from financialReport.dbo.financialReport order by year desc`)
+
     const query: string = `
       with valueData as (select [code],
                                 [year],
@@ -537,7 +552,7 @@ export class FinanceHealthService {
                                 N'TỔNG TÀI SẢN', N'TỔNG CỘNG TÀI SẢN',
                                 N'VỐN CHỦ SỞ HỮU'
                                   )
-                          and year in ${dateFilter}),
+                          and year in ${order == 0 ? `('${lastDate[0].year}')` : dateFilter}),
           canculatedData as (select industry,
                                     year,
                                     case industry
@@ -590,7 +605,7 @@ export class FinanceHealthService {
       group by industry, year
       order by year, industry
     `;
-
+    
     const data = await this.mssqlService.query<ISIndsDebtSolvency[]>(query);
 
     const mappedData = new DebtSolvencyResponse().mapToList(data);

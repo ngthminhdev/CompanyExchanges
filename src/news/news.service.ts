@@ -19,41 +19,48 @@ export class NewsService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache
   ){}
+  private newsEventType = [`N'Trả cổ tức bằng tiền mặt'`, `N'Trả cổ tức bằng cổ phiếu'`, `N'Thưởng cổ phiếu'`, `N'Phát hành thêm'`]
   async getEvent(q: EventDto){
     const limit = +q.limit || 20
     const page = +q.page || 1
 
     const exchange = q.exchange.toLowerCase() != 'all' ? `('${q.exchange}')` : `('HOSE', 'UPCOM', 'HNX')` 
 
-    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`)
+    const redisData = await this.redis.get(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}:${q.type}`)
     if(redisData) return redisData
 
     const query = `
     SELECT 
+      count(*) over (  ) as total_record,
       ticker AS code,
       san AS exchange,
       NgayDKCC AS date_dkcc,
-      NgayThucHien AS date,
+      case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date,
       NgayGDKHQ AS date_gdkhq,
       NoiDungSuKien AS content,
       LoaiSuKien AS type
     FROM PHANTICH.dbo.LichSukien
-    WHERE LoaiSuKien IN (
-        N'Trả cổ tức bằng tiền mặt',
-        N'Trả cổ tức bằng cổ phiếu',
-        N'Thưởng cổ phiếu',
-        N'Phát hành thêm'
-    )
+    WHERE ${!q.type || +q.type == 0 ? `LoaiSuKien IN (
+      N'Trả cổ tức bằng tiền mặt',
+      N'Trả cổ tức bằng cổ phiếu',
+      N'Thưởng cổ phiếu',
+      N'Phát hành thêm'
+  )` : `LoaiSuKien = ${this.newsEventType[+q.type - 1]}`} 
     and san IN ${exchange}
     ORDER BY NgayDKCC desc
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
-
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
+    
     const dataMapped = NewsEventResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}`, dataMapped, {ttl: TimeToLive.OneHour})
-    return dataMapped
+    const res = {
+      limit,
+      total_record: data[0]?.total_record || 0,
+      list: dataMapped
+    }
+    await this.redis.set(`${RedisKeys.newsEvent}:${page}:${limit}:${exchange}:${q.type}`, res, {ttl: TimeToLive.OneHour})
+    return res
   }
 
   async newsEnterprise(){
@@ -61,21 +68,22 @@ export class NewsService {
     if(redisData) return redisData
     const query = `
     SELECT
-        n.date,
-        title,
-        href,
-        ticker as code,
+        n.Date as date,
+        Title as title,
+        Href as href,
+        TickerTitle as code,
         closePrice,
         perChange,
         change
-    FROM PHANTICH.dbo.TinTuc n
+    FROM macroEconomic.dbo.TinTuc n
     INNER JOIN marketTrade.dbo.tickerTradeVND t
-      ON ticker = t.code
+      ON TickerTitle = t.code
       AND t.date = '${moment().format('YYYY-MM-DD')}'
     WHERE Href NOT LIKE 'https://cafef.vn%'  
     AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY n.date DESC
     `
+    
     const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(query)
     const dataMapped = NewsEnterpriseResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.newsEnterprise}`, dataMapped, {ttl: TimeToLive.OneHour})
@@ -140,7 +148,7 @@ export class NewsService {
       and status = 'listed'
       and LV4 != ''
       and LV2 != ''
-      order by floor desc
+      order by floor desc, LV2 asc
     `
     const data = await this.mssqlService.query<any[]>(query)
 
@@ -175,24 +183,54 @@ export class NewsService {
   async newsFilter(q: NewsFilterDto){
     const limit = +q.limit || 20
     const page = +q.page || 1
-    const code = q.code.split(',')
+    const code = q.code != 'all' ? q.code.split(',') : ''
     
     const redisData = await this.redis.get(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`)
     if(redisData) return redisData
 
     const query = `
-    select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code from macroEconomic.dbo.TinTuc
-    ${q.code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
+    select distinct Title as title, Href as href, Date as date, Img as img, TickerTitle as code, count(*) over (  ) as total_record from macroEconomic.dbo.TinTuc
+    ${code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
     AND Href NOT LIKE 'https://ndh.vn%'
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;
     `
+
     const data = await this.mssqlService.query<NewsFilterResponse[]>(query)
     const dataMapped = NewsFilterResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, dataMapped, {ttl: TimeToLive.HaftHour})
-    return dataMapped
+    const res = {
+      limit,
+      total_record: data[0]?.total_record,
+      list: dataMapped
+    }
+    await this.redis.set(`${RedisKeys.newsFilter}:${page}:${limit}:${code}`, res, {ttl: TimeToLive.HaftHour})
+    return res
+  }
+  
+
+  async getInfoStock(){
+    const redisData = await this.redis.get(RedisKeys.infoStock)
+    if(redisData) return redisData
+    const query = `
+    SELECT    
+      code,
+      companyName as company_name,
+      shortName as short_name,
+      CASE
+        WHEN SUBSTRING(shortName, 0, 5) = 'CTCP' THEN shortName
+        WHEN SUBSTRING(companyName, 0, 5) = N'Ngân' AND
+          SUBSTRING(shortName, 0, 5) = N'Ngân' THEN 'NH ' + SUBSTRING(shortName, 11, 100)
+        WHEN SUBSTRING(companyName, 0, 5) = N'Ngân' THEN 'NH ' + info.shortName
+        ELSE 'CTCP ' + shortName
+      END AS name
+    FROM marketInfor.dbo.info
+    WHERE shortName != ''
+    `
+    const data = await this.mssqlService.query(query)
+    await this.redis.set(RedisKeys.infoStock, data, {ttl: TimeToLive.OneDay})
+    return data
   }
 }
 

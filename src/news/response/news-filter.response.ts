@@ -27,6 +27,8 @@ export class NewsFilterResponse {
     })
     code: string
 
+    total_record: number
+
     constructor(data?: NewsFilterResponse){
         this.title = data?.title || ''
         this.href = data?.href || ''

@@ -3,6 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { MapExportImportDto } from './dto/map-retail.dto';
 import { RetailValueDto } from './dto/retail-value.dto';
 import { MainExportImportResponse } from './responses/main-import-export.response';
 import { RetailValueSwagger } from './responses/retail-value.response';
@@ -112,6 +113,18 @@ export class RetailController {
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))
     } catch (error) {
       throw new CatchException(error)
+    }
+  }
+
+  @Get('map-xuat-nhap-khau')
+  @ApiOperation({summary: 'Map xuất nhập khẩu'})
+  @ApiResponse({type: MainExportImportResponse})
+  async mapExportImport(@Res() res: Response, @Query() q: MapExportImportDto){
+    try {
+      const data = await this.retailService.mapExportImport(+q.order)
+      return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    } catch (e) {
+      throw new CatchException(e)
     }
   }
 }

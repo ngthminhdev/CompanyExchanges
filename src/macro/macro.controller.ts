@@ -1,5 +1,5 @@
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
@@ -7,6 +7,11 @@ import { MacroService } from './macro.service';
 import { GDPSwagger } from './responses/gdp.response';
 import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
 import { LaborForceResponse } from './responses/labor-force.response';
+import { CatchException } from '../exceptions/common.exception';
+import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
+import { FDIOrderDto } from './dto/fdi-order.dto';
+import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
+import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -130,8 +135,8 @@ export class MacroController {
     summary: 'Chỉ số sản xuất công nghiệp (%)',
   })
   @ApiOkResponse({ type: GDPSwagger })
-  async industrialIndex(@Res() res: Response) {
-    const data = await this.macrosService.industrialIndex();
+  async industrialIndex(@Res() res: Response, @Query() q: IndustrialIndexDto) {
+    const data = await this.macrosService.industrialIndex(+q.industry);
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
@@ -260,5 +265,96 @@ export class MacroController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  
+  //Tín dụng
+
+  @Get('tong-phuong-tien-thanh-toan')
+  @ApiOperation({summary: 'Tổng phương tiện thanh toán'})
+  async totalPayment(@Res() res: Response){
+    try {
+      const data = await this.macrosService.totalPayment()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tang-truong-tong-phuong-tien-thanh-toan')
+  @ApiOperation({summary: 'Tổng phương tiện thanh toán tăng trưởng'})
+  async totalPaymentPercent(@Res() res: Response){
+    try {
+      const data = await this.macrosService.totalPaymentPercent()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('can-can-thanh-toan-quoc-te')
+  @ApiOperation({summary: 'Cán cân thanh toán quốc tế'})
+  async balancePaymentInternational(@Res() res: Response){
+    try {
+      const data = await this.macrosService.balancePaymentInternational()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('du-no-tin-dung')
+  @ApiOperation({summary: 'Dư nợ tín dụng đối với nền kinh tế (tỷ VNĐ)'})
+  async creditDebt(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditDebt()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tang-truong-du-no-tin-dung')
+  @ApiOperation({summary: 'Tăng trưởng dư nợ tín dụng đối với nền kinh tế (%)'})
+  async creditDebtPercent(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditDebtPercent()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('thong-ke-theo-loai-hinh-to-chuc-tin-dung')
+  @ApiOperation({summary: 'Thống kê theo loại hình tổ chức tín dụng'})
+  async creditInstitution(@Res() res: Response){
+    try {
+      const data = await this.macrosService.creditInstitution()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  //FDI
+  @ApiOperation({summary: 'Tổng số dự án đầu tư'})
+  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  @Get('tong-so-du-an-dau-tu')
+  async totalInvestmentProjects(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.totalInvestmentProjects(+q.order)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('chi-so-dau-tu-nuoc-ngoai')
+  @ApiOperation({summary: 'Chỉ số đầu tư nước ngoài'})
+  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  async foreignInvestmentIndex(@Res() res: Response, @Query() q: ForeignInvestmentIndexDto){
+    try {
+      const data = await this.macrosService.foreignInvestmentIndex(q)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }

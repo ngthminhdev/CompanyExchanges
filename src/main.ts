@@ -23,7 +23,7 @@ async function bootstrap() {
   //   credentials: true,
   //   allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
   // });
-  app.enableCors({ origin: '*' });
+  app.enableCors({ origin: ['http://localhost:3000', 'http://192.168.15.104:3000', 'http://192.168.15.101:3000', '*'], credentials: true});
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLoggerInterceptor());
