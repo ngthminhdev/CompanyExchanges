@@ -5,9 +5,11 @@ import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { FDIOrderDto } from './dto/fdi-order.dto';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { AccumulatedResponse } from './responses/accumulated.response';
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
@@ -920,7 +922,7 @@ export class MacroService {
       END AS type
     FROM macroEconomic.dbo.DuLieuViMo
     WHERE phanBang = 'FDI'
-    AND nhomDulieu = N'Chỉ số FDI'
+    AND nhomDulieu = N'${type} FDI'
     AND chiTieu LIKE N'%(TV%'
     AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')
     UNION ALL
@@ -934,7 +936,7 @@ export class MacroService {
       END AS type
     FROM macroEconomic.dbo.DuLieuViMo
     WHERE phanBang = 'FDI'
-    AND nhomDulieu = N'Chỉ số FDI'
+    AND nhomDulieu = N'${type} FDI'
     AND chiTieu LIKE N'%(GV%'
     AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')),
     pivoted
@@ -988,6 +990,113 @@ export class MacroService {
 
     const dataMapped = ForeignInvestmentIndexResponse.mapToList(data_reduce)
     await this.redis.set(`${RedisKeys.foreignInvestmentIndex}:${q.type}:${q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async accumulated(q: FDIOrderDto){
+    const redisData = await this.redis.get(`${RedisKeys.accumulated}:${q.order}`)
+    if(redisData) return redisData
+
+    let date: string = ''
+    let group: string = ''
+    switch (+q.order) {
+      case TimeTypeEnum.Month:
+        date = `giaTri as value, thoiDiem as date,`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `
+        sum(giaTri) as value,
+        case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date, `
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2)`
+        break
+      default:
+        date = `thoiDiem as date,`
+    } 
+    const query = `
+    WITH temp
+    AS (SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${date}
+      1 AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(Lũy kế 1988)%'
+
+    AND thoiDiem > '2020-01-01'
+    ${group}
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${date}
+      2 AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(Lũy kế vốn 1988 triệu USD)%'
+    AND thoiDiem > '2020-01-01'
+    ${group}
+    )
+    SELECT
+      name,
+      date,
+      [1] AS luy_ke,
+      [2] AS luy_ke_von
+    FROM (SELECT
+      *
+    FROM temp) AS source PIVOT (SUM(value) FOR type IN ([1], [2])) AS chuyen
+    where name != ''
+`
+    const data = await this.mssqlService.query<AccumulatedResponse[]>(query)
+    const dataMapped = AccumulatedResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.accumulated}:${q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async totalRegisteredAndDisbursed(q: FDIOrderDto){
+    const redisData = await this.redis.get(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`)
+    if(redisData) return redisData
+    let date: string = ''
+    let group: string = ''
+    switch (+q.order) {
+      case TimeTypeEnum.Month:
+        date = `giaTri as value, thoiDiem as date`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `
+        sum(giaTri) as value,
+        case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu`
+        break
+      default:
+        date = `thoiDiem as date,`
+    } 
+    const query = 
+    `
+    SELECT
+      chiTieu AS name,
+      ${date}
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu IN (N'Tổng vốn đăng ký (triệu USD)', N'Tổng vốn giải ngân (triệu USD)')
+    AND thoiDiem >= '2018-01-01'
+    ${group}
+    ORDER BY date asc
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped
   }
 }
