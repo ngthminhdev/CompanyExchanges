@@ -132,6 +132,8 @@ export enum RedisKeys {
   //FDI
   totalInvestmentProjects = 'total-investment-projects',
   foreignInvestmentIndex = 'foreign-investment-index',
+  accumulated = 'accumulated',
+  totalRegisteredAndDisbursed = 'total-registered-disbursed',
 
   //Tin tuc
   newsEvent = 'news-event',

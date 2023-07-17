@@ -13,6 +13,7 @@ import { FDIOrderDto } from './dto/fdi-order.dto';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
+import { AccumulatedResponse } from './responses/accumulated.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -353,6 +354,30 @@ export class MacroController {
   async foreignInvestmentIndex(@Res() res: Response, @Query() q: ForeignInvestmentIndexDto){
     try {
       const data = await this.macrosService.foreignInvestmentIndex(q)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('luy-ke')
+  @ApiOperation({summary: 'Lũy kế số dự án cấp mới và tổng vốn đầu tư từ năm 1988'})
+  @ApiOkResponse({type: AccumulatedResponse})
+  async accumulated(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.accumulated(q)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tong-von-dang-ky-va-giai-ngan')
+  @ApiOperation({summary: 'Tổng vốn đăng ký và giải ngân (triệu USD)'})
+  @ApiOkResponse({type: LaborForceResponse})
+  async totalRegisteredAndDisbursed(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.totalRegisteredAndDisbursed(q)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
