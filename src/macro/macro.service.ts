@@ -8,6 +8,7 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
@@ -882,8 +883,111 @@ export class MacroService {
   }
 
   async foreignInvestmentIndex(q: ForeignInvestmentIndexDto){
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+    const redisData = await this.redis.get(`${RedisKeys.foreignInvestmentIndex}:${q.type}:${q.order}`)
+    if(redisData) return redisData
+
+    const type = q.type == 1 ? 'Chỉ số' : 'Đối tác'
+    const lastDate = await this.mssqlService.query(`select top 2 thoiDiem as date from macroEconomic.dbo.DuLieuViMo WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'  
+    and chiTieu like N'%(CM%'
+    group by thoiDiem
+    order by thoiDiem desc `
+    )
+    
+    const query = `
+    WITH temp
+    AS (SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
+      giaTri AS value,
+      thoiDiem AS date,
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(CM triệu USD)' THEN 1
+        WHEN RIGHT(chiTieu, 4) = '(CM)' THEN 2
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'
+    AND chiTieu LIKE N'%(CM%'
+    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
+      giaTri AS value,
+      thoiDiem AS date,
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(TV triệu USD)' THEN 3
+        WHEN RIGHT(chiTieu, 4) = '(TV)' THEN 4
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(TV%'
+    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
+      giaTri AS value,
+      thoiDiem AS date,
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(GV triệu USD)' THEN 5
+        WHEN RIGHT(chiTieu, 4) = '(GV)' THEN 6
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(GV%'
+    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')),
+    pivoted
+    AS (SELECT
+      name,
+      type,
+      [${UtilCommonTemplate.toDate(lastDate[1].date)}] AS now,
+      [${UtilCommonTemplate.toDate(lastDate[0].date)}] AS pre
+    FROM temp AS source PIVOT (SUM(value) FOR date IN ([${UtilCommonTemplate.toDate(lastDate[1].date)}], [${UtilCommonTemplate.toDate(lastDate[0].date)}])) AS bang_chuyen)
+    SELECT
+      *
+    FROM pivoted
+    `
+    const data = await this.mssqlService.query<any[]>(query)
+
+    const now = {
+      1: 'cm_usd',
+      2: 'cm',
+      3: 'tv_usd',
+      4: 'tv',
+      5: 'gv_usd',
+      6: 'gv',
+    }
+
+    const pre = {
+      1: 'cm_usd_pre',
+      2: 'cm_pre',
+      3: 'tv_usd_pre',
+      4: 'tv_pre',
+      5: 'gv_usd_pre',
+      6: 'gv_pre',
+    }
+    
+    const data_reduce = data.reduce((acc, item) => {
+      const index = acc.findIndex(child => child.name == item.name)
+      
+      if(index != -1){
+        acc[index][now[item.type]] = item.now
+        acc[index][pre[item.type]] = item.pre
+        acc[index]['total'] = (acc[index]['cm_usd'] || 0) + (acc[index]['tv_usd'] || 0) + (acc[index]['gv_usd'] || 0)
+        acc[index]['total_pre'] = (acc[index]['cm_usd_pre'] || 0) + (acc[index]['tv_usd_pre'] || 0) + (acc[index]['gv_usd_pre'] || 0)
+        return acc
+      }
+      acc.push({
+        name: item.name, 
+        [now[item.type]]: item.now, 
+        [pre[item.type]]: item.pre, 
+      })
+      return acc
+    }, [])
+
+    const dataMapped = ForeignInvestmentIndexResponse.mapToList(data_reduce)
+    await this.redis.set(`${RedisKeys.foreignInvestmentIndex}:${q.type}:${q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
   }
 }

@@ -12,6 +12,7 @@ import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
 import { FDIOrderDto } from './dto/fdi-order.dto';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
+import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -348,7 +349,7 @@ export class MacroController {
 
   @Get('chi-so-dau-tu-nuoc-ngoai')
   @ApiOperation({summary: 'Chỉ số đầu tư nước ngoài'})
-  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  @ApiOkResponse({type: ForeignInvestmentIndexResponse})
   async foreignInvestmentIndex(@Res() res: Response, @Query() q: ForeignInvestmentIndexDto){
     try {
       const data = await this.macrosService.foreignInvestmentIndex(q)

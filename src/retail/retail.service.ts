@@ -369,6 +369,7 @@ export class RetailService {
     const lastDate = await this.mssqlService.query(`select top 1 thoiDiem as date from macroEconomic.dbo.EconomicVN where phanBang = N'XUẤT KHẨU' order by thoiDiem desc`);
     const redisData = await this.redis.get(`${RedisKeys.mapImportMain}:${order}`)
     if(redisData) return redisData
+
     let month = 1
     switch (order) {
       case 1:
@@ -397,6 +398,8 @@ export class RetailService {
     FROM macroEconomic.dbo.EconomicVN
     WHERE (phanBang = N'NHẬP KHẨU')
     AND nhomDulieu = N'Thị trường nhập khẩu chính'
+    and chiTieu not like N'%ASEAN Ytd (USD)%'
+    and chiTieu not like N'%EU Ytd (USD)%'
     AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}
     UNION ALL
     SELECT
@@ -407,6 +410,8 @@ export class RetailService {
     FROM macroEconomic.dbo.EconomicVN
     WHERE (phanBang = N'XUẤT KHẨU')
     AND nhomDulieu = N'Thị trường xuất khẩu chính'
+    and chiTieu not like N'%ASEAN Ytd (USD)%'
+    and chiTieu not like N'%EU Ytd (USD)%'
     AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}),
     data
     AS (SELECT
