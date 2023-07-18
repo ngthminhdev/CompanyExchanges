@@ -121,7 +121,7 @@ export class RetailController {
   @ApiResponse({type: MainExportImportResponse})
   async mapExportImport(@Res() res: Response, @Query() q: MapExportImportDto){
     try {
-      const data = await this.retailService.mapExportImport(+q.order)
+      const data = await this.retailService.mapExportImport(+q.order, +q.type)
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))
     } catch (e) {
       throw new CatchException(e)
