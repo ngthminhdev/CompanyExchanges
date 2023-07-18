@@ -447,4 +447,39 @@ export class UtilCommonTemplate {
     const color = blueLevel.toString(16).toUpperCase().padStart(2, '0');
     return `#00${color}FF`;
   }
+
+  static getLastTwoQuarters(date: string) {
+    let currentDate = new Date(date);
+    let currentMonth = currentDate.getMonth() + 1; // Tháng hiện tại (tính từ 0 đến 11)
+    let currentQuarter = Math.ceil(currentMonth / 3); // Quý hiện tại
+    let currentYear = currentDate.getFullYear(); // Năm hiện tại
+    let quarters = [];
+
+
+    if (currentMonth == 1 || currentMonth == 2) {
+        quarters.push({ quarter: 3, year: currentYear - 1 });
+        quarters.push({ quarter: 4, year: currentYear - 1 });
+    } else if (currentMonth == 4 || currentMonth == 5 || currentMonth == 3) {
+        quarters.push({ quarter: 4, year: currentYear - 1 });
+        quarters.push({ quarter: 1, year: currentYear });
+    } else if (currentMonth == 6 || currentMonth == 9 || currentMonth == 12) {
+        quarters.push({ quarter: currentQuarter - 1, year: currentYear });
+        quarters.push({ quarter: currentQuarter, year: currentYear });
+    } else {
+        quarters.push({ quarter: currentQuarter - 2, year: currentYear });
+        quarters.push({ quarter: currentQuarter - 1, year: currentYear });
+    }
+
+    let months = [];
+
+    quarters.forEach((quarter) => {
+        let startMonth = (quarter.quarter - 1) * 3 + 1;
+        let endMonth = quarter.quarter * 3;
+        for (let month = startMonth; month <= endMonth; month++) {
+            let monthStr = moment(month + "/" + quarter.year, 'MM/YYYY').format('YYYY/MM/01');
+            months.push(monthStr);
+        }
+    });
+    return {months, quarters: quarters.map(item => `${item.year}${item.quarter}`)};
+}
 }

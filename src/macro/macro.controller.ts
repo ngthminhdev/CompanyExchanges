@@ -383,4 +383,32 @@ export class MacroController {
       throw new CatchException(e)
     }
   }
+
+  //Trái phiếu
+
+  @Get('tpdn-phat-hanh-thanh-cong-theo-tung-ky')
+  @ApiOperation({summary: 'TPDN phát hành thành công theo từng kỳ '})
+  @ApiOkResponse({type: LaborForceResponse})
+  async corporateBondsIssuedSuccessfully(@Res() res: Response){
+    try {
+      const data = await this.macrosService.corporateBondsIssuedSuccessfully()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('lai-suat-trai-phieu-huy-dong-binh-quan')
+  @ApiOperation({summary: 'Lãi suất trái phiếu huy động bình quân'})
+  @ApiOkResponse({type: LaborForceResponse})
+  async averageDepositInterestRate(@Res() res: Response){
+    try {
+      const data = await this.macrosService.averageDepositInterestRate()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  
 }

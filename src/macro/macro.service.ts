@@ -10,6 +10,7 @@ import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
 import { AccumulatedResponse } from './responses/accumulated.response';
+import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
@@ -896,12 +897,18 @@ export class MacroService {
     order by thoiDiem desc `
     )
     
+    const quarter = UtilCommonTemplate.getLastTwoQuarters(lastDate[0].date)
+    
+    const select = +q.order == TimeTypeEnum.Month ? `giaTri AS value,
+    thoiDiem AS date,` : `sum(giaTri) AS value, cast(datepart(year, thoiDiem) as varchar) + cast(datepart(qq, thoiDiem) as varchar) AS date,`
+    const group = +q.order == TimeTypeEnum.Quarter ? `group by datepart(year, thoiDiem), datepart(qq, thoiDiem), LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2), RIGHT(chiTieu, 14), RIGHT(chiTieu, 4)` : ``
+    const date = +q.order == TimeTypeEnum.Month ? `AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')` : `AND thoiDiem between '${quarter.months[0]}' and '${quarter.months[5]}'`
+    
     const query = `
     WITH temp
     AS (SELECT
-      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
-      giaTri AS value,
-      thoiDiem AS date,
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
       CASE
         WHEN RIGHT(chiTieu, 14) = N'(CM triệu USD)' THEN 1
         WHEN RIGHT(chiTieu, 4) = '(CM)' THEN 2
@@ -910,12 +917,12 @@ export class MacroService {
     WHERE phanBang = 'FDI'
     AND nhomDulieu = N'${type} FDI'
     AND chiTieu LIKE N'%(CM%'
-    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')
+    ${date}
+    ${group}
     UNION ALL
     SELECT
-      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
-      giaTri AS value,
-      thoiDiem AS date,
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
       CASE
         WHEN RIGHT(chiTieu, 14) = N'(TV triệu USD)' THEN 3
         WHEN RIGHT(chiTieu, 4) = '(TV)' THEN 4
@@ -924,12 +931,12 @@ export class MacroService {
     WHERE phanBang = 'FDI'
     AND nhomDulieu = N'${type} FDI'
     AND chiTieu LIKE N'%(TV%'
-    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')
+    ${date}
+    ${group}
     UNION ALL
     SELECT
-      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 1) AS name,
-      giaTri AS value,
-      thoiDiem AS date,
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
       CASE
         WHEN RIGHT(chiTieu, 14) = N'(GV triệu USD)' THEN 5
         WHEN RIGHT(chiTieu, 4) = '(GV)' THEN 6
@@ -938,17 +945,19 @@ export class MacroService {
     WHERE phanBang = 'FDI'
     AND nhomDulieu = N'${type} FDI'
     AND chiTieu LIKE N'%(GV%'
-    AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')),
+    ${date}
+    ${group}),
     pivoted
     AS (SELECT
       name,
       type,
-      [${UtilCommonTemplate.toDate(lastDate[1].date)}] AS now,
-      [${UtilCommonTemplate.toDate(lastDate[0].date)}] AS pre
-    FROM temp AS source PIVOT (SUM(value) FOR date IN ([${UtilCommonTemplate.toDate(lastDate[1].date)}], [${UtilCommonTemplate.toDate(lastDate[0].date)}])) AS bang_chuyen)
+      [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[1].date) : quarter.quarters[1]}] AS now,
+      [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[0].date) : quarter.quarters[0]}] AS pre
+    FROM temp AS source PIVOT (SUM(value) FOR date IN ([${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[1].date) : quarter.quarters[1]}], [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[0].date) : quarter.quarters[0]}])) AS bang_chuyen)
     SELECT
       *
     FROM pivoted
+    where name != ''
     `
     const data = await this.mssqlService.query<any[]>(query)
 
@@ -1061,6 +1070,7 @@ export class MacroService {
   async totalRegisteredAndDisbursed(q: FDIOrderDto){
     const redisData = await this.redis.get(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`)
     if(redisData) return redisData
+
     let date: string = ''
     let group: string = ''
     switch (+q.order) {
@@ -1098,5 +1108,33 @@ export class MacroService {
     const dataMapped = LaborForceResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped
+  }
+
+  async corporateBondsIssuedSuccessfully(){
+    const redisData = await this.redis.get(`${RedisKeys.corporateBondsIssuedSuccessfully}`)
+    if(redisData) return redisData
+
+    const query = `
+    SELECT
+      type as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS bigint)) AS value,
+      DATEPART(MONTH, ngayPhatHanh) AS month,
+      DATEPART(YEAR, ngayPhatHanh) AS year
+    FROM marketBonds.dbo.BondsInfor
+    WHERE ngayPhatHanh >= '01-01-2018'
+    GROUP BY DATEPART(MONTH, ngayPhatHanh),
+            DATEPART(YEAR, ngayPhatHanh),
+            type
+    `
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.corporateBondsIssuedSuccessfully}`, dataMapped, {ttl: TimeToLive.OneDay})
+    return dataMapped
+  }
+
+  async averageDepositInterestRate(){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
   }
 }
