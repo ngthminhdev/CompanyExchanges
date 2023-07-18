@@ -8,4 +8,11 @@ export class MapExportImportDto {
         description: '0 - Tháng gần nhất, 1 - 3 thánh gần nhất, 2 - Từ đầu năm, 3 - Qua một năm'
     })
     order: number
+
+    @IsNotEmpty()
+    @ApiProperty({
+        type: Number,
+        description: `0 - Nhập khẩu, 1 - Xuất khẩu`
+    })
+    type: number
 }

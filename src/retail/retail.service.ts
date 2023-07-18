@@ -365,7 +365,7 @@ export class RetailService {
     return mapped_data
   }
 
-  async mapExportImport(order: number) {
+  async mapExportImport(order: number, type: number) {
     const lastDate = await this.mssqlService.query(`select top 1 thoiDiem as date from macroEconomic.dbo.EconomicVN where phanBang = N'XUẤT KHẨU' order by thoiDiem desc`);
     const redisData = await this.redis.get(`${RedisKeys.mapImportMain}:${order}`)
     if(redisData) return redisData
@@ -387,57 +387,70 @@ export class RetailService {
     }
     const date = UtilCommonTemplate.getPreviousMonth(new Date(lastDate[0].date), month)
     
-    const query = `
-    WITH temp
-    AS (SELECT
-      chiTieu AS name,
-      thoiDiem AS date,
-      giaTri AS value,
-      phanBang
+    // const query = `
+    // WITH temp
+    // AS (SELECT
+    //   chiTieu AS name,
+    //   thoiDiem AS date,
+    //   giaTri AS value,
+    //   phanBang
     
-    FROM macroEconomic.dbo.EconomicVN
-    WHERE (phanBang = N'NHẬP KHẨU')
-    AND nhomDulieu = N'Thị trường nhập khẩu chính'
-    and chiTieu not like N'%ASEAN Ytd (USD)%'
-    and chiTieu not like N'%EU Ytd (USD)%'
-    AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}
-    UNION ALL
+    // FROM macroEconomic.dbo.EconomicVN
+    // WHERE (phanBang = N'NHẬP KHẨU')
+    // AND nhomDulieu = N'Thị trường nhập khẩu chính'
+    // and chiTieu not like N'%ASEAN Ytd (USD)%'
+    // and chiTieu not like N'%EU Ytd (USD)%'
+    // AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}
+    // UNION ALL
+    // SELECT
+    //   chiTieu AS name,
+    //   thoiDiem AS date,
+    //   giaTri AS value,
+    //   phanBang
+    // FROM macroEconomic.dbo.EconomicVN
+    // WHERE (phanBang = N'XUẤT KHẨU')
+    // AND nhomDulieu = N'Thị trường xuất khẩu chính'
+    // and chiTieu not like N'%ASEAN Ytd (USD)%'
+    // and chiTieu not like N'%EU Ytd (USD)%'
+    // AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}),
+    // data
+    // AS (SELECT
+    //   name,
+    //   date,
+    //   [XUẤT KHẨU] AS xk,
+    //   [NHẬP KHẨU] AS nk
+    // FROM (SELECT
+    //   LTRIM(SUBSTRING(name, 21, LEN(name))) AS name,
+    //   date,
+    //   value,
+    //   phanBang
+    // FROM temp) AS source
+    // PIVOT (
+    // SUM(value)
+    // FOR phanBang IN ([XUẤT KHẨU], [NHẬP KHẨU])
+    // ) AS pvtable)
+    // SELECT
+    //   name, sum(xk) as xk, sum(nk) as nk
+    // FROM data
+    // GROUP BY name
+    // `
+    const query = `
     SELECT
-      chiTieu AS name,
+      LEFT(LTRIM(SUBSTRING(chiTieu, 21, LEN(chiTieu))), CHARINDEX('Y', LTRIM(SUBSTRING(chiTieu, 21, LEN(chiTieu)))) - 2) AS name,
       thoiDiem AS date,
-      giaTri AS value,
-      phanBang
+      giaTri AS value
+
     FROM macroEconomic.dbo.EconomicVN
-    WHERE (phanBang = N'XUẤT KHẨU')
-    AND nhomDulieu = N'Thị trường xuất khẩu chính'
-    and chiTieu not like N'%ASEAN Ytd (USD)%'
-    and chiTieu not like N'%EU Ytd (USD)%'
-    AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}),
-    data
-    AS (SELECT
-      name,
-      date,
-      [XUẤT KHẨU] AS xk,
-      [NHẬP KHẨU] AS nk
-    FROM (SELECT
-      LTRIM(SUBSTRING(name, 21, LEN(name))) AS name,
-      date,
-      value,
-      phanBang
-    FROM temp) AS source
-    PIVOT (
-    SUM(value)
-    FOR phanBang IN ([XUẤT KHẨU], [NHẬP KHẨU])
-    ) AS pvtable)
-    SELECT
-      name, sum(xk) as xk, sum(nk) as nk
-    FROM data
-    GROUP BY name
+    WHERE (phanBang = N'${type == 0 ? `NHẬP` : `XUẤT`} KHẨU')
+    AND nhomDulieu = N'Thị trường ${type == 0 ? `nhập` : `xuất`} khẩu chính'
+    AND chiTieu NOT LIKE N'%ASEAN Ytd (USD)%'
+    AND chiTieu NOT LIKE N'%EU Ytd (USD)%'
+    AND ${order == 3 ? `YEAR(thoiDiem) = ${new Date(lastDate[0].date).getFullYear()}` : `thoiDiem IN (${date.map(item => `'${item}'`).join(',')})`}
     `
 
     const data = await this.mssqlService.query<MapImportExportResponse[]>(query)
     const dataMapped = MapImportExportResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.mapImportMain}:${order}`, dataMapped, {ttl: TimeToLive.OneDay})
+    // await this.redis.set(`${RedisKeys.mapImportMain}:${order}`, dataMapped, {ttl: TimeToLive.OneDay})
     return dataMapped
   }
 }
