@@ -140,6 +140,9 @@ export enum RedisKeys {
   newsEnterprise = 'news-enterprise',
   newsFilter = 'news-filter',
   infoStock = 'info-stock',
+
+  //Trái phiếu
+  corporateBondsIssuedSuccessfully = 'corporate-bonds-issued',
     
   //Filter
   filter = 'filter'
