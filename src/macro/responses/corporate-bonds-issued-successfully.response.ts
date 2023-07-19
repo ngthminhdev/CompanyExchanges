@@ -36,6 +36,9 @@ export class CorporateBondsIssuedSuccessfullyResponse {
             case 'Tài chính':
                 this.color = '#38B6FF'
                 break;
+                case 'DN':
+                    this.color = '#2CC8DD'
+                    break;    
             default:
                 this.color = '#147DF5'
                 break;

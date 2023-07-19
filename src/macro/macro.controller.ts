@@ -24,6 +24,16 @@ import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enter
 export class MacroController {
   constructor(private readonly macrosService: MacroService) {}
 
+  @Post('test')
+    async test(@Body() body: {email: string}, @Res() res: Response){
+        try {
+            await this.macrosService.test(body.email)
+            return res.status(HttpStatus.OK).send(new BaseResponse({}));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
+
   /**
    * API site GDP
    */
@@ -462,25 +472,29 @@ export class MacroController {
     }
   }
 
-  // @Get('co-cau-du-no-tpdn')
-  // @ApiOperation({summary: 'Cơ cấu dư nợ TPDN'})
-  // @ApiOkResponse({type: ListOfEnterprisesWithLateBondResponse})
-  // async structureOfOutstandingDebt (@Res() res: Response){
-  //   try {
-  //     const data = await this.macrosService.structureOfOutstandingDebt()
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
-
-  @Post('test')
-    async test(@Body() body: {email: string}, @Res() res: Response){
-        try {
-            await this.macrosService.test(body.email)
-            return res.status(HttpStatus.OK).send(new BaseResponse({}));
-        } catch (e) {
-            throw new CatchException(e)
-        }
+  @Get('co-cau-du-no-tpdn')
+  @ApiOperation({summary: 'Cơ cấu dư nợ TPDN'})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async structureOfOutstandingDebt (@Res() res: Response){
+    try {
+      const data = await this.macrosService.structureOfOutstandingDebt()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
     }
+  }
+
+  @Get('ty-trong-du-no-cac-dn')
+  @ApiOperation({summary: 'Tỷ trọng dư nợ các DN chậm thanh toán '})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async proportionOfOutstandingLoansOfEnterprises (@Res() res: Response){
+    try {
+      const data = await this.macrosService.proportionOfOutstandingLoansOfEnterprises()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  
 }
