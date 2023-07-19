@@ -146,6 +146,8 @@ export enum RedisKeys {
   averageDepositInterestRate = 'average-deposit-interest-rate',
   totalOutstandingBalance = 'total-outstanding-balance',
   estimatedValueOfCorporateBonds = 'estimated-value-of-corporate-bonds',
+  listOfBondsToMaturity = 'list-of-bonds-to-maturity',
+  listOfEnterprisesWithLateBond = 'list-of-enterprises-with-late-bond',
     
   //Filter
   filter = 'filter'

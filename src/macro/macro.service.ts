@@ -14,6 +14,8 @@ import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
+import { ListOfBondsToMaturityResponse } from './responses/list-of-bonds-to-maturity.response';
+import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enterprises-with-late-bond.response';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
 
@@ -1113,7 +1115,7 @@ export class MacroService {
 
   async corporateBondsIssuedSuccessfully(){
     const redisData = await this.redis.get(`${RedisKeys.corporateBondsIssuedSuccessfully}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     const query = `
     SELECT
@@ -1127,7 +1129,6 @@ export class MacroService {
             DATEPART(YEAR, ngayPhatHanh),
             type
     `
-    console.log(query);
     
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
@@ -1205,5 +1206,89 @@ export class MacroService {
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.estimatedValueOfCorporateBonds}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
+  }
+
+  async listOfBondsToMaturity(){
+    const redisData = await this.redis.get(`${RedisKeys.listOfBondsToMaturity}`)
+    if(redisData) return redisData
+    const query = `
+    SELECT TOP 50
+      doanhNghiep as name,
+      maTP as code,
+      CAST(LEFT(kyHanConlai, CHARINDEX('n', kyHanConlai) - 2) AS int) AS khcl,
+      CAST(menhGia AS bigint) * kLPhatHanh AS gtph,
+      CAST(menhGia AS bigint) * BondsInfor.kLConLuuHanh AS gtlh,
+      toChucLuuKy as tclk
+    FROM marketBonds.dbo.BondsInfor
+    WHERE kyHanConlai != ''
+    ORDER BY khcl ASC
+    `
+    const data = await this.mssqlService.query<ListOfBondsToMaturityResponse[]>(query)
+    const dataMapped = ListOfBondsToMaturityResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.listOfBondsToMaturity}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
+
+  async listOfEnterprisesWithLateBond(){
+    const redisData = await this.redis.get(`${RedisKeys.listOfEnterprisesWithLateBond}`)
+    if(redisData) return redisData
+
+    const date = moment().subtract(1, 'month').format('YYYY-MM-DD') //30 ngày gần nhất
+
+    const query = `
+    WITH temp
+    AS (SELECT
+      b.doanhNghiep,
+      b.maTP,
+      b.laiSuatPhatHanh,
+      b.menhGia,
+      b.kLConLuuHanh,
+      b.kLPhatHanh,
+      CASE
+        WHEN b.kyHan LIKE N'%Năm' THEN LEFT(kyHan, CHARINDEX('N', kyHan) - 2)
+        WHEN b.kyHan LIKE N'%Ngày' THEN CAST(LEFT(kyHan, CHARINDEX('N', kyHan) - 2) AS float) / 365
+        WHEN b.kyHan LIKE N'%Tháng' THEN CAST(LEFT(kyHan, CHARINDEX('T', kyHan) - 2) AS float) / 12
+      END AS kyhan_year,
+      CASE
+        WHEN b.kyHanTraLai LIKE N'%Năm' THEN LEFT(kyHanTraLai, CHARINDEX('N', kyHanTraLai) - 2)
+        WHEN b.kyHanTraLai LIKE N'%Ngày' THEN CAST(LEFT(kyHanTraLai, CHARINDEX('N', kyHanTraLai) - 2) AS float) / 365
+        WHEN b.kyHanTraLai LIKE N'%Tháng' THEN CAST(LEFT(kyHanTraLai, CHARINDEX('T', kyHanTraLai) - 2) AS float) / 12
+      END AS kyhantralai_year
+    FROM marketBonds.dbo.BondsInfor b),
+    cal
+    AS (SELECT
+      *,
+      1 / kyhantralai_year AS sokytralaitrong1nam,
+      kyhan_year / kyhantralai_year AS sokytralai
+    FROM temp)
+    SELECT
+      doanhNghiep as name,
+      maTP as code,
+      (CAST(menhGia AS bigint) * kLPhatHanh) * (laiSuatPhatHanh / sokytralaitrong1nam) * sokytralai AS lai_tra_ky,
+      kLPhatHanh * CAST(menhGia AS bigint) AS gia_tri_goc
+    FROM cal c
+    INNER JOIN marketBonds.dbo.unusualBonds u
+      ON c.maTP = u.maTPLienQuan
+    WHERE u.ngayDangTin >= '${date}'
+    `
+    
+    const data = await this.mssqlService.query<ListOfEnterprisesWithLateBondResponse[]>(query)
+    const dataMapped = ListOfEnterprisesWithLateBondResponse.mapToList(data)
+
+    await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async structureOfOutstandingDebt(){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
+  }
+
+  async test(email: string){
+    await this.mssqlService.query(`
+    insert into test_any.dbo.email (email) values ('${email}')
+    `)
+    return
   }
 }
