@@ -148,6 +148,8 @@ export enum RedisKeys {
   estimatedValueOfCorporateBonds = 'estimated-value-of-corporate-bonds',
   listOfBondsToMaturity = 'list-of-bonds-to-maturity',
   listOfEnterprisesWithLateBond = 'list-of-enterprises-with-late-bond',
+  structureOfOutstandingDebt = 'structure-of-outstanding-debt',
+  proportionOfOutstandingLoansOfEnterprises = 'proportion-of-outstanding-loans-of-enterprises',
     
   //Filter
   filter = 'filter'

@@ -27,6 +27,13 @@ export class MacroService {
     private readonly mssqlService: MssqlService,
   ) {}
 
+  async test(email: string){
+    await this.mssqlService.query(`
+    insert into test_any.dbo.email (email) values ('${email}')
+    `)
+    return
+  }
+
   async industryGDPValue(): Promise<GDPResponse[]> {
     const redisData = await this.redis.get<GDPResponse[]>(
       RedisKeys.industryGDPValue,
@@ -1280,15 +1287,39 @@ export class MacroService {
   }
 
   async structureOfOutstandingDebt(){
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+    const redisData = await this.redis.get(`${RedisKeys.structureOfOutstandingDebt}`)
+    if(redisData) return redisData
+    const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
+    const query = `
+    SELECT
+      type as name,
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value
+    FROM marketBonds.dbo.BondsInfor
+    GROUP BY type
+    `
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.structureOfOutstandingDebt}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
 
-  async test(email: string){
-    await this.mssqlService.query(`
-    insert into test_any.dbo.email (email) values ('${email}')
-    `)
-    return
+  async proportionOfOutstandingLoansOfEnterprises(){
+    const redisData = await this.redis.get(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`)
+    if(redisData) return redisData
+    const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
+    const query = `
+    SELECT
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value,
+      'DN' as name
+    FROM marketBonds.dbo.unusualBonds u
+    INNER JOIN marketBonds.dbo.BondsInfor b
+      ON u.maTPLienQuan = b.maTP
+    WHERE u.tieuDeTin LIKE N'%chậm%'
+    `
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
+  
 }
