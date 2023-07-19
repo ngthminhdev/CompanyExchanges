@@ -143,6 +143,9 @@ export enum RedisKeys {
 
   //Trái phiếu
   corporateBondsIssuedSuccessfully = 'corporate-bonds-issued',
+  averageDepositInterestRate = 'average-deposit-interest-rate',
+  totalOutstandingBalance = 'total-outstanding-balance',
+  estimatedValueOfCorporateBonds = 'estimated-value-of-corporate-bonds',
     
   //Filter
   filter = 'filter'

@@ -237,7 +237,7 @@ export class UtilCommonTemplate {
     };
   }
 
-  static getPreviousMonth(date: Date, order: number) {
+  static getPreviousMonth(date: Date = new Date(), order: number, type: number = 0) {
     var currentMonth = date.getMonth();
     var currentYear = date.getFullYear();
 
@@ -246,7 +246,7 @@ export class UtilCommonTemplate {
     var previousThreeMonths = [];
 
     for (var i = 0; i < order; i++) {
-      previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01'))
+      type == 0 ? previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01')) : previousThreeMonths.push(moment(threeMonthsAgo).endOf('month').format('YYYY-MM-DD'))
       
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() + 1);
     }
