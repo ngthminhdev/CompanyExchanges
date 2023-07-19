@@ -28,7 +28,7 @@ export class CorporateBondsIssuedSuccessfullyResponse {
     constructor(data?: CorporateBondsIssuedSuccessfullyResponse) {
         this.name = data?.name || 'Khác'
         this.value = data?.value || 0
-        this.date = moment(`${data.year}-${data?.month}-01`, 'YYYY-MM-DD').format('YYYY/MM/DD')
+        this.date = data?.year ? moment(`${data.year}-${data?.month}-01`, 'YYYY-MM-DD').format('YYYY/MM/DD') : data.date
         switch (data?.name) {
             case 'Bất động sản & Xây dựng':
                 this.color = '#0AEFFF'

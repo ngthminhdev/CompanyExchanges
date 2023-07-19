@@ -14,6 +14,8 @@ import { TotalInvestmentProjectsResponse } from './responses/total-invesment-pro
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { AccumulatedResponse } from './responses/accumulated.response';
+import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
+import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -410,5 +412,39 @@ export class MacroController {
     }
   }
 
-  
+  @Get('bang-doanh-nghiep-tong-du-no-va-lai-suat-tp-binh-quan')
+  @ApiOperation({summary: 'Bảng doanh nghiệp, tổng dư nợ và lãi suất TP bình quân'})
+  @ApiOkResponse({type: TotalOutstandingBalanceResponse})
+  async totalOutstandingBalance(@Res() res: Response){
+    try {
+      const data = await this.macrosService.totalOutstandingBalance()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('uoc-tinh-gia-tri-tpdn-dao-han')
+  @ApiOperation({summary: 'Ước tính giá trị TPDN đáo hạn theo từng kỳ'})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async estimatedValueOfCorporateBonds(@Res() res: Response){
+    try {
+      const data = await this.macrosService.estimatedValueOfCorporateBonds()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  // @Get('danh-sach-trai-phieu-den-ky-dao-han')
+  // @ApiOperation({summary: 'Ước tính giá trị TPDN đáo hạn theo từng kỳ'})
+  // @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  // async estimatedValueOfCorporateBonds(@Res() res: Response){
+  //   try {
+  //     const data = await this.macrosService.estimatedValueOfCorporateBonds()
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
 }

@@ -15,6 +15,7 @@ import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.r
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
+import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
 
 @Injectable()
 export class MacroService {
@@ -1112,7 +1113,7 @@ export class MacroService {
 
   async corporateBondsIssuedSuccessfully(){
     const redisData = await this.redis.get(`${RedisKeys.corporateBondsIssuedSuccessfully}`)
-    if(redisData) return redisData
+    // if(redisData) return redisData
 
     const query = `
     SELECT
@@ -1126,6 +1127,8 @@ export class MacroService {
             DATEPART(YEAR, ngayPhatHanh),
             type
     `
+    console.log(query);
+    
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.corporateBondsIssuedSuccessfully}`, dataMapped, {ttl: TimeToLive.OneDay})
@@ -1133,8 +1136,74 @@ export class MacroService {
   }
 
   async averageDepositInterestRate(){
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+    const redisData = await this.redis.get(`${RedisKeys.averageDepositInterestRate}`)
+    if(redisData) return redisData
+    
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 20, 1)
+    
+    const query_map = date.map(item => `
+    SELECT
+      type as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS tt,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) AS lainam,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) / SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS value,
+      '${moment(item, 'YYYY-MM-DD').format('YYYY/MM/DD')}' AS date
+    FROM marketBonds.dbo.BondsInfor
+    WHERE '${item}' BETWEEN ngayPhatHanh AND ngayDaoHan
+    GROUP BY type
+    `)
+    
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query_map.join('UNION ALL'))
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+
+    await this.redis.set(`${RedisKeys.averageDepositInterestRate}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async totalOutstandingBalance(){
+    const redisData = await this.redis.get(`${RedisKeys.totalOutstandingBalance}`)
+    if(redisData) return redisData
+
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 1, 1)
+    const query = `
+    SELECT TOP 50
+      doanhNghiep as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS total,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) AS lainam,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) / SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS interest_rate,
+      '${date}' AS date
+    FROM marketBonds.dbo.BondsInfor
+    WHERE '${date}' BETWEEN ngayPhatHanh AND ngayDaoHan
+    GROUP BY doanhNghiep
+    ORDER BY interest_rate DESC
+    `
+    const data = await this.mssqlService.query<TotalOutstandingBalanceResponse[]>(query)
+    const dataMapped = TotalOutstandingBalanceResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.totalOutstandingBalance}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async estimatedValueOfCorporateBonds(){
+    const redisData = await this.redis.get(`${RedisKeys.estimatedValueOfCorporateBonds}`)
+    if(redisData) return redisData
+
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 1, 1)
+    
+    const query = `
+    SELECT
+      type as name,
+      SUM((CAST(menhGia AS bigint) * CAST(kLPhatHanh AS bigint)) * (1 + laiSuatPhatHanh)) AS value,
+      DATEPART(MONTH, ngayDaoHan) AS month,
+      DATEPART(YEAR, ngayDaoHan) AS year
+    FROM marketBonds.dbo.BondsInfor
+    WHERE ngayDaoHan > '${date[0]}'
+    GROUP BY DATEPART(MONTH, ngayDaoHan),
+            DATEPART(YEAR, ngayDaoHan),
+            type
+    `
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.estimatedValueOfCorporateBonds}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
 }
