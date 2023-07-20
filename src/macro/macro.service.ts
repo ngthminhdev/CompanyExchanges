@@ -1277,15 +1277,23 @@ export class MacroService {
       *,
       1 / kyhantralai_year AS sokytralaitrong1nam,
       kyhan_year / kyhantralai_year AS sokytralai
-    FROM temp)
+    FROM temp),
+    unusual as (
+          SELECT
+      *
+    FROM
+      marketBonds.dbo.unusualBonds A
+    CROSS APPLY
+      STRING_SPLIT(A.maTPLienQuan, ',') SplitData
+      )
     SELECT
       doanhNghiep as name,
       maTP as code,
       (CAST(menhGia AS bigint) * kLPhatHanh) * (laiSuatPhatHanh / 100 / sokytralaitrong1nam) * sokytralai AS lai_tra_ky,
       kLPhatHanh * CAST(menhGia AS bigint) AS gia_tri_goc
     FROM cal c
-    INNER JOIN marketBonds.dbo.unusualBonds u
-      ON c.maTP = u.maTPLienQuan
+    INNER JOIN unusual u
+      ON c.maTP = u.value
     WHERE u.ngayDangTin >= '${date}'
     `
     
@@ -1318,14 +1326,20 @@ export class MacroService {
     // if(redisData) return redisData
     const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
     const query = `
+    WITH unusual
+    AS (SELECT
+      *
+    FROM marketBonds.dbo.unusualBonds A
+    CROSS APPLY STRING_SPLIT(A.maTPLienQuan, ',') SplitData)
     SELECT
-      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value,
-      'DN' as name
-    FROM marketBonds.dbo.unusualBonds u
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / 911767050600000) * 100 AS value,
+      'DN' AS name
+    FROM unusual u
     INNER JOIN marketBonds.dbo.BondsInfor b
-      ON u.maTPLienQuan = b.maTP
+      ON u.value = b.maTP
     WHERE u.tieuDeTin LIKE N'%chậm%'
     `
+    
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`, dataMapped, { ttl: TimeToLive.HaftHour })
