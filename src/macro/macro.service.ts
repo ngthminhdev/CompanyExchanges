@@ -1207,7 +1207,7 @@ export class MacroService {
     const query = month.map(item => `
       SELECT
         type as name,
-        SUM((CAST(menhGia AS bigint) * CAST(kLPhatHanh AS bigint)) * (1 + (laiSuatPhatHanh / 100))) AS value,
+        SUM((CAST(menhGia AS bigint) * CAST(kLConLuuHanh AS bigint)) * (1 + (laiSuatPhatHanh / 100))) AS value,
         '${item.year}/${item.month}/01' as date
       FROM marketBonds.dbo.BondsInfor
       WHERE MONTH(ngayDaoHan) = ${item.month}
