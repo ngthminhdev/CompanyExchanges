@@ -1135,11 +1135,12 @@ export class MacroService {
     GROUP BY DATEPART(MONTH, ngayPhatHanh),
             DATEPART(YEAR, ngayPhatHanh),
             type
+            order by DATEPART(YEAR, ngayPhatHanh) asc, DATEPART(MONTH, ngayPhatHanh) asc        
     `
     
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.corporateBondsIssuedSuccessfully}`, dataMapped, {ttl: TimeToLive.OneDay})
+    await this.redis.set(`${RedisKeys.corporateBondsIssuedSuccessfully}`, dataMapped, {ttl: TimeToLive.HaftHour})
     return dataMapped
   }
 
@@ -1164,7 +1165,7 @@ export class MacroService {
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query_map.join('UNION ALL'))
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
 
-    await this.redis.set(`${RedisKeys.averageDepositInterestRate}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.averageDepositInterestRate}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1187,7 +1188,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<TotalOutstandingBalanceResponse[]>(query)
     const dataMapped = TotalOutstandingBalanceResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.totalOutstandingBalance}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.totalOutstandingBalance}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1211,13 +1212,14 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.estimatedValueOfCorporateBonds}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.estimatedValueOfCorporateBonds}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
   async listOfBondsToMaturity(){
     const redisData = await this.redis.get(`${RedisKeys.listOfBondsToMaturity}`)
     if(redisData) return redisData
+
     const query = `
     SELECT TOP 50
       doanhNghiep as name,
@@ -1228,11 +1230,12 @@ export class MacroService {
       toChucLuuKy as tclk
     FROM marketBonds.dbo.BondsInfor
     WHERE kyHanConlai != ''
+    AND kLConLuuHanh != 0
     ORDER BY khcl ASC
     `
     const data = await this.mssqlService.query<ListOfBondsToMaturityResponse[]>(query)
     const dataMapped = ListOfBondsToMaturityResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.listOfBondsToMaturity}`, dataMapped, { ttl: TimeToLive.OneDay })
+    await this.redis.set(`${RedisKeys.listOfBondsToMaturity}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1282,7 +1285,7 @@ export class MacroService {
     const data = await this.mssqlService.query<ListOfEnterprisesWithLateBondResponse[]>(query)
     const dataMapped = ListOfEnterprisesWithLateBondResponse.mapToList(data)
 
-    await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1299,7 +1302,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.structureOfOutstandingDebt}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.structureOfOutstandingDebt}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1318,7 +1321,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
     const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
   

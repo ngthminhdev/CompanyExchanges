@@ -238,14 +238,14 @@ export class UtilCommonTemplate {
   }
 
   static getPreviousMonth(date: Date = new Date(), order: number, type: number = 0) {
-    var currentMonth = date.getMonth();
-    var currentYear = date.getFullYear();
+    const currentMonth = date.getMonth();
+    const currentYear = date.getFullYear();
 
-    var threeMonthsAgo = new Date(currentYear, currentMonth - (order - 1), 1);
+    const threeMonthsAgo = new Date(currentYear, currentMonth - (order - 1), 1);
 
-    var previousThreeMonths = [];
+    const previousThreeMonths = [];
 
-    for (var i = 0; i < order; i++) {
+    for (let i = 0; i < order; i++) {
       type == 0 ? previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01')) : previousThreeMonths.push(moment(threeMonthsAgo).endOf('month').format('YYYY-MM-DD'))
       
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() + 1);
