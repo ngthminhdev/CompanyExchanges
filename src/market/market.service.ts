@@ -148,6 +148,8 @@ export class MarketService {
       group by other.date, other.code, now.closePrice, other.closePrice
       order by perChange desc, other.code, other.date desc
     `;
+    console.log(query);
+    
 
     const data = await this.dbServer.query(query);
 
@@ -273,25 +275,31 @@ export class MarketService {
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
+    const dateFilterV2: string[] = dateFilter.replace('(', '').replace(')', '').replace(/'/g, '').replace(/\s/g, '').split(',')
+
     const query: string = `
+        WITH SelectedDates AS (
+          ${dateFilterV2.map(item => `
+          select '${item}' as date
+          `).join(`union all`)}
+      )
       SELECT
         now.date, now.industry,
         ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
       FROM
         (
           SELECT
-            [date],
-            i.LV2 as industry,
-            sum(value) as value
-          FROM [RATIO].[dbo].[ratio] t
-          inner join marketInfor.dbo.info i
-          on t.code = i.code
-          WHERE [date] in ${dateFilter}
-            and i.floor in ${floor}
-            and i.type in ('STOCK', 'ETF')
-            and i.LV2 != ''
-            and t.ratioCode = 'MARKETCAP'
-          group by [date], i.LV2
+              s.[date],
+              i.LV2 AS industry,
+              SUM(t.value) AS value
+          FROM SelectedDates s
+          INNER JOIN [RATIO].[dbo].[ratio] t ON s.[date] = t.[date]
+          INNER JOIN marketInfor.dbo.info i ON t.code = i.code
+          WHERE i.floor IN ('HOSE', 'HNX', 'UPCOM')
+              AND i.type IN ('STOCK', 'ETF')
+              AND i.LV2 != ''
+              AND t.ratioCode = 'MARKETCAP'
+          GROUP BY s.[date], i.LV2
         ) AS now
       INNER JOIN
         (
