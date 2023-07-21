@@ -1148,7 +1148,8 @@ export class MacroService {
     const redisData = await this.redis.get(`${RedisKeys.averageDepositInterestRate}`)
     if(redisData) return redisData
     
-    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 100, 1)
+    const month = UtilCommonTemplate.getAnyToNow(new Date('01/01/2016'), new Date())
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), month + 1, 1)
     
     const query_map = date.map(item => `
     SELECT
@@ -1171,7 +1172,7 @@ export class MacroService {
 
   async totalOutstandingBalance(){
     const redisData = await this.redis.get(`${RedisKeys.totalOutstandingBalance}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     const date = UtilCommonTemplate.getPreviousMonth(new Date(), 1, 1)
     const query = `
@@ -1194,7 +1195,7 @@ export class MacroService {
 
   async estimatedValueOfCorporateBonds(){
     const redisData = await this.redis.get(`${RedisKeys.estimatedValueOfCorporateBonds}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     //Lấy 20 tháng tiếp theo
     const month = []
@@ -1225,7 +1226,7 @@ export class MacroService {
 
   async listOfBondsToMaturity(){
     const redisData = await this.redis.get(`${RedisKeys.listOfBondsToMaturity}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     const query = `
     SELECT TOP 50
@@ -1248,7 +1249,7 @@ export class MacroService {
 
   async listOfEnterprisesWithLateBond(){
     const redisData = await this.redis.get(`${RedisKeys.listOfEnterprisesWithLateBond}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     const date = moment().subtract(1, 'month').format('YYYY-MM-DD') //30 ngày gần nhất
 
@@ -1306,7 +1307,8 @@ export class MacroService {
 
   async structureOfOutstandingDebt(){
     const redisData = await this.redis.get(`${RedisKeys.structureOfOutstandingDebt}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
+
     const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
     const query = `
     SELECT
@@ -1323,7 +1325,8 @@ export class MacroService {
 
   async proportionOfOutstandingLoansOfEnterprises(){
     const redisData = await this.redis.get(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
+
     const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
     const query = `
     WITH unusual
@@ -1332,7 +1335,7 @@ export class MacroService {
     FROM marketBonds.dbo.unusualBonds A
     CROSS APPLY STRING_SPLIT(A.maTPLienQuan, ',') SplitData)
     SELECT
-      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / 911767050600000) * 100 AS value,
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value,
       'DN' AS name
     FROM unusual u
     INNER JOIN marketBonds.dbo.BondsInfor b

@@ -254,6 +254,14 @@ export class UtilCommonTemplate {
     return previousThreeMonths;
   }
 
+  static getAnyToNow(date: Date, now: Date){
+    return (
+      now.getMonth() -
+      date.getMonth() +
+      12 * (now.getFullYear() - date.getFullYear())
+    );
+  }
+
   static getDateFilterV2(input: string[]) {
     const filteredDates = input.filter((date) => date !== '');
     return {
