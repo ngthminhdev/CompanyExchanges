@@ -1146,9 +1146,9 @@ export class MacroService {
 
   async averageDepositInterestRate(){
     const redisData = await this.redis.get(`${RedisKeys.averageDepositInterestRate}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
     
-    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 20, 1)
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 100, 1)
     
     const query_map = date.map(item => `
     SELECT
