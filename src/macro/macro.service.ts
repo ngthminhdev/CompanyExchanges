@@ -5,12 +5,19 @@ import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { FDIOrderDto } from './dto/fdi-order.dto';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
 import { IIndustryGDPValue } from './interfaces/industry-gdp-value.interface';
 import { IPPIndusProductionIndexMapping, IPPIndustyMapping, IPPMostIndustryProductionMapping } from './mapping/ipp-industry.mapping';
+import { AccumulatedResponse } from './responses/accumulated.response';
+import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
+import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { LaborForceResponse } from './responses/labor-force.response';
+import { ListOfBondsToMaturityResponse } from './responses/list-of-bonds-to-maturity.response';
+import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enterprises-with-late-bond.response';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
+import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
 
 @Injectable()
 export class MacroService {
@@ -19,6 +26,13 @@ export class MacroService {
     private readonly redis: Cache,
     private readonly mssqlService: MssqlService,
   ) {}
+
+  async test(email: string){
+    await this.mssqlService.query(`
+    insert into test_any.dbo.email (email) values ('${email}')
+    `)
+    return
+  }
 
   async industryGDPValue(): Promise<GDPResponse[]> {
     const redisData = await this.redis.get<GDPResponse[]>(
@@ -882,8 +896,457 @@ export class MacroService {
   }
 
   async foreignInvestmentIndex(q: ForeignInvestmentIndexDto){
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+    const redisData = await this.redis.get(`${RedisKeys.foreignInvestmentIndex}:${q.type}:${q.order}`)
+    if(redisData) return redisData
+
+    const type = q.type == 1 ? 'Chỉ số' : 'Đối tác'
+    const lastDate = await this.mssqlService.query(`select top 2 thoiDiem as date from macroEconomic.dbo.DuLieuViMo WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'  
+    and chiTieu like N'%(CM%'
+    group by thoiDiem
+    order by thoiDiem desc `
+    )
+    
+    const quarter = UtilCommonTemplate.getLastTwoQuarters(lastDate[0].date)
+    
+    const select = +q.order == TimeTypeEnum.Month ? `giaTri AS value,
+    thoiDiem AS date,` : `sum(giaTri) AS value, cast(datepart(year, thoiDiem) as varchar) + cast(datepart(qq, thoiDiem) as varchar) AS date,`
+    const group = +q.order == TimeTypeEnum.Quarter ? `group by datepart(year, thoiDiem), datepart(qq, thoiDiem), LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2), RIGHT(chiTieu, 14), RIGHT(chiTieu, 4)` : ``
+    const date = +q.order == TimeTypeEnum.Month ? `AND thoiDiem IN ('${UtilCommonTemplate.toDate(lastDate[0].date)}', '${UtilCommonTemplate.toDate(lastDate[1].date)}')` : `AND thoiDiem between '${quarter.months[0]}' and '${quarter.months[5]}'`
+    
+    const query = `
+    WITH temp
+    AS (SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(CM triệu USD)' THEN 1
+        WHEN RIGHT(chiTieu, 4) = '(CM)' THEN 2
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'
+    AND chiTieu LIKE N'%(CM%'
+    ${date}
+    ${group}
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(TV triệu USD)' THEN 3
+        WHEN RIGHT(chiTieu, 4) = '(TV)' THEN 4
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'
+    AND chiTieu LIKE N'%(TV%'
+    ${date}
+    ${group}
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${select}
+      CASE
+        WHEN RIGHT(chiTieu, 14) = N'(GV triệu USD)' THEN 5
+        WHEN RIGHT(chiTieu, 4) = '(GV)' THEN 6
+      END AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'${type} FDI'
+    AND chiTieu LIKE N'%(GV%'
+    ${date}
+    ${group}),
+    pivoted
+    AS (SELECT
+      name,
+      type,
+      [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[1].date) : quarter.quarters[1]}] AS now,
+      [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[0].date) : quarter.quarters[0]}] AS pre
+    FROM temp AS source PIVOT (SUM(value) FOR date IN ([${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[1].date) : quarter.quarters[1]}], [${+q.order == TimeTypeEnum.Month ? UtilCommonTemplate.toDate(lastDate[0].date) : quarter.quarters[0]}])) AS bang_chuyen)
+    SELECT
+      *
+    FROM pivoted
+    where name != ''
+    `
+    const data = await this.mssqlService.query<any[]>(query)
+
+    const now = {
+      1: 'cm_usd',
+      2: 'cm',
+      3: 'tv_usd',
+      4: 'tv',
+      5: 'gv_usd',
+      6: 'gv',
+    }
+
+    const pre = {
+      1: 'cm_usd_pre',
+      2: 'cm_pre',
+      3: 'tv_usd_pre',
+      4: 'tv_pre',
+      5: 'gv_usd_pre',
+      6: 'gv_pre',
+    }
+    
+    const data_reduce = data.reduce((acc, item) => {
+      const index = acc.findIndex(child => child.name == item.name)
+      
+      if(index != -1){
+        acc[index][now[item.type]] = item.now
+        acc[index][pre[item.type]] = item.pre
+        acc[index]['total'] = (acc[index]['cm_usd'] || 0) + (acc[index]['tv_usd'] || 0) + (acc[index]['gv_usd'] || 0)
+        acc[index]['total_pre'] = (acc[index]['cm_usd_pre'] || 0) + (acc[index]['tv_usd_pre'] || 0) + (acc[index]['gv_usd_pre'] || 0)
+        return acc
+      }
+      acc.push({
+        name: item.name, 
+        [now[item.type]]: item.now, 
+        [pre[item.type]]: item.pre, 
+      })
+      return acc
+    }, [])
+
+    const dataMapped = ForeignInvestmentIndexResponse.mapToList(data_reduce)
+    await this.redis.set(`${RedisKeys.foreignInvestmentIndex}:${q.type}:${q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
   }
+
+  async accumulated(q: FDIOrderDto){
+    const redisData = await this.redis.get(`${RedisKeys.accumulated}:${q.order}`)
+    if(redisData) return redisData
+
+    let date: string = ''
+    let group: string = ''
+    switch (+q.order) {
+      case TimeTypeEnum.Month:
+        date = `giaTri as value, thoiDiem as date,`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `
+        sum(giaTri) as value,
+        case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date, `
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2)`
+        break
+      default:
+        date = `thoiDiem as date,`
+    } 
+    const query = `
+    WITH temp
+    AS (SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${date}
+      1 AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(Lũy kế 1988)%'
+
+    AND thoiDiem > '2020-01-01'
+    ${group}
+    UNION ALL
+    SELECT
+      LEFT(chiTieu, CHARINDEX('(', chiTieu) - 2) AS name,
+      ${date}
+      2 AS type
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu LIKE N'%(Lũy kế vốn 1988 triệu USD)%'
+    AND thoiDiem > '2020-01-01'
+    ${group}
+    )
+    SELECT
+      name,
+      date,
+      [1] AS luy_ke,
+      [2] AS luy_ke_von
+    FROM (SELECT
+      *
+    FROM temp) AS source PIVOT (SUM(value) FOR type IN ([1], [2])) AS chuyen
+    where name != ''
+`
+    const data = await this.mssqlService.query<AccumulatedResponse[]>(query)
+    const dataMapped = AccumulatedResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.accumulated}:${q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async totalRegisteredAndDisbursed(q: FDIOrderDto){
+    const redisData = await this.redis.get(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`)
+    if(redisData) return redisData
+
+    let date: string = ''
+    let group: string = ''
+    switch (+q.order) {
+      case TimeTypeEnum.Month:
+        date = `giaTri as value, thoiDiem as date`
+        break
+      case TimeTypeEnum.Quarter:
+        date = `
+        sum(giaTri) as value,
+        case datepart(qq, thoiDiem)
+        when 1 then cast(datepart(year, thoiDiem) as varchar) + '/03/31'
+        when 2 then cast(datepart(year, thoiDiem) as varchar) + '/06/30'
+        when 3 then cast(datepart(year, thoiDiem) as varchar) + '/09/30'
+        when 4 then cast(datepart(year, thoiDiem) as varchar) + '/12/31'
+        end as date`
+        group = `group by datepart(qq, thoiDiem), datepart(year, thoiDiem), chiTieu`
+        break
+      default:
+        date = `thoiDiem as date,`
+    } 
+    const query = 
+    `
+    SELECT
+      chiTieu AS name,
+      ${date}
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = 'FDI'
+    AND nhomDulieu = N'Chỉ số FDI'
+    AND chiTieu IN (N'Tổng vốn đăng ký (triệu USD)', N'Tổng vốn giải ngân (triệu USD)')
+    AND thoiDiem >= '2018-01-01'
+    ${group}
+    ORDER BY date asc
+    `
+    const data = await this.mssqlService.query<LaborForceResponse[]>(query)
+    const dataMapped = LaborForceResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.totalRegisteredAndDisbursed}:${+q.order}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped
+  }
+
+  async corporateBondsIssuedSuccessfully(){
+    const redisData = await this.redis.get(`${RedisKeys.corporateBondsIssuedSuccessfully}`)
+    // if(redisData) return redisData
+
+    const query = `
+    SELECT
+      type as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS bigint)) AS value,
+      DATEPART(MONTH, ngayPhatHanh) AS month,
+      DATEPART(YEAR, ngayPhatHanh) AS year
+    FROM marketBonds.dbo.BondsInfor
+    WHERE ngayPhatHanh >= '01-01-2018'
+    GROUP BY DATEPART(MONTH, ngayPhatHanh),
+            DATEPART(YEAR, ngayPhatHanh),
+            type
+            order by DATEPART(YEAR, ngayPhatHanh) asc, DATEPART(MONTH, ngayPhatHanh) asc        
+    `
+    
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.corporateBondsIssuedSuccessfully}`, dataMapped, {ttl: TimeToLive.HaftHour})
+    return dataMapped
+  }
+
+  async averageDepositInterestRate(){
+    const redisData = await this.redis.get(`${RedisKeys.averageDepositInterestRate}`)
+    if(redisData) return redisData
+    
+    const month = UtilCommonTemplate.getAnyToNow(new Date('01/01/2016'), new Date())
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), month + 1, 1)
+    
+    const query_map = date.map(item => `
+    SELECT
+      type as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS tt,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) AS lainam,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) / SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS value,
+      '${moment(item, 'YYYY-MM-DD').format('YYYY/MM/DD')}' AS date
+    FROM marketBonds.dbo.BondsInfor
+    WHERE '${item}' BETWEEN ngayPhatHanh AND ngayDaoHan
+    GROUP BY type
+    `)
+    
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query_map.join('UNION ALL'))
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+
+    await this.redis.set(`${RedisKeys.averageDepositInterestRate}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async totalOutstandingBalance(){
+    const redisData = await this.redis.get(`${RedisKeys.totalOutstandingBalance}`)
+    if(redisData) return redisData
+
+    const date = UtilCommonTemplate.getPreviousMonth(new Date(), 1, 1)
+    const query = `
+    SELECT TOP 50
+      doanhNghiep as name,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS total,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) AS lainam,
+      SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int) * CAST(laiSuatPhatHanh AS float)) / SUM(CAST(menhGia AS bigint) * CAST(kLPhatHanh AS int)) AS interest_rate,
+      '${date}' AS date
+    FROM marketBonds.dbo.BondsInfor
+    WHERE '${date}' BETWEEN ngayPhatHanh AND ngayDaoHan
+    GROUP BY doanhNghiep
+    ORDER BY interest_rate DESC
+    `
+    const data = await this.mssqlService.query<TotalOutstandingBalanceResponse[]>(query)
+    const dataMapped = TotalOutstandingBalanceResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.totalOutstandingBalance}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async estimatedValueOfCorporateBonds(){
+    const redisData = await this.redis.get(`${RedisKeys.estimatedValueOfCorporateBonds}`)
+    if(redisData) return redisData
+
+    //Lấy 20 tháng tiếp theo
+    const month = []
+    let now = moment().add(1, 'month')
+    for(let i = 0; i < 20; i++){
+      month.push({year: now.year(), month: now.month() + 1})
+      now = now.add(1, 'month')
+    }
+    
+    const query = month.map(item => `
+      SELECT
+        type as name,
+        SUM((CAST(menhGia AS bigint) * CAST(kLConLuuHanh AS bigint)) * (1 + (laiSuatPhatHanh / 100))) AS value,
+        '${item.year}/${item.month}/01' as date
+      FROM marketBonds.dbo.BondsInfor
+      WHERE MONTH(ngayDaoHan) = ${item.month}
+      and year(ngayDaoHan) = ${item.year}
+      GROUP BY DATEPART(MONTH, ngayDaoHan),
+              DATEPART(YEAR, ngayDaoHan),
+              type
+    `)
+    
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query.join('union all'))
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.estimatedValueOfCorporateBonds}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async listOfBondsToMaturity(){
+    const redisData = await this.redis.get(`${RedisKeys.listOfBondsToMaturity}`)
+    if(redisData) return redisData
+
+    const query = `
+    SELECT TOP 50
+      doanhNghiep as name,
+      maTP as code,
+      CAST(LEFT(kyHanConlai, CHARINDEX('n', kyHanConlai) - 2) AS int) AS khcl,
+      CAST(menhGia AS bigint) * kLPhatHanh AS gtph,
+      CAST(menhGia AS bigint) * BondsInfor.kLConLuuHanh AS gtlh,
+      toChucLuuKy as tclk
+    FROM marketBonds.dbo.BondsInfor
+    WHERE kyHanConlai != ''
+    AND kLConLuuHanh != 0
+    ORDER BY khcl ASC
+    `
+    const data = await this.mssqlService.query<ListOfBondsToMaturityResponse[]>(query)
+    const dataMapped = ListOfBondsToMaturityResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.listOfBondsToMaturity}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async listOfEnterprisesWithLateBond(){
+    const redisData = await this.redis.get(`${RedisKeys.listOfEnterprisesWithLateBond}`)
+    if(redisData) return redisData
+
+    const date = moment().subtract(1, 'month').format('YYYY-MM-DD') //30 ngày gần nhất
+
+    const query = `
+    WITH temp
+    AS (SELECT
+      b.doanhNghiep,
+      b.maTP,
+      b.laiSuatPhatHanh,
+      b.menhGia,
+      b.kLConLuuHanh,
+      b.kLPhatHanh,
+      CASE
+        WHEN b.kyHan LIKE N'%Năm' THEN LEFT(kyHan, CHARINDEX('N', kyHan) - 2)
+        WHEN b.kyHan LIKE N'%Ngày' THEN CAST(LEFT(kyHan, CHARINDEX('N', kyHan) - 2) AS float) / 365
+        WHEN b.kyHan LIKE N'%Tháng' THEN CAST(LEFT(kyHan, CHARINDEX('T', kyHan) - 2) AS float) / 12
+      END AS kyhan_year,
+      CASE
+        WHEN b.kyHanTraLai LIKE N'%Năm' THEN LEFT(kyHanTraLai, CHARINDEX('N', kyHanTraLai) - 2)
+        WHEN b.kyHanTraLai LIKE N'%Ngày' THEN CAST(LEFT(kyHanTraLai, CHARINDEX('N', kyHanTraLai) - 2) AS float) / 365
+        WHEN b.kyHanTraLai LIKE N'%Tháng' THEN CAST(LEFT(kyHanTraLai, CHARINDEX('T', kyHanTraLai) - 2) AS float) / 12
+      END AS kyhantralai_year
+    FROM marketBonds.dbo.BondsInfor b),
+    cal
+    AS (SELECT
+      *,
+      1 / kyhantralai_year AS sokytralaitrong1nam,
+      kyhan_year / kyhantralai_year AS sokytralai
+    FROM temp),
+    unusual as (
+          SELECT
+      *
+    FROM
+      marketBonds.dbo.unusualBonds A
+    CROSS APPLY
+      STRING_SPLIT(A.maTPLienQuan, ',') SplitData
+      )
+    SELECT
+      doanhNghiep as name,
+      maTP as code,
+      (CAST(menhGia AS bigint) * kLPhatHanh) * (laiSuatPhatHanh / 100 / sokytralaitrong1nam) * sokytralai AS lai_tra_ky,
+      kLPhatHanh * CAST(menhGia AS bigint) AS gia_tri_goc
+    FROM cal c
+    INNER JOIN unusual u
+      ON c.maTP = u.value
+    WHERE u.ngayDangTin >= '${date}'
+    `
+    
+    const data = await this.mssqlService.query<ListOfEnterprisesWithLateBondResponse[]>(query)
+    const dataMapped = ListOfEnterprisesWithLateBondResponse.mapToList(data)
+
+    await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async structureOfOutstandingDebt(){
+    const redisData = await this.redis.get(`${RedisKeys.structureOfOutstandingDebt}`)
+    if(redisData) return redisData
+
+    const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
+    const query = `
+    SELECT
+      type as name,
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value
+    FROM marketBonds.dbo.BondsInfor
+    GROUP BY type
+    `
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.structureOfOutstandingDebt}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async proportionOfOutstandingLoansOfEnterprises(){
+    const redisData = await this.redis.get(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`)
+    if(redisData) return redisData
+
+    const query_all = await this.mssqlService.query(`select sum(cast(menhGia as bigint) * kLConLuuHanh) as value from marketBonds.dbo.BondsInfor`)
+    const query = `
+    WITH unusual
+    AS (SELECT
+      *
+    FROM marketBonds.dbo.unusualBonds A
+    CROSS APPLY STRING_SPLIT(A.maTPLienQuan, ',') SplitData)
+    SELECT
+      (SUM(CAST(menhGia AS bigint) * kLConLuuHanh) / ${query_all[0].value}) * 100 AS value,
+      'DN' AS name
+    FROM unusual u
+    INNER JOIN marketBonds.dbo.BondsInfor b
+      ON u.value = b.maTP
+    WHERE u.tieuDeTin LIKE N'%chậm%'
+    `
+    
+    const data = await this.mssqlService.query<CorporateBondsIssuedSuccessfullyResponse[]>(query)
+    const dataMapped = CorporateBondsIssuedSuccessfullyResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.proportionOfOutstandingLoansOfEnterprises}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+  
 }

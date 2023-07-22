@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { OrderDto } from '../market/dto/order.dto';
@@ -12,11 +12,27 @@ import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
 import { FDIOrderDto } from './dto/fdi-order.dto';
 import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
+import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
+import { AccumulatedResponse } from './responses/accumulated.response';
+import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
+import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
+import { ListOfBondsToMaturityResponse } from './responses/list-of-bonds-to-maturity.response';
+import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enterprises-with-late-bond.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
 export class MacroController {
   constructor(private readonly macrosService: MacroService) {}
+
+  @Post('test')
+    async test(@Body() body: {email: string}, @Res() res: Response){
+        try {
+            await this.macrosService.test(body.email)
+            return res.status(HttpStatus.OK).send(new BaseResponse({}));
+        } catch (e) {
+            throw new CatchException(e)
+        }
+    }
 
   /**
    * API site GDP
@@ -348,7 +364,7 @@ export class MacroController {
 
   @Get('chi-so-dau-tu-nuoc-ngoai')
   @ApiOperation({summary: 'Chỉ số đầu tư nước ngoài'})
-  @ApiOkResponse({type: TotalInvestmentProjectsResponse})
+  @ApiOkResponse({type: ForeignInvestmentIndexResponse})
   async foreignInvestmentIndex(@Res() res: Response, @Query() q: ForeignInvestmentIndexDto){
     try {
       const data = await this.macrosService.foreignInvestmentIndex(q)
@@ -357,4 +373,128 @@ export class MacroController {
       throw new CatchException(e)
     }
   }
+
+  @Get('luy-ke')
+  @ApiOperation({summary: 'Lũy kế số dự án cấp mới và tổng vốn đầu tư từ năm 1988'})
+  @ApiOkResponse({type: AccumulatedResponse})
+  async accumulated(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.accumulated(q)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('tong-von-dang-ky-va-giai-ngan')
+  @ApiOperation({summary: 'Tổng vốn đăng ký và giải ngân (triệu USD)'})
+  @ApiOkResponse({type: LaborForceResponse})
+  async totalRegisteredAndDisbursed(@Res() res: Response, @Query() q: FDIOrderDto){
+    try {
+      const data = await this.macrosService.totalRegisteredAndDisbursed(q)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  //Trái phiếu
+
+  @Get('tpdn-phat-hanh-thanh-cong-theo-tung-ky')
+  @ApiOperation({summary: 'TPDN phát hành thành công theo từng kỳ '})
+  @ApiOkResponse({type: LaborForceResponse})
+  async corporateBondsIssuedSuccessfully(@Res() res: Response){
+    try {
+      const data = await this.macrosService.corporateBondsIssuedSuccessfully()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('lai-suat-trai-phieu-huy-dong-binh-quan')
+  @ApiOperation({summary: 'Lãi suất trái phiếu huy động bình quân'})
+  @ApiOkResponse({type: LaborForceResponse})
+  async averageDepositInterestRate(@Res() res: Response){
+    try {
+      const data = await this.macrosService.averageDepositInterestRate()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('bang-doanh-nghiep-tong-du-no-va-lai-suat-tp-binh-quan')
+  @ApiOperation({summary: 'Bảng doanh nghiệp, tổng dư nợ và lãi suất TP bình quân'})
+  @ApiOkResponse({type: TotalOutstandingBalanceResponse})
+  async totalOutstandingBalance(@Res() res: Response){
+    try {
+      const data = await this.macrosService.totalOutstandingBalance()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('uoc-tinh-gia-tri-tpdn-dao-han')
+  @ApiOperation({summary: 'Ước tính giá trị TPDN đáo hạn theo từng kỳ'})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async estimatedValueOfCorporateBonds(@Res() res: Response){
+    try {
+      const data = await this.macrosService.estimatedValueOfCorporateBonds()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('danh-sach-trai-phieu-den-ky-dao-han')
+  @ApiOperation({summary: 'Danh sách trái phiếu đến kỳ đáo hạn'})
+  @ApiOkResponse({type: ListOfBondsToMaturityResponse})
+  async listOfBondsToMaturity(@Res() res: Response){
+    try {
+      const data = await this.macrosService.listOfBondsToMaturity()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('danh-sach-doanh-nghiep-cham-nghia-vu-trai-phieu')
+  @ApiOperation({summary: 'Danh sách doanh nghiệp chậm nghĩa vụ trái phiếu'})
+  @ApiOkResponse({type: ListOfEnterprisesWithLateBondResponse})
+  async listOfEnterprisesWithLateBond (@Res() res: Response){
+    try {
+      const data = await this.macrosService.listOfEnterprisesWithLateBond()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('co-cau-du-no-tpdn')
+  @ApiOperation({summary: 'Cơ cấu dư nợ TPDN'})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async structureOfOutstandingDebt (@Res() res: Response){
+    try {
+      const data = await this.macrosService.structureOfOutstandingDebt()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('ty-trong-du-no-cac-dn')
+  @ApiOperation({summary: 'Tỷ trọng dư nợ các DN chậm thanh toán '})
+  @ApiOkResponse({type: CorporateBondsIssuedSuccessfullyResponse})
+  async proportionOfOutstandingLoansOfEnterprises (@Res() res: Response){
+    try {
+      const data = await this.macrosService.proportionOfOutstandingLoansOfEnterprises()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  
 }

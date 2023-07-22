@@ -273,25 +273,40 @@ export class MarketService {
 
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
+    const dateFilterV2: string[] = dateFilter.replace('(', '').replace(')', '').replace(/'/g, '').replace(/\s/g, '').split(',')
+    
+    const date_v2 = await this.mssqlService.query(`
+    SELECT top 1
+            [date]
+          FROM [RATIO].[dbo].[ratio] t
+          
+            WHERE t.ratioCode = 'MARKETCAP'
+          order by date asc  
+    `)
+
     const query: string = `
+        WITH SelectedDates AS (
+          ${dateFilterV2.map(item => `
+          select '${item}' as date
+          `).join(`union all`)}
+      )
       SELECT
         now.date, now.industry,
         ((now.value - prev.value) / NULLIF(prev.value, 0)) * 100 AS perChange
       FROM
         (
           SELECT
-            [date],
-            i.LV2 as industry,
-            sum(value) as value
-          FROM [RATIO].[dbo].[ratio] t
-          inner join marketInfor.dbo.info i
-          on t.code = i.code
-          WHERE [date] in ${dateFilter}
-            and i.floor in ${floor}
-            and i.type in ('STOCK', 'ETF')
-            and i.LV2 != ''
-            and t.ratioCode = 'MARKETCAP'
-          group by [date], i.LV2
+              s.[date],
+              i.LV2 AS industry,
+              SUM(t.value) AS value
+          FROM SelectedDates s
+          INNER JOIN [RATIO].[dbo].[ratio] t ON s.[date] = t.[date]
+          INNER JOIN marketInfor.dbo.info i ON t.code = i.code
+          WHERE i.floor IN ('HOSE', 'HNX', 'UPCOM')
+              AND i.type IN ('STOCK', 'ETF')
+              AND i.LV2 != ''
+              AND t.ratioCode = 'MARKETCAP'
+          GROUP BY s.[date], i.LV2
         ) AS now
       INNER JOIN
         (
@@ -302,7 +317,7 @@ export class MarketService {
           FROM [RATIO].[dbo].[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
-          WHERE [date] = '${startDate}'
+          WHERE [date] = '${new Date(startDate) > new Date(date_v2[0].date) ? startDate : UtilCommonTemplate.toDate(date_v2[0].date)}'
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
             and i.LV2 != ''

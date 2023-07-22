@@ -131,12 +131,25 @@ export enum RedisKeys {
 
   //FDI
   totalInvestmentProjects = 'total-investment-projects',
+  foreignInvestmentIndex = 'foreign-investment-index',
+  accumulated = 'accumulated',
+  totalRegisteredAndDisbursed = 'total-registered-disbursed',
 
   //Tin tuc
   newsEvent = 'news-event',
   newsEnterprise = 'news-enterprise',
   newsFilter = 'news-filter',
   infoStock = 'info-stock',
+
+  //Trái phiếu
+  corporateBondsIssuedSuccessfully = 'corporate-bonds-issued',
+  averageDepositInterestRate = 'average-deposit-interest-rate',
+  totalOutstandingBalance = 'total-outstanding-balance',
+  estimatedValueOfCorporateBonds = 'estimated-value-of-corporate-bonds',
+  listOfBondsToMaturity = 'list-of-bonds-to-maturity',
+  listOfEnterprisesWithLateBond = 'list-of-enterprises-with-late-bond',
+  structureOfOutstandingDebt = 'structure-of-outstanding-debt',
+  proportionOfOutstandingLoansOfEnterprises = 'proportion-of-outstanding-loans-of-enterprises',
     
   //Filter
   filter = 'filter'

@@ -134,6 +134,12 @@ export class LaborForceResponse {
             case 'NH Liên doanh, nước ngoài (%)':
                 this.color = '#5CE1E6'
                 break;
+            case 'Tổng vốn Đăng ký (triệu USD)':
+                this.color = '#004AAD'
+                break;
+            case 'Tổng vốn Giải ngân (triệu USD)':
+                this.color = '#3CD8C5'
+                break;
             default:
                 this.color = ''
                 break;
