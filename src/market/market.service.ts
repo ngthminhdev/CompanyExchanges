@@ -148,8 +148,6 @@ export class MarketService {
       group by other.date, other.code, now.closePrice, other.closePrice
       order by perChange desc, other.code, other.date desc
     `;
-    console.log(query);
-    
 
     const data = await this.dbServer.query(query);
 
@@ -276,6 +274,15 @@ export class MarketService {
     const { startDate, dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
     const dateFilterV2: string[] = dateFilter.replace('(', '').replace(')', '').replace(/'/g, '').replace(/\s/g, '').split(',')
+    
+    const date_v2 = await this.mssqlService.query(`
+    SELECT top 1
+            [date]
+          FROM [RATIO].[dbo].[ratio] t
+          
+            WHERE t.ratioCode = 'MARKETCAP'
+          order by date asc  
+    `)
 
     const query: string = `
         WITH SelectedDates AS (
@@ -310,7 +317,7 @@ export class MarketService {
           FROM [RATIO].[dbo].[ratio] t
           inner join marketInfor.dbo.info i
           on t.code = i.code
-          WHERE [date] = '${startDate}'
+          WHERE [date] = '${new Date(startDate) > new Date(date_v2[0].date) ? startDate : UtilCommonTemplate.toDate(date_v2[0].date)}'
             and i.floor in ${floor}
             and i.type in ('STOCK', 'ETF')
             and i.LV2 != ''
