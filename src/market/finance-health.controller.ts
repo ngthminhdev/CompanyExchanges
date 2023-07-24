@@ -176,6 +176,25 @@ export class FinanceHealthController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
+  @Get('lai-suat-vay-no-cac-nhom-nganh')
+  @ApiOperation({
+    summary: `
+    Diễn biến Lãi suất vay nợ các nhóm ngành
+    `,
+  })
+  @ApiOkResponse({ type: IndusInterestCoverageResponse })
+  async interestRatesOnLoans(
+    @Query() q: TimeFrameDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.fHealthService.interestRatesOnLoans(
+      q.exchange.toUpperCase(),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
   // @Get('ty-suat-loi-nhuan-cac-nhom-nganh-table')
   // @ApiOperation({
   //   summary: `

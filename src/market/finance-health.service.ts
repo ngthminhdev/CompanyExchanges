@@ -26,6 +26,7 @@ import { TimeToLive } from '../enums/common.enum';
 import { PEIndustryResponse } from './responses/pe-industry.response';
 import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
 import * as moment from 'moment'
+import { TimeFrameDto } from './dto/time-frame.dto';
 
 @Injectable()
 export class FinanceHealthService {
@@ -724,6 +725,31 @@ export class FinanceHealthService {
 
     const dataMapped = IndusInterestCoverageResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.IndsInterestCoverage}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped;
+  }
+
+  async interestRatesOnLoans(ex: string, type: number, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.interestRatesOnLoans}:${ex}:${order}:${type}`)
+    if(redisData) return redisData
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+          SELECT
+              date,
+              industry,
+              floor,
+              laisuatvay AS value
+          FROM VISUALIZED_DATA.dbo.pb_nganh
+          WHERE floor = '${ex}'
+          and date IN ${dateFilter}
+        `;
+        
+    const data = await this.mssqlService.query<IndusInterestCoverageResponse[]>(query);
+
+    const dataMapped = IndusInterestCoverageResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.interestRatesOnLoans}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }
 }

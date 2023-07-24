@@ -79,6 +79,7 @@ export enum RedisKeys {
   IndsProfitMargins = 'inds-profit-margin',
 
   IndsInterestCoverage = 'inds-coverage',
+  interestRatesOnLoans = 'interest-rates-on-loans',
 
   NearestDate = 'nearest-date',
 
