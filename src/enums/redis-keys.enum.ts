@@ -152,5 +152,8 @@ export enum RedisKeys {
   proportionOfOutstandingLoansOfEnterprises = 'proportion-of-outstanding-loans-of-enterprises',
     
   //Filter
-  filter = 'filter'
+  filter = 'filter',
+
+  //Report
+  reportIndex = 'report-index'
 }

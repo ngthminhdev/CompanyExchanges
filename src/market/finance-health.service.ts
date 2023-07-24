@@ -25,6 +25,7 @@ import { ProfitMarginResponse } from './responses/profit-margin.response';
 import { TimeToLive } from '../enums/common.enum';
 import { PEIndustryResponse } from './responses/pe-industry.response';
 import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
+import * as moment from 'moment'
 
 @Injectable()
 export class FinanceHealthService {
@@ -44,8 +45,8 @@ export class FinanceHealthService {
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
     );
     if (redisData) return redisData;
-
-    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const query_date = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.pb_nganh order by date desc`))[0].date
+    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(+query_date + 1, 'YYYYQ').endOf('quarter').toDate());
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
     
@@ -105,7 +106,8 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getYearQuarters(type, order);
+    const query_date = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.EPS_code order by date desc`))[0].date
+    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(+query_date + 1, 'YYYYQ').endOf('quarter').toDate());
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
