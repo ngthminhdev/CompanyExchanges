@@ -1249,7 +1249,7 @@ export class MacroService {
 
   async listOfEnterprisesWithLateBond(){
     const redisData = await this.redis.get(`${RedisKeys.listOfEnterprisesWithLateBond}`)
-    if(redisData) return redisData
+    // if(redisData) return redisData
 
     const date = moment().subtract(1, 'month').format('YYYY-MM-DD') //30 ngày gần nhất
 
@@ -1287,7 +1287,7 @@ export class MacroService {
     CROSS APPLY
       STRING_SPLIT(A.maTPLienQuan, ',') SplitData
       )
-    SELECT
+    SELECT distinct
       doanhNghiep as name,
       maTP as code,
       (CAST(menhGia AS bigint) * kLPhatHanh) * (laiSuatPhatHanh / 100 / sokytralaitrong1nam) * sokytralai AS lai_tra_ky,
@@ -1301,7 +1301,7 @@ export class MacroService {
     const data = await this.mssqlService.query<ListOfEnterprisesWithLateBondResponse[]>(query)
     const dataMapped = ListOfEnterprisesWithLateBondResponse.mapToList(data)
 
-    await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    // await this.redis.set(`${RedisKeys.listOfEnterprisesWithLateBond}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
