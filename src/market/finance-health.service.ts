@@ -1,32 +1,32 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
+import * as moment from 'moment';
 import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
+import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { ISIndsDebtSolvency } from './interfaces/Inds-debt-solvency.interface';
+import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
 import { IPayoutRatio } from './interfaces/payout-ratio.interface';
 import {
   IPEIndustry,
-  ISPEPBIndustry,
+  ISPEPBIndustry
 } from './interfaces/pe-pb-industry-interface';
+import { ISRotationRatio } from './interfaces/rotation-ratio.interface';
 import { MarketService } from './market.service';
+import { CashRatioResponse } from './responses/cash-ratio.response';
+import { DebtSolvencyResponse } from './responses/debt-solvency.response';
+import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
+import { InterestRatesOnLoansResponse } from './responses/interest-rates-on-loans.response';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
+import { PEIndustryResponse } from './responses/pe-industry.response';
 import { PEBResponse } from './responses/peb-ticker.response';
 import { PEPBIndustryResponse } from './responses/pepb-industry.response';
-import { CashRatioResponse } from './responses/cash-ratio.response';
-import { ISRotationRatio } from './interfaces/rotation-ratio.interface';
-import { RotationRatioResponse } from './responses/rotation.response';
-import { ISIndsDebtSolvency } from './interfaces/Inds-debt-solvency.interface';
-import { DebtSolvencyResponse } from './responses/debt-solvency.response';
-import { ISIndsProfitMargins } from './interfaces/inds-profit-margin.interface';
 import { ProfitMarginResponse } from './responses/profit-margin.response';
-import { TimeToLive } from '../enums/common.enum';
-import { PEIndustryResponse } from './responses/pe-industry.response';
-import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
-import * as moment from 'moment'
-import { TimeFrameDto } from './dto/time-frame.dto';
+import { RotationRatioResponse } from './responses/rotation.response';
 
 @Injectable()
 export class FinanceHealthService {
@@ -746,9 +746,9 @@ export class FinanceHealthService {
           and date IN ${dateFilter}
         `;
         
-    const data = await this.mssqlService.query<IndusInterestCoverageResponse[]>(query);
+    const data = await this.mssqlService.query<InterestRatesOnLoansResponse[]>(query);
 
-    const dataMapped = IndusInterestCoverageResponse.mapToList(data)
+    const dataMapped = InterestRatesOnLoansResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.interestRatesOnLoans}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }

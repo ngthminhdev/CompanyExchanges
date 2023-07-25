@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
 import { GetExchangeQuery } from './dto/getExchangeQuery.dto';
 import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
@@ -9,29 +10,31 @@ import { IndexQueryDto } from './dto/indexQuery.dto';
 import { MarketLiquidityQueryDto } from './dto/marketLiquidityQuery.dto';
 import { MerchandisePriceQueryDto } from './dto/merchandisePriceQuery.dto';
 import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
+import { SearchStockDto } from './dto/searchStock.dto';
 import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
 import { IndustrySwagger } from './responses/Industry.response';
 import { InternationalIndexSwagger } from './responses/InternationalIndex.response';
 import { LiquidContributeSwagger } from './responses/LiquidityContribute.response';
+import { MarketMapSwagger } from './responses/market-map.response';
 import { MarketEvaluationSwagger } from './responses/MarketEvaluation.response';
 import { MarketLiquiditySwagger } from './responses/MarketLiquidity.response';
 import { MarketVolatilitySwagger } from './responses/MarketVolatiliy.response';
 import { MerchandisePriceSwagger } from './responses/MerchandisePrice.response';
 import { NetForeignSwagger } from './responses/NetForeign.response';
 import { NetTransactionValueResponse } from './responses/NetTransactionValue.response';
+import { SearchStockResponse } from './responses/searchStock.response';
 import { StockEventsSwagger } from './responses/StockEvents.response';
 import { StockNewsSwagger } from './responses/StockNews.response';
 import { TopNetForeignSwagger } from './responses/TopNetForeign.response';
 import { TopNetForeignByExsSwagger } from './responses/TopNetForeignByEx.response';
 import { TopRocSwagger } from './responses/TopRoc.response';
 import { UpDownTickerSwagger } from './responses/UpDownTicker.response';
-import { MarketMapSwagger } from './responses/market-map.response';
 import { StockService } from './stock.service';
 
 @Controller('stock')
 @ApiTags('Stock - Api')
 export class StockController {
-  constructor(private readonly stockService: StockService) {}
+  constructor(private readonly stockService: StockService) { }
 
   @Get('market-volatility')
   @ApiOperation({ summary: 'Danh sách biến động thị trường' })
@@ -226,5 +229,17 @@ export class StockController {
   async getUpDownTicker(@Query() q: IndexQueryDto, @Res() res: Response) {
     const data = await this.stockService.getUpDownTicker(q.index.toUpperCase());
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
+
+  //Stock site
+  @Get('search')
+  @ApiOkResponse({type: SearchStockResponse})
+  async searchStock(@Query() q: SearchStockDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.searchStock(q.key_search)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
   }
 }

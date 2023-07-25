@@ -53,6 +53,7 @@ import { TopRocResponse } from './responses/TopRoc.response';
 import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 import { MarketMapResponse } from './responses/market-map.response';
 import { MssqlService } from '../mssql/mssql.service';
+import { SearchStockResponse } from './responses/searchStock.response';
 
 @Injectable()
 export class StockService {
@@ -1300,5 +1301,15 @@ export class StockService {
     } catch (e) {
       throw new CatchException(e);
     }
+  }
+
+  async searchStock(key_search: string){
+    const query = `
+    select code, LV2 as type, companyName as company_name from marketInfor.dbo.info
+    where code like N'%${key_search}%'
+    `
+    const data = await this.mssqlService.query<SearchStockResponse[]>(query)
+    const dataMapped = SearchStockResponse.mapToList(data)
+    return dataMapped
   }
 }
