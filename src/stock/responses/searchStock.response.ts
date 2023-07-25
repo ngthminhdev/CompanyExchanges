@@ -21,9 +21,15 @@ export class SearchStockResponse {
     })
     image: string
 
+    @ApiProperty({
+        type: String
+    })
+    floor: string
+
     constructor(data?: SearchStockResponse) {
-        this.code = data?.code
-        this.company_name = data?.company_name
+        this.code = data?.code || ''
+        this.company_name = data?.company_name || ''
+        this.floor = data?.floor || ''
         switch (data?.type) {
             case 'Ngân hàng':
                 this.type = 'NH'
@@ -38,7 +44,7 @@ export class SearchStockResponse {
                 this.type = 'CTCP'
                 break;
         }
-        this.image = data?.image
+        this.image = `${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/resources/stock/${data?.code}_${data?.floor}.jpg`
     }
 
     static mapToList(data?: SearchStockResponse[]) {

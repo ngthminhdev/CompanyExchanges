@@ -1,17 +1,19 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Cache } from 'cache-manager';
 import * as moment from 'moment';
+import { TimeToLive } from '../enums/common.enum';
+import { RedisKeys } from '../enums/redis-keys.enum';
+import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { ReportIndexResponse } from './response/index.response';
-import { Cache } from 'cache-manager'
-import { RedisKeys } from '../enums/redis-keys.enum';
-import { TimeToLive } from '../enums/common.enum';
 
 @Injectable()
 export class ReportService {
   constructor(
     private readonly mssqlService: MssqlService,
     @Inject(CACHE_MANAGER)
-    private readonly redis: Cache
+    private readonly redis: Cache,
+    private readonly minio: MinioOptionService
   ) { }
   async getIndex() {
     const redisData = await this.redis.get(RedisKeys.reportIndex)
@@ -70,5 +72,15 @@ export class ReportService {
     const dataMapped = ReportIndexResponse.mapToList(data)
     await this.redis.set(RedisKeys.reportIndex, dataMapped, {ttl: TimeToLive.HaftMinute})
     return dataMapped
+  }
+
+  async uploadFile(file: any[]){
+    for(const item of file){
+      await this.minio.put(`resources`, `stock/${item.originalname}`, item.buffer, {
+        'Content-Type': item.mimetype,
+        'X-Amz-Meta-Testing': 1234,
+      })
+    }
+    return 'success'
   }
 }

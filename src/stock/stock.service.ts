@@ -1305,7 +1305,7 @@ export class StockService {
 
   async searchStock(key_search: string){
     const query = `
-    select code, LV2 as type, companyName as company_name from marketInfor.dbo.info
+    select code, LV2 as type, companyName as company_name, floor from marketInfor.dbo.info
     where code like N'%${key_search}%'
     `
     const data = await this.mssqlService.query<SearchStockResponse[]>(query)

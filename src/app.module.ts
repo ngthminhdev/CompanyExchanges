@@ -24,6 +24,8 @@ import { MssqlModule } from './mssql/mssql.module';
 import { MacroModule } from './macro/macro.module';
 import { RetailModule } from './retail/retail.module';
 import { NewsModule } from './news/news.module';
+import { ReportModule } from './report/report.module';
+import { MinioModule } from 'nestjs-minio-client';
 
 @Module({
   imports: [
@@ -70,6 +72,13 @@ import { NewsModule } from './news/news.module';
         ClientProxyFactory.create(config.createKafkaConfig()),
       inject: [ConfigServiceProvider],
     }),
+    //Minio
+    MinioModule.registerAsync({
+      imports: [ConfigModuleModule],
+      useFactory: (configService: ConfigServiceProvider) => configService.minioConfig(),
+      inject: [ConfigServiceProvider],
+      isGlobal: true
+    }),
 
     //aplication modules
     ConfigModuleModule,
@@ -84,6 +93,7 @@ import { NewsModule } from './news/news.module';
     KafkaModule,
     RetailModule,
     NewsModule,
+    ReportModule,
   ],
 })
 export class AppModule implements NestModule {
