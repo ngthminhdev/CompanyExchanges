@@ -160,5 +160,6 @@ export enum RedisKeys {
 
   //Co phieu
   transactionStatistics = 'transaction-statistics',
-  businessResults = 'business-results'
+  businessResults = 'business-results',
+  balanceSheet = 'balance-sheet'
 }

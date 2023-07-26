@@ -10,9 +10,10 @@ import { MarketMapEnum, SelectorTypeEnum } from '../enums/exchange.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import {
   CatchException,
-  ExceptionResponse,
+  ExceptionResponse
 } from '../exceptions/common.exception';
 import { LineChartInterface } from '../kafka/interfaces/line-chart.interface';
+import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { GetExchangeQuery } from './dto/getExchangeQuery.dto';
 import { GetLiquidityQueryDto } from './dto/getLiquidityQuery.dto';
@@ -22,7 +23,7 @@ import { MerchandisePriceQueryDto } from './dto/merchandisePriceQuery.dto';
 import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
 import {
   ExchangeValueInterface,
-  TickerByExchangeInterface,
+  TickerByExchangeInterface
 } from './interfaces/exchange-value.interface';
 import { IndustryFullInterface } from './interfaces/industry-full.interface';
 import { InternationalIndexInterface } from './interfaces/international-index.interface';
@@ -34,28 +35,27 @@ import { StockEventsInterface } from './interfaces/stock-events.interface';
 import { TopNetForeignByExInterface } from './interfaces/top-net-foreign-by-ex.interface';
 import { TopNetForeignInterface } from './interfaces/top-net-foreign.interface';
 import { TopRocInterface } from './interfaces/top-roc-interface';
+import { BusinessResultsResponse } from './responses/businessResults.response';
 import { DomesticIndexResponse } from './responses/DomesticIndex.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
 import { InternationalSubResponse } from './responses/InternationalSub.response';
 import { LiquidContributeResponse } from './responses/LiquidityContribute.response';
+import { MarketMapResponse } from './responses/market-map.response';
 import { MarketEvaluationResponse } from './responses/MarketEvaluation.response';
 import { MarketLiquidityResponse } from './responses/MarketLiquidity.response';
 import { MarketVolatilityResponse } from './responses/MarketVolatiliy.response';
 import { MerchandisePriceResponse } from './responses/MerchandisePrice.response';
 import { NetForeignResponse } from './responses/NetForeign.response';
 import { NetTransactionValueResponse } from './responses/NetTransactionValue.response';
+import { SearchStockResponse } from './responses/searchStock.response';
 import { StockEventsResponse } from './responses/StockEvents.response';
 import { StockNewsResponse } from './responses/StockNews.response';
 import { TopNetForeignResponse } from './responses/TopNetForeign.response';
 import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.response';
 import { TopRocResponse } from './responses/TopRoc.response';
-import { UpDownTickerResponse } from './responses/UpDownTicker.response';
-import { MarketMapResponse } from './responses/market-map.response';
-import { MssqlService } from '../mssql/mssql.service';
-import { SearchStockResponse } from './responses/searchStock.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
-import { BusinessResultsResponse } from './responses/businessResults.response';
+import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 
 @Injectable()
 export class StockService {
@@ -1393,13 +1393,13 @@ export class StockService {
         name = `N'II. Tiền gửi tại NHNN', N'TỔNG CỘNG TÀI SẢN', N'III. Tiền gửi khách hàng', N'VIII. Chứng khoán đầu tư', N'VIII. Vốn chủ sở hữu'`
         break;
       case 'BH':
-        name = `N'7. Doanh thu thuần hoạt động kinh doanh bảo hiểm', N'20. Chi phí bán hàng', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'35. Lợi nhuận sau thuế thu nhập doanh nghiệp', N'8. Chi bồi thường bảo hiểm gốc, trả tiền bảo hiểm'`
+        name = `N'I. Tiền', N'TỔNG CỘNG TÀI SẢN', N'A. NỢ PHẢI TRẢ', N'IV. Hàng tồn kho', N'I. Vốn chủ sở hữu'`
         break;
       case 'CK':
-        name = `N'Cộng doanh thu hoạt động', N'Cộng doanh thu hoạt động tài chính', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'XI. LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN', N'VII. KẾT QUẢ HOẠT ĐỘNG'`
+        name = `N'I. Tài sản tài chính', N'I. Tài sản tài chính dài hạn', N'C. NỢ PHẢI TRẢ', N'TỔNG CỘNG TÀI SẢN', N'D. VỐN CHỦ SỞ HỮU'`
         break;
       default:
-        name = `N'3. Doanh thu thuần (1)-(2)', N'5. Lợi nhuận gộp (3)-(4)', N'18. Chi phí thuế TNDN (16)+(17)', N'15. Tổng lợi nhuận kế toán trước thuế (11)+(14)', N'19. Lợi nhuận sau thuế thu nhập doanh nghiệp (15)-(18)'`
+        name = `N'A. Tài sản lưu động và đầu tư ngắn hạn', N'B. Tài sản cố định và đầu tư dài hạn', N'A. Nợ phải trả', N'TỔNG CỘNG NGUỒN VỐN', N'I. Vốn chủ sở hữu'`
         break;
     }
     return name
@@ -1442,6 +1442,8 @@ export class StockService {
   }
 
   async balanceSheet(stock: string, order: number, type: string){
+    const redisData = await this.redis.get(`${RedisKeys.balanceSheet}:${order}:${stock}:${type}`)
+    if(redisData) return redisData
     let group = ``
     let select = ``
     switch (order) {
@@ -1470,6 +1472,7 @@ export class StockService {
     `
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
     const dataMapped = BusinessResultsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.balanceSheet}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 }

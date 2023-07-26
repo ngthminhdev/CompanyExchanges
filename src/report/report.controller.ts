@@ -1,4 +1,5 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Post, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
@@ -26,13 +27,13 @@ export class ReportController {
     }
   }
 
-  // @Post('upload')
-  // @UseInterceptors(AnyFilesInterceptor())
-  // async upload(@UploadedFiles() file: any){
-  //   try {
-  //     await this.reportService.uploadFile(file)
-  //   } catch (error) {
-  //     throw new CatchException(error)
-  //   }
-  // }
+  @Post('upload')
+  @UseInterceptors(AnyFilesInterceptor())
+  async upload(@UploadedFiles() file: any){
+    try {
+      await this.reportService.uploadFile(file)
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
 }
