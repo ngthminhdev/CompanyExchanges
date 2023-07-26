@@ -26,9 +26,15 @@ export class SearchStockResponse {
     })
     floor: string
 
+    @ApiProperty({
+        type: String
+    })
+    short_name: string
+
     constructor(data?: SearchStockResponse) {
         this.code = data?.code || ''
         this.company_name = data?.company_name || ''
+        this.short_name = data?.short_name || ''
         this.floor = data?.floor || ''
         switch (data?.type) {
             case 'Ngân hàng':
