@@ -1386,6 +1386,25 @@ export class StockService {
     return name
   }
 
+  private getNameBalanceSheet(type: string){
+    let name = ``
+    switch (type) {
+      case 'NH':
+        name = `N'II. Tiền gửi tại NHNN', N'TỔNG CỘNG TÀI SẢN', N'III. Tiền gửi khách hàng', N'VIII. Chứng khoán đầu tư', N'VIII. Vốn chủ sở hữu'`
+        break;
+      case 'BH':
+        name = `N'7. Doanh thu thuần hoạt động kinh doanh bảo hiểm', N'20. Chi phí bán hàng', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'35. Lợi nhuận sau thuế thu nhập doanh nghiệp', N'8. Chi bồi thường bảo hiểm gốc, trả tiền bảo hiểm'`
+        break;
+      case 'CK':
+        name = `N'Cộng doanh thu hoạt động', N'Cộng doanh thu hoạt động tài chính', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'XI. LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN', N'VII. KẾT QUẢ HOẠT ĐỘNG'`
+        break;
+      default:
+        name = `N'3. Doanh thu thuần (1)-(2)', N'5. Lợi nhuận gộp (3)-(4)', N'18. Chi phí thuế TNDN (16)+(17)', N'15. Tổng lợi nhuận kế toán trước thuế (11)+(14)', N'19. Lợi nhuận sau thuế thu nhập doanh nghiệp (15)-(18)'`
+        break;
+    }
+    return name
+  }
+
   async businessResults(stock: string, order: number, type: string) {
     const redisData = await this.redis.get(`${RedisKeys.businessResults}:${order}:${stock}:${type}`)
     if(redisData) return redisData
@@ -1419,6 +1438,38 @@ export class StockService {
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
     const dataMapped = BusinessResultsResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.businessResults}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
+
+  async balanceSheet(stock: string, order: number, type: string){
+    let group = ``
+    let select = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, yearQuarter as date`
+        group = `order by yearQuarter desc`
+        break;
+        case TimeTypeEnum.Year:
+          select = `sum(value) as value, cast(year as varchar) + '4' as date`
+          group = `group by year, name order by year desc`
+          break;
+      default:
+        break;
+    }
+    const name = this.getNameBalanceSheet(type)
+    
+    const query = `
+      SELECT TOP 20
+      LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
+        ${select}
+      FROM financialReport.dbo.financialReportV2 f
+      WHERE f.code = '${stock}'
+      AND f.type = 'CDKT'
+      AND f.name IN (${name})
+      ${group}
+    `
+    const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
+    const dataMapped = BusinessResultsResponse.mapToList(data)
     return dataMapped
   }
 }

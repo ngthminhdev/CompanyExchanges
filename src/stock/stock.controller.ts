@@ -273,6 +273,17 @@ export class StockController {
     }
   }
 
-
+  @Get('can-doi-ke-toan')
+  @ApiOperation({summary: 'Cân đối kế toán'})
+  @ApiOkResponse({type: BusinessResultsResponse})
+  async balanceSheet(@Query() q: StockOrderDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.balanceSheet(q.stock, +q.order, q.type.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+  
   
 }

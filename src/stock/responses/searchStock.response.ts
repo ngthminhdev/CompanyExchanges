@@ -44,7 +44,7 @@ export class SearchStockResponse {
                 this.type = 'CTCP'
                 break;
         }
-        this.image = `${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/resources/stock/${data?.code}_${data?.floor}.jpg`
+        this.image = `/resources/stock/${data?.code}_${data?.floor}.jpg`
     }
 
     static mapToList(data?: SearchStockResponse[]) {
