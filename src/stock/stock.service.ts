@@ -1475,4 +1475,38 @@ export class StockService {
     await this.redis.set(`${RedisKeys.balanceSheet}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
+
+  async castFlow(stock: string, order: number, type: string){
+    const redisData = await this.redis.get(`${RedisKeys.castFlow}:${order}:${stock}:${type}`)
+    if(redisData) return redisData
+    let group = ``
+    let select = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, yearQuarter as date`
+        group = `order by yearQuarter desc`
+        break;
+        case TimeTypeEnum.Year:
+          select = `sum(value) as value, cast(year as varchar) + '4' as date`
+          group = `group by year, name order by year desc`
+          break;
+      default:
+        break;
+    }
+    
+    const query = `
+      SELECT TOP 20
+      LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
+        ${select}
+      FROM financialReport.dbo.financialReportV2 f
+      WHERE f.code = '${stock}'
+      AND f.type like 'LC%'
+      AND f.name IN (N'Lưu chuyển tiền thuần từ hoạt động kinh doanh', N'Lưu chuyển tiền thuần từ hoạt động đầu tư', N'Lưu chuyển tiền thuần trong kỳ', N'Tiền và tương đương tiền đầu kỳ', N'Tiền và tương đương tiền cuối kỳ')
+      ${group}
+    `
+    const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
+    const dataMapped = BusinessResultsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.castFlow}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
 }
