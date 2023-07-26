@@ -5,7 +5,7 @@ import { ChildProcess, fork } from 'child_process';
 import * as moment from 'moment';
 import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
-import { TimeToLive, TransactionTimeTypeEnum } from '../enums/common.enum';
+import { TimeToLive, TimeTypeEnum, TransactionTimeTypeEnum } from '../enums/common.enum';
 import { MarketMapEnum, SelectorTypeEnum } from '../enums/exchange.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import {
@@ -54,6 +54,8 @@ import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 import { MarketMapResponse } from './responses/market-map.response';
 import { MssqlService } from '../mssql/mssql.service';
 import { SearchStockResponse } from './responses/searchStock.response';
+import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
+import { BusinessResultsResponse } from './responses/businessResults.response';
 
 @Injectable()
 export class StockService {
@@ -63,7 +65,7 @@ export class StockService {
     @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly mssqlService: MssqlService,
-  ) {}
+  ) { }
 
   public async getExchangesVolume(
     startDate: Date | string,
@@ -142,7 +144,7 @@ export class StockService {
         await this.redis.set(RedisKeys.TickerPrice, tickerPrice);
         return tickerPrice;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   //Get the nearest day have transaction in session, week, month...
@@ -397,8 +399,8 @@ export class StockService {
                     '${UtilCommonTemplate.toDate(weekDate)}', 
                     '${UtilCommonTemplate.toDate(monthDate)}', 
                     '${UtilCommonTemplate.toDate(
-                      firstDateYear,
-                    )}' ) ${byExchange}
+        firstDateYear,
+      )}' ) ${byExchange}
                 AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
                 GROUP BY c.LV2 ${groupBy}, p.date_time
                 ORDER BY p.date_time DESC
@@ -669,14 +671,12 @@ export class StockService {
       );
 
       const query = (transaction: number): string => `
-        SELECT c.floor as EXCHANGE, c.LV2, c.code as ticker, n.netVal AS total_value_${
-          +transaction ? 'sell' : 'buy'
+        SELECT c.floor as EXCHANGE, c.LV2, c.code as ticker, n.netVal AS total_value_${+transaction ? 'sell' : 'buy'
         }
         FROM [marketTrade].[dbo].[foreign] n
         JOIN [marketInfor].[dbo].[info] c
         ON c.code = n.code AND c.floor = @1
-        WHERE date = @0 and n.netVal ${
-          +transaction ? ' < 0 ' : ' > 0 '
+        WHERE date = @0 and n.netVal ${+transaction ? ' < 0 ' : ' > 0 '
         } and c.[type] = 'STOCK'
         ORDER BY netVal ${+transaction ? 'ASC' : 'DESC'}
     `;
@@ -1098,7 +1098,7 @@ export class StockService {
 
         await this.redis.set(
           `${RedisKeys.MarketMap}:${ex}:${order}`,
-          mappedData, {ttl: TimeToLive.FiveMinutes}
+          mappedData, { ttl: TimeToLive.FiveMinutes }
         );
 
         return mappedData;
@@ -1151,7 +1151,7 @@ export class StockService {
 
         await this.redis.set(
           `${RedisKeys.MarketMap}:${ex}:${order}`,
-          mappedData, {ttl: TimeToLive.FiveMinutes}
+          mappedData, { ttl: TimeToLive.FiveMinutes }
         );
 
         return mappedData;
@@ -1206,7 +1206,7 @@ export class StockService {
         await this.dbServer.query(query, [date]),
       );
 
-      await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData, {ttl: TimeToLive.FiveMinutes});
+      await this.redis.set(`${RedisKeys.MarketMap}:${ex}:${order}`, mappedData, { ttl: TimeToLive.FiveMinutes });
 
       return mappedData;
     } catch (e) {
@@ -1303,13 +1303,122 @@ export class StockService {
     }
   }
 
-  async searchStock(key_search: string){
+  async searchStock(key_search: string) {
     const query = `
     select code, LV2 as type, companyName as company_name, floor from marketInfor.dbo.info
     where code like N'%${key_search}%'
     `
     const data = await this.mssqlService.query<SearchStockResponse[]>(query)
     const dataMapped = SearchStockResponse.mapToList(data)
+    return dataMapped
+  }
+
+  async transactionStatistics(stock: string) {
+    const redisData = await this.redis.get(`${RedisKeys.transactionStatistics}:${stock.toUpperCase}`)
+    if (redisData) return redisData
+
+    const query = `
+    WITH temp
+    AS (SELECT TOP 6
+      closePrice,
+      totalVol,
+      totalVal,
+      t.date,
+      closePrice - LEAD(closePrice) OVER (ORDER BY t.date DESC) AS change,
+      ((closePrice - LEAD(closePrice) OVER (ORDER BY t.date DESC)) / LEAD(closePrice) OVER (ORDER BY t.date DESC)) * 100 AS perChange
+    FROM marketTrade.dbo.tickerTradeVND t
+    WHERE t.code = '${stock}'
+    ORDER BY date DESC),
+    vh
+    AS (SELECT TOP 5
+      value,
+      date
+    FROM RATIO.dbo.ratio
+    WHERE code = '${stock}'
+    AND ratioCode = 'MARKETCAP'
+    ORDER BY date DESC),
+    fo
+    AS (SELECT TOP 5
+      buyVal,
+      sellVal,
+      date
+    FROM marketTrade.dbo.[foreign]
+    WHERE code = '${stock}'
+    ORDER BY date DESC)
+    SELECT TOP 5
+      closePrice,
+      totalVol AS klgd,
+      totalVal AS gtdd,
+      t.date,
+      change,
+      perChange,
+      value AS vh,
+      buyVal AS nn_mua,
+      sellVal AS nn_ban
+    FROM temp t
+    LEFT JOIN vh v
+      ON t.date = v.date
+    LEFT JOIN fo f
+      ON f.date = t.date
+    `
+    const data = await this.mssqlService.query<TransactionStatisticsResponse[]>(query)
+    const dataMapped = TransactionStatisticsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.transactionStatistics}:${stock.toUpperCase}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  private getNameBusinessResults(type: string){
+    let name = ``
+    switch (type) {
+      case 'NH':
+        name = `N'Thu nhập lãi thuần', N'Chi phí hoạt động', N'Tổng lợi nhuận trước thuế', N'Lợi nhuận sau thuế thu nhập doanh nghiệp', N'Lãi/Lỗ thuần từ hoạt động dịch vụ'`
+        break;
+      case 'BH':
+        name = `N'7. Doanh thu thuần hoạt động kinh doanh bảo hiểm', N'20. Chi phí bán hàng', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'35. Lợi nhuận sau thuế thu nhập doanh nghiệp', N'8. Chi bồi thường bảo hiểm gốc, trả tiền bảo hiểm'`
+        break;
+      case 'CK':
+        name = `N'Cộng doanh thu hoạt động', N'Cộng doanh thu hoạt động tài chính', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'XI. LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN', N'VII. KẾT QUẢ HOẠT ĐỘNG'`
+        break;
+      default:
+        name = `N'3. Doanh thu thuần (1)-(2)', N'5. Lợi nhuận gộp (3)-(4)', N'18. Chi phí thuế TNDN (16)+(17)', N'15. Tổng lợi nhuận kế toán trước thuế (11)+(14)', N'19. Lợi nhuận sau thuế thu nhập doanh nghiệp (15)-(18)'`
+        break;
+    }
+    return name
+  }
+
+  async businessResults(stock: string, order: number, type: string) {
+    const redisData = await this.redis.get(`${RedisKeys.businessResults}:${order}:${stock}:${type}`)
+    if(redisData) return redisData
+
+    let group = ``
+    let select = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, yearQuarter as date`
+        group = `order by yearQuarter desc`
+        break;
+        case TimeTypeEnum.Year:
+          select = `sum(value) as value, cast(year as varchar) + '4' as date`
+          group = `group by year, name order by year desc`
+          break;
+      default:
+        break;
+    }
+    const name = this.getNameBusinessResults(type)
+    
+    const query = `
+      SELECT TOP 20
+      LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
+        ${select}
+      FROM financialReport.dbo.financialReportV2 f
+      WHERE f.code = '${stock}'
+      AND f.type = 'KQKD'
+      AND f.name IN (${name})
+      ${group}
+    `
+    const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
+    const dataMapped = BusinessResultsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.businessResults}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 }

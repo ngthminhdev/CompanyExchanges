@@ -156,5 +156,9 @@ export enum RedisKeys {
   filter = 'filter',
 
   //Report
-  reportIndex = 'report-index'
+  reportIndex = 'report-index',
+
+  //Co phieu
+  transactionStatistics = 'transaction-statistics',
+  businessResults = 'business-results'
 }

@@ -11,6 +11,9 @@ import { MarketLiquidityQueryDto } from './dto/marketLiquidityQuery.dto';
 import { MerchandisePriceQueryDto } from './dto/merchandisePriceQuery.dto';
 import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
 import { SearchStockDto } from './dto/searchStock.dto';
+import { StockOrderDto } from './dto/stock-order.dto';
+import { StockDto } from './dto/stock.dto';
+import { BusinessResultsResponse } from './responses/businessResults.response';
 import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
 import { IndustrySwagger } from './responses/Industry.response';
 import { InternationalIndexSwagger } from './responses/InternationalIndex.response';
@@ -28,6 +31,7 @@ import { StockNewsSwagger } from './responses/StockNews.response';
 import { TopNetForeignSwagger } from './responses/TopNetForeign.response';
 import { TopNetForeignByExsSwagger } from './responses/TopNetForeignByEx.response';
 import { TopRocSwagger } from './responses/TopRoc.response';
+import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { UpDownTickerSwagger } from './responses/UpDownTicker.response';
 import { StockService } from './stock.service';
 
@@ -232,7 +236,9 @@ export class StockController {
   }
 
   //Stock site
+
   @Get('search')
+  @ApiOperation({summary: 'Tìm kiếm cổ phiếu'})
   @ApiOkResponse({type: SearchStockResponse})
   async searchStock(@Query() q: SearchStockDto, @Res() res: Response) {
     try {
@@ -242,4 +248,31 @@ export class StockController {
       throw new CatchException(e)
     }
   }
+
+  @Get('thong-ke-giao-dich')
+  @ApiOperation({summary: 'Thống kê giao dịch'})
+  @ApiOkResponse({type: TransactionStatisticsResponse})
+  async transactionStatistics(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.transactionStatistics(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('ket-qua-kinh-doanh')
+  @ApiOperation({summary: 'Kết quả kinh doanh'})
+  @ApiOkResponse({type: BusinessResultsResponse})
+  async businessResults(@Query() q: StockOrderDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.businessResults(q.stock, +q.order, q.type.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+
+  
 }
