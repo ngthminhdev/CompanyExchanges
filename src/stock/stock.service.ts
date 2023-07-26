@@ -1306,7 +1306,7 @@ export class StockService {
   async searchStock(key_search: string) {
     const query = `
     select code, LV2 as type, companyName as company_name, shortNameEng as short_name, floor from marketInfor.dbo.info
-    where code like N'%${key_search}%'
+    where code like N'%${UtilCommonTemplate.normalizedString(key_search)}%' or replace(lower(dbo.fn_RemoveVietNamese5(companyName)), ' ', '') like '%${UtilCommonTemplate.normalizedString(key_search)}%'
     `
     const data = await this.mssqlService.query<SearchStockResponse[]>(query)
     const dataMapped = SearchStockResponse.mapToList(data)

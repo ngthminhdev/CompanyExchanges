@@ -247,14 +247,14 @@ export class UtilCommonTemplate {
 
     for (let i = 0; i < order; i++) {
       type == 0 ? previousThreeMonths.push(moment(threeMonthsAgo).format('YYYY-MM-01')) : previousThreeMonths.push(moment(threeMonthsAgo).endOf('month').format('YYYY-MM-DD'))
-      
+
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() + 1);
     }
 
     return previousThreeMonths;
   }
 
-  static getAnyToNow(date: Date, now: Date){
+  static getAnyToNow(date: Date, now: Date) {
     return (
       now.getMonth() -
       date.getMonth() +
@@ -465,29 +465,41 @@ export class UtilCommonTemplate {
 
 
     if (currentMonth == 1 || currentMonth == 2) {
-        quarters.push({ quarter: 3, year: currentYear - 1 });
-        quarters.push({ quarter: 4, year: currentYear - 1 });
+      quarters.push({ quarter: 3, year: currentYear - 1 });
+      quarters.push({ quarter: 4, year: currentYear - 1 });
     } else if (currentMonth == 4 || currentMonth == 5 || currentMonth == 3) {
-        quarters.push({ quarter: 4, year: currentYear - 1 });
-        quarters.push({ quarter: 1, year: currentYear });
+      quarters.push({ quarter: 4, year: currentYear - 1 });
+      quarters.push({ quarter: 1, year: currentYear });
     } else if (currentMonth == 6 || currentMonth == 9 || currentMonth == 12) {
-        quarters.push({ quarter: currentQuarter - 1, year: currentYear });
-        quarters.push({ quarter: currentQuarter, year: currentYear });
+      quarters.push({ quarter: currentQuarter - 1, year: currentYear });
+      quarters.push({ quarter: currentQuarter, year: currentYear });
     } else {
-        quarters.push({ quarter: currentQuarter - 2, year: currentYear });
-        quarters.push({ quarter: currentQuarter - 1, year: currentYear });
+      quarters.push({ quarter: currentQuarter - 2, year: currentYear });
+      quarters.push({ quarter: currentQuarter - 1, year: currentYear });
     }
 
     let months = [];
 
     quarters.forEach((quarter) => {
-        let startMonth = (quarter.quarter - 1) * 3 + 1;
-        let endMonth = quarter.quarter * 3;
-        for (let month = startMonth; month <= endMonth; month++) {
-            let monthStr = moment(month + "/" + quarter.year, 'MM/YYYY').format('YYYY/MM/01');
-            months.push(monthStr);
-        }
+      let startMonth = (quarter.quarter - 1) * 3 + 1;
+      let endMonth = quarter.quarter * 3;
+      for (let month = startMonth; month <= endMonth; month++) {
+        let monthStr = moment(month + "/" + quarter.year, 'MM/YYYY').format('YYYY/MM/01');
+        months.push(monthStr);
+      }
     });
-    return {months, quarters: quarters.map(item => `${item.year}${item.quarter}`)};
-}
+    return { months, quarters: quarters.map(item => `${item.year}${item.quarter}`) };
+  }
+
+  static normalizedString(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/ + /g, ' ')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .replace(/\s/g, '');
+  }
 }
