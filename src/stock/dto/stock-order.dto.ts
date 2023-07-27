@@ -5,13 +5,15 @@ import { StockDto } from "./stock.dto";
 export class StockOrderDto extends StockDto {
     @IsEnum(['0', '1'], {message: 'order not found'})
     @ApiProperty({
-        type: Number
+        type: Number,
+        description: `0 - Quý, 1 - Năm`
     })
     order: number
 
     @IsString()
     @ApiProperty({
-        type: Number
+        type: String,
+        example: 'CTCP'
     })
     type: string
 }

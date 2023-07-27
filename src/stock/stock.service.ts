@@ -1735,4 +1735,10 @@ export class StockService {
     const dataMapped = TransactionDataResponse.mapToList(data)
     return dataMapped
   }
+
+  async totalMatchingVolume(stock: string, from: string, to: string){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
+  }
 }
