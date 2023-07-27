@@ -17,7 +17,9 @@ import { StockDto } from './dto/stock.dto';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
+import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
+import { HeaderStockResponse } from './responses/headerStock.response';
 import { IndustrySwagger } from './responses/Industry.response';
 import { InternationalIndexSwagger } from './responses/InternationalIndex.response';
 import { LiquidContributeSwagger } from './responses/LiquidityContribute.response';
@@ -252,6 +254,18 @@ export class StockController {
     }
   }
 
+  @Get('header')
+  @ApiOperation({summary: 'Header'})
+  @ApiOkResponse({type: HeaderStockResponse})
+  async header(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.header(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   @Get('thong-ke-giao-dich')
   @ApiOperation({summary: 'Thống kê giao dịch'})
   @ApiOkResponse({type: TransactionStatisticsResponse})
@@ -326,7 +340,7 @@ export class StockController {
 
   @Get('lich-su-kien')
   @ApiOperation({summary: 'Lịch sự kiện'})
-  @ApiOkResponse({type: FinancialIndicatorsResponse})
+  @ApiOkResponse({type: EventCalendarResponse})
   async eventCalendar(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.stockService.eventCalendar(q.stock)

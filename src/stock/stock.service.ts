@@ -40,6 +40,7 @@ import { DomesticIndexResponse } from './responses/DomesticIndex.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
+import { HeaderStockResponse } from './responses/headerStock.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
 import { InternationalSubResponse } from './responses/InternationalSub.response';
@@ -1316,6 +1317,101 @@ export class StockService {
     return dataMapped
   }
 
+  async header(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}`)
+    if(redisData) return redisData
+
+    const now = moment((await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0].date, 'YYYY-MM-DD').format('YYYY-MM-DD')
+    const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
+    const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const year = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+
+    const query = `
+    WITH temp
+    AS (SELECT
+      i.code,
+      CASE
+        WHEN i.floor = 'HOSE' THEN 'VNINDEX'
+        ELSE i.floor
+      END AS floor,
+      i.LV2,
+      i.companyName,
+      i.companyNameEng,
+      o.vnSummary,
+      t.closePrice AS price,
+      t.change,
+      t.perChange,
+      t.totalVol AS kldg
+    FROM marketInfor.dbo.info i
+    INNER JOIN marketInfor.dbo.overview o
+      ON i.code = o.code
+    INNER JOIN marketTrade.dbo.tickerTradeVND t
+      ON i.code = t.code
+    WHERE i.code = '${stock}'
+    AND t.date = '${now}'),
+    pivotted
+    AS (SELECT
+      [${now}] AS now,
+      [${week}] AS week,
+      [${month}] AS month,
+      [${year}] AS year,
+      code
+    FROM (SELECT
+      closePrice,
+      date,
+      p.code
+    FROM temp p
+    INNER JOIN marketTrade.dbo.indexTradeVND i
+      ON p.floor = i.code
+      AND date IN ('${now}', '${week}', '${month}',
+      '${year}')) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${week}], [${month}], [${year}])) AS chuyen),
+    pe
+    AS (SELECT
+      [PRICE_TO_EARNINGS] AS pe,
+      [PRICE_TO_BOOK] AS pb,
+      [MARKETCAP] AS vh,
+      [ROAA_TR_AVG5Q] AS roaa,
+      [ROAE_TR_AVG5Q] AS roae,
+      code
+    FROM (SELECT
+      ratioCode,
+      value,
+      code
+    FROM RATIO.dbo.ratio
+    WHERE code = '${stock}'
+    AND date = '${now}'
+    AND ratioCode IN ('MARKETCAP', 'PRICE_TO_BOOK', 'PRICE_TO_EARNINGS')
+    UNION
+    SELECT TOP 2
+      ratioCode,
+      value,
+      code
+    FROM RATIO.dbo.ratio
+    WHERE code = '${stock}'
+    AND ratioCode IN ('ROAA_TR_AVG5Q', 'ROAE_TR_AVG5Q')
+    ORDER BY date DESC) AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_EARNINGS], [PRICE_TO_BOOK], [MARKETCAP], [ROAA_TR_AVG5Q], [ROAE_TR_AVG5Q])) AS chuyen)
+    SELECT
+      t.code, t.floor as exchange, t.LV2 as industry, t.companyName as company, t.companyNameEng as company_eng, t.vnSummary as summary, t.price, t.change, t.perChange, t.kldg,
+      ((p.now - p.week) / p.week) * 100 AS p_week,
+      ((p.now - p.month) / p.month) * 100 AS p_month,
+      ((p.now - p.year) / p.year) * 100 AS p_year,
+      e.pb,
+      e.pe,
+      e.vh,
+      e.roaa,
+      e.roae
+    FROM temp t
+    INNER JOIN pivotted p
+      ON p.code = t.code
+    INNER JOIN pe e
+      ON e.code = t.code
+    `
+    const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
+    const dataMapped = new HeaderStockResponse(data[0])
+    await this.redis.set(`${RedisKeys.headerStock}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
   async transactionStatistics(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.transactionStatistics}:${stock.toUpperCase}`)
     if (redisData) return redisData
@@ -1539,6 +1635,8 @@ export class StockService {
     const redisData = await this.redis.get(`${RedisKeys.enterprisesSameIndustry}:${exchange}:${stock}`)
     if(redisData) return redisData
 
+    const date = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`)
+    
     const query = `
       WITH temp
       AS (SELECT
@@ -1560,7 +1658,7 @@ export class StockService {
       INNER JOIN RATIO.dbo.ratio r
         ON temp.code = r.code
       WHERE ratioCode IN ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS', 'MARKETCAP')
-      AND r.date = '2023-07-25') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS], [MARKETCAP])) AS chuyen)
+      AND r.date = '${UtilCommonTemplate.toDate( date[0].date)}') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS], [MARKETCAP])) AS chuyen)
       SELECT
         p.code as code,
         t.closePrice,
@@ -1573,7 +1671,7 @@ export class StockService {
         ON t.code = p.code
       INNER JOIN pivotted
         ON pivotted.code = p.code
-      WHERE t.date = '2023-07-25'
+      WHERE t.date = '${UtilCommonTemplate.toDate( date[0].date)}'
     `
     const data = await this.mssqlService.query<EnterprisesSameIndustryResponse[]>(query)
     const dataMapped = EnterprisesSameIndustryResponse.mapToList(data)
