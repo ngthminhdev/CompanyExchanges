@@ -59,6 +59,7 @@ import { TopNetForeignResponse } from './responses/TopNetForeign.response';
 import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.response';
 import { TopRocResponse } from './responses/TopRoc.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
+import { TransactionDataResponse } from './responses/transactionData.response';
 import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 
 @Injectable()
@@ -1697,6 +1698,41 @@ export class StockService {
     const data = await this.mssqlService.query<EventCalendarResponse[]>(query)
     const dataMapped = EventCalendarResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.eventCalendar}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
+
+  async transactionData(stock: string, from: string, to: string){
+    const query = `
+    WITH temp
+    AS (SELECT
+      t.code,
+      t.date,
+      t.perChange,
+      t.change,
+      t.closePrice,
+      t.totalVol,
+      t.omVol,
+      t.omVal,
+      t.highPrice,
+      t.lowPrice
+    FROM marketTrade.dbo.tickerTradeVND t
+    WHERE t.code = '${stock}'
+    AND t.date >= '${from}' AND t.date <= '${to}'
+    )
+    SELECT
+      t.*,
+      r.value AS vh
+    FROM temp t
+    LEFT JOIN RATIO.dbo.ratio r
+      ON t.code = r.code
+      AND t.date = r.date
+    
+      AND r.ratioCode = 'MARKETCAP'
+    ORDER BY t.date DESC
+    `
+    
+    const data = await this.mssqlService.query<TransactionDataResponse[]>(query)
+    const dataMapped = TransactionDataResponse.mapToList(data)
     return dataMapped
   }
 }

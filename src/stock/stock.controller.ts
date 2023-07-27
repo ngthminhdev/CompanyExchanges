@@ -14,6 +14,7 @@ import { NetForeignQueryDto } from './dto/netForeignQuery.dto';
 import { SearchStockDto } from './dto/searchStock.dto';
 import { StockOrderDto } from './dto/stock-order.dto';
 import { StockDto } from './dto/stock.dto';
+import { TransactionDataDto } from './dto/transactionData.dto';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { DomesticIndexSwagger } from './responses/DomesticIndex.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
@@ -37,6 +38,7 @@ import { TopNetForeignSwagger } from './responses/TopNetForeign.response';
 import { TopNetForeignByExsSwagger } from './responses/TopNetForeignByEx.response';
 import { TopRocSwagger } from './responses/TopRoc.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
+import { TransactionDataResponse } from './responses/transactionData.response';
 import { UpDownTickerSwagger } from './responses/UpDownTicker.response';
 import { StockService } from './stock.service';
 
@@ -344,6 +346,18 @@ export class StockController {
   async eventCalendar(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.stockService.eventCalendar(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('du-lieu-giao-dich')
+  @ApiOperation({summary: 'Dữ liệu giao dịch'})
+  @ApiOkResponse({type: TransactionDataResponse})
+  async transactionData(@Query() q: TransactionDataDto, @Res() res: Response) {
+    try {
+      const data = await this.stockService.transactionData(q.stock, q.from, q.to)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

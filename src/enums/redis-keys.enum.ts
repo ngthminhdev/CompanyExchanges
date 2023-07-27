@@ -166,5 +166,6 @@ export enum RedisKeys {
   financialIndicators = 'financial-indicators',
   enterprisesSameIndustry = 'enterprisesS-same-industry',
   eventCalendar = 'event-calendar',
-  headerStock = 'header-stock'
+  headerStock = 'header-stock',
+  transactionData = 'transaction-data'
 }
