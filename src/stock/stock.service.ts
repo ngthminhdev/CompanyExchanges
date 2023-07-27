@@ -1321,7 +1321,10 @@ export class StockService {
     const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}`)
     if(redisData) return redisData
 
-    const now = moment((await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0].date, 'YYYY-MM-DD').format('YYYY-MM-DD')
+    const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
+    if(!date) return {}
+
+    const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
     const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const year = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')

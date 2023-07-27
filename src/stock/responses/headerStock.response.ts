@@ -17,6 +17,7 @@ export class HeaderStockResponse {
     vh: number
     roaa: number
     roae: number
+    image: string
 
     constructor(data?: HeaderStockResponse) {
         this.code = data?.code || ''
@@ -37,5 +38,6 @@ export class HeaderStockResponse {
         this.vh = data?.vh || 0
         this.roaa = data?.roaa || 0
         this.roae = data?.roae || 0
+        this.image = `/resources/stock/${data?.code}_${data?.exchange == 'VNINDEX' ? 'HOSE' : data.exchange}.jpg`
     }
 }
