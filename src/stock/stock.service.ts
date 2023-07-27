@@ -37,6 +37,9 @@ import { TopNetForeignInterface } from './interfaces/top-net-foreign.interface';
 import { TopRocInterface } from './interfaces/top-roc-interface';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { DomesticIndexResponse } from './responses/DomesticIndex.response';
+import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
+import { EventCalendarResponse } from './responses/eventCalendar.response';
+import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
 import { InternationalSubResponse } from './responses/InternationalSub.response';
@@ -1306,7 +1309,7 @@ export class StockService {
   async searchStock(key_search: string) {
     const query = `
     select code, LV2 as type, companyName as company_name, shortNameEng as short_name, floor from marketInfor.dbo.info
-    where code like N'%${UtilCommonTemplate.normalizedString(key_search)}%' or replace(lower(dbo.fn_RemoveVietNamese5(companyName)), ' ', '') like '%${UtilCommonTemplate.normalizedString(key_search)}%'
+    where code like N'%${UtilCommonTemplate.normalizedString(key_search)}%' or lower(dbo.fn_RemoveVietNamese5(companyName)) like '%${UtilCommonTemplate.normalizedString(key_search)}%'
     `
     const data = await this.mssqlService.query<SearchStockResponse[]>(query)
     const dataMapped = SearchStockResponse.mapToList(data)
@@ -1476,8 +1479,8 @@ export class StockService {
     return dataMapped
   }
 
-  async castFlow(stock: string, order: number, type: string){
-    const redisData = await this.redis.get(`${RedisKeys.castFlow}:${order}:${stock}:${type}`)
+  async castFlow(stock: string, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.castFlow}:${order}:${stock}`)
     if(redisData) return redisData
     let group = ``
     let select = ``
@@ -1506,7 +1509,93 @@ export class StockService {
     `
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
     const dataMapped = BusinessResultsResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.castFlow}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
+    await this.redis.set(`${RedisKeys.castFlow}:${order}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
+
+  async financialIndicators(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.financialIndicators}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+    SELECT TOP 4
+      EPS as eps,
+      BVPS as bvps,
+      PE as pe,
+      ROE as roe,
+      ROA as roa,
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    ORDER BY yearQuarter DESC
+    `
+    const data = await this.mssqlService.query<FinancialIndicatorsResponse[]>(query)
+    const dataMapped = FinancialIndicatorsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.financialIndicators}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return data
+  }
+
+  async enterprisesSameIndustry(stock: string, exchange: string){
+    const redisData = await this.redis.get(`${RedisKeys.enterprisesSameIndustry}:${exchange}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+      WITH temp
+      AS (SELECT
+        code
+      FROM marketInfor.dbo.info
+      WHERE LV2 = (SELECT
+        LV2
+      FROM marketInfor.dbo.info
+      WHERE code = '${stock}')
+      AND code != '${stock}' and floor = '${exchange}'),
+      pivotted
+      AS (SELECT
+        *
+      FROM (SELECT
+        value,
+        ratioCode,
+        temp.code
+      FROM temp
+      INNER JOIN RATIO.dbo.ratio r
+        ON temp.code = r.code
+      WHERE ratioCode IN ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS', 'MARKETCAP')
+      AND r.date = '2023-07-25') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS], [MARKETCAP])) AS chuyen)
+      SELECT
+        p.code as code,
+        t.closePrice,
+        t.totalVol as kl,
+        PRICE_TO_EARNINGS AS pe,
+        PRICE_TO_BOOK AS pb,
+        MARKETCAP AS vh
+      FROM temp p
+      INNER JOIN marketTrade.dbo.tickerTradeVND t
+        ON t.code = p.code
+      INNER JOIN pivotted
+        ON pivotted.code = p.code
+      WHERE t.date = '2023-07-25'
+    `
+    const data = await this.mssqlService.query<EnterprisesSameIndustryResponse[]>(query)
+    const dataMapped = EnterprisesSameIndustryResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.enterprisesSameIndustry}:${exchange}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async eventCalendar(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.eventCalendar}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+    SELECT
+      NgayDKCC as date,
+      NoiDungSuKien as content
+    FROM PHANTICH.dbo.LichSukien
+    WHERE ticker = '${stock}'
+    ORDER BY NgayDKCC DESC
+    `
+    const data = await this.mssqlService.query<EventCalendarResponse[]>(query)
+    const dataMapped = EventCalendarResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.eventCalendar}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 }

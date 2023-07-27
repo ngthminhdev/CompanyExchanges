@@ -162,5 +162,8 @@ export enum RedisKeys {
   transactionStatistics = 'transaction-statistics',
   businessResults = 'business-results',
   balanceSheet = 'balance-sheet',
-  castFlow = 'cast-flow'
+  castFlow = 'cast-flow',
+  financialIndicators = 'financial-indicators',
+  enterprisesSameIndustry = 'enterprisesS-same-industry',
+  eventCalendar = 'event-calendar'
 }
