@@ -363,4 +363,16 @@ export class StockController {
       throw new CatchException(e)
     }
   }
+
+  // @Get('bien-dong-gia-giao-dich')
+  // @ApiOperation({summary: 'Biến động giá giao dịch'})
+  // @ApiOkResponse({type: TransactionDataResponse})
+  // async tradingPriceFluctuations(@Query() q: StockDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.stockService.tradingPriceFluctuations(q.stock)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
 }

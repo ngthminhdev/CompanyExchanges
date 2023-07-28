@@ -1417,7 +1417,7 @@ export class StockService {
   }
 
   async transactionStatistics(stock: string) {
-    const redisData = await this.redis.get(`${RedisKeys.transactionStatistics}:${stock.toUpperCase}`)
+    const redisData = await this.redis.get(`${RedisKeys.transactionStatistics}:${stock.toUpperCase()}`)
     if (redisData) return redisData
 
     const query = `
@@ -1466,7 +1466,7 @@ export class StockService {
     `
     const data = await this.mssqlService.query<TransactionStatisticsResponse[]>(query)
     const dataMapped = TransactionStatisticsResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.transactionStatistics}:${stock.toUpperCase}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    await this.redis.set(`${RedisKeys.transactionStatistics}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 
@@ -1736,7 +1736,19 @@ export class StockService {
     return dataMapped
   }
 
-  async totalMatchingVolume(stock: string, from: string, to: string){
+  async tradingPriceFluctuations(stock: string){
+    const date = UtilCommonTemplate.getLastTwoQuarters()
+    console.log(moment(date.months[2]).endOf('month').format('YYYY-MM-DD'));
+    console.log(moment(date.months[5]).endOf('month').format('YYYY-MM-DD'));
+    
+
+    const now = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment().format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const week = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(7, 'day').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const year = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const quarter_start = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[2]).endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    const quarter_end = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[2]).endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
+    
     const query = ``
     const data = await this.mssqlService.query(query)
     return data

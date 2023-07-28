@@ -456,8 +456,8 @@ export class UtilCommonTemplate {
     return `#00${color}FF`;
   }
 
-  static getLastTwoQuarters(date: string) {
-    let currentDate = new Date(date);
+  static getLastTwoQuarters(date?: string) {
+    let currentDate = date ? new Date(date) : new Date();
     let currentMonth = currentDate.getMonth() + 1; // Tháng hiện tại (tính từ 0 đến 11)
     let currentQuarter = Math.ceil(currentMonth / 3); // Quý hiện tại
     let currentYear = currentDate.getFullYear(); // Năm hiện tại
