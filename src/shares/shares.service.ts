@@ -12,6 +12,7 @@ import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
+import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
@@ -191,7 +192,7 @@ export class SharesService {
         name = `N'Thu nhập lãi thuần', N'Chi phí hoạt động', N'Tổng lợi nhuận trước thuế', N'Lợi nhuận sau thuế thu nhập doanh nghiệp', N'Lãi/Lỗ thuần từ hoạt động dịch vụ'`
         break;
       case 'BH':
-        name = `N'7. Doanh thu thuần hoạt động kinh doanh bảo hiểm', N'20. Chi phí bán hàng', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'35. Lợi nhuận sau thuế thu nhập doanh nghiệp', N'8. Chi bồi thường bảo hiểm gốc, trả tiền bảo hiểm'`
+        name = `N'7. Doanh thu thuần hoạt động kinh doanh bảo hiểm', N'20. Chi phí bán hàng', N'IX. TỔNG LỢI NHUẬN KẾ TOÁN TRƯỚC THUẾ', N'35. Lợi nhuận sau thuế thu nhập doanh nghiệp', N'8. Chi bồi thường bảo hiểm gốc, trả tiền bảo hiểm'`
         break;
       case 'CK':
         name = `N'Cộng doanh thu hoạt động', N'Cộng doanh thu hoạt động tài chính', N'31. Tổng lợi nhuận trước thuế thu nhập doanh nghiệp', N'XI. LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN', N'VII. KẾT QUẢ HOẠT ĐỘNG'`
@@ -338,7 +339,7 @@ export class SharesService {
       PE as pe,
       ROE as roe,
       ROA as roa,
-      yearQuarter
+      yearQuarter as date
     FROM financialReport.dbo.calBCTC
     WHERE code = '${stock}'
     ORDER BY yearQuarter DESC
@@ -577,5 +578,60 @@ export class SharesService {
     const dataMapped = new AverageTradingVolumeResponse(data[0])
     await this.redis.set(`${RedisKeys.averageTradingVolume}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
+  }
+
+  async statisticsMonthQuarterYear(stock: string, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.statisticsMonthQuarterYear}:${order}:${stock.toUpperCase()}`)
+    if(redisData) return redisData
+    let group = ``
+    let select = ``
+    switch (order) {
+      case TimeTypeEnum.Month:
+        select = `'1/' + cast(month(date) as varchar) + '/' + cast(year(date) as varchar) as date`
+        group = `group by month(date), year(date), code
+        order by date desc`
+        break;
+      case TimeTypeEnum.Quarter: 
+      select = `
+      CASE
+        WHEN DATEPART(QUARTER, date) = 1 THEN '31/1/' + CAST(DATEPART(YEAR, date) AS varchar)
+        WHEN DATEPART(QUARTER, date) = 2 THEN '30/6/' + CAST(DATEPART(YEAR, date) AS varchar)
+        WHEN DATEPART(QUARTER, date) = 3 THEN '30/9/' + CAST(DATEPART(YEAR, date) AS varchar)
+        WHEN DATEPART(QUARTER, date) = 4 THEN '31/12/' + CAST(DATEPART(YEAR, date) AS varchar)
+      END AS date
+      `
+      group = `group by datepart(quarter, date), datepart(year, date), code
+      order by datepart(year, date) desc, datepart(quarter, date) desc;`
+      break
+      case TimeTypeEnum.Year:
+        select = `'31/12/' + cast(year(date) as varchar) as date`
+        group = `group by year(date), code
+        order by date desc`
+        break
+      default:
+        break;
+    }
+    const query = `
+    SELECT
+      SUM(omVal) AS omVal,
+      SUM(omVol) AS omVol,
+      SUM(ptVol) AS ptVol,
+      SUM(ptVal) AS ptVal,
+      COUNT(*) AS total,
+      ${select}
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = 'hpg'
+    ${group}
+    `
+    const data = await this.mssqlService.query<StatisticsMonthQuarterYearResponse[]>(query)
+    const dataMapped = StatisticsMonthQuarterYearResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.statisticsMonthQuarterYear}:${order}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async tradingGroupsInvestors(stock: string){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
   }
 }

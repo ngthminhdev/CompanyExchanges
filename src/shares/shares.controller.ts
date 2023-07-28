@@ -15,6 +15,7 @@ import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
+import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
@@ -168,4 +169,34 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  @Get('thong-ke-theo-cac-thang-quy-nam')
+  @ApiOperation({summary: 'Thống kê theo các tháng, quý, năm'})
+  @ApiOkResponse({type: StatisticsMonthQuarterYearResponse})
+  async statisticsMonthQuarterYear(@Query() q: CastFlowDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.statisticsMonthQuarterYear(q.stock, +q.order)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  // @Get('thong-ke-theo-cac-thang-quy-nam')
+  // @ApiOperation({summary: 'Giao dịch các nhóm nhà đầu tư'})
+  // @ApiOkResponse({type: StatisticsMonthQuarterYearResponse})
+  // async tradingGroupsInvestors(@Query() q: StockDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.sharesService.tradingGroupsInvestors(q.stock)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
+  
+  
+
+
+
+
 }
