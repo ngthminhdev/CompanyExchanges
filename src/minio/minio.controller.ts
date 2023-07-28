@@ -5,14 +5,14 @@ import { MinioService } from 'nestjs-minio-client';
 export class MinioController {
   constructor(private readonly minioService: MinioService) {}
 
-  @Get()
-  listBucket() {
-    return this.minioService.client.listBucket();
-  }
+  // @Get()
+  // listBucket() {
+  //   return this.minioService.client.listBucket();
+  // }
 
-  @Get('todo')
-  async listTodo(){
-  }
+  // @Get('todo')
+  // async listTodo(){
+  // }
 
 
 }

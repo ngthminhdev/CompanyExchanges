@@ -15,25 +15,25 @@ export class ReportController {
     private readonly minio: MinioOptionService
     ) {}
 
-  @ApiOperation({summary: 'Chỉ số'})
-  @ApiOkResponse({status: HttpStatus.OK, type: ReportIndexResponse})
-  @Get('chi-so')
-  async getIndex(@Res() res: Response) {
-    try {
-      const data = await this.reportService.getIndex();
-      return res.status(HttpStatus.OK).send(new BaseResponse({data}))
-    } catch (error) {
-      throw new CatchException(error)
-    }
-  }
+  // @ApiOperation({summary: 'Chỉ số'})
+  // @ApiOkResponse({status: HttpStatus.OK, type: ReportIndexResponse})
+  // @Get('chi-so')
+  // async getIndex(@Res() res: Response) {
+  //   try {
+  //     const data = await this.reportService.getIndex();
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  //   } catch (error) {
+  //     throw new CatchException(error)
+  //   }
+  // }
 
-  @Post('upload')
-  @UseInterceptors(AnyFilesInterceptor())
-  async upload(@UploadedFiles() file: any){
-    try {
-      await this.reportService.uploadFile(file)
-    } catch (error) {
-      throw new CatchException(error)
-    }
-  }
+  // @Post('upload')
+  // @UseInterceptors(AnyFilesInterceptor())
+  // async upload(@UploadedFiles() file: any){
+  //   try {
+  //     await this.reportService.uploadFile(file)
+  //   } catch (error) {
+  //     throw new CatchException(error)
+  //   }
+  // }
 }

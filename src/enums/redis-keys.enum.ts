@@ -167,5 +167,6 @@ export enum RedisKeys {
   enterprisesSameIndustry = 'enterprisesS-same-industry',
   eventCalendar = 'event-calendar',
   headerStock = 'header-stock',
-  transactionData = 'transaction-data'
+  transactionData = 'transaction-data',
+  tradingPriceFluctuations = 'trading-price-fluctuations'
 }

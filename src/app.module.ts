@@ -26,6 +26,7 @@ import { RetailModule } from './retail/retail.module';
 import { NewsModule } from './news/news.module';
 import { ReportModule } from './report/report.module';
 import { MinioModule } from 'nestjs-minio-client';
+import { SharesModule } from './shares/shares.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { MinioModule } from 'nestjs-minio-client';
     RetailModule,
     NewsModule,
     ReportModule,
+    SharesModule,
   ],
 })
 export class AppModule implements NestModule {
