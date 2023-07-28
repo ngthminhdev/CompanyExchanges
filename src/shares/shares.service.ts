@@ -5,6 +5,7 @@ import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
@@ -252,7 +253,7 @@ export class SharesService {
       ${group}
     `
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
-    const dataMapped = BusinessResultsResponse.mapToList(data)
+    const dataMapped = BusinessResultsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.businessResults}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -287,7 +288,7 @@ export class SharesService {
       ${group}
     `
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
-    const dataMapped = BusinessResultsResponse.mapToList(data)
+    const dataMapped = BusinessResultsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.balanceSheet}:${order}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -321,7 +322,7 @@ export class SharesService {
       ${group}
     `
     const data = await this.mssqlService.query<BusinessResultsResponse[]>(query)
-    const dataMapped = BusinessResultsResponse.mapToList(data)
+    const dataMapped = BusinessResultsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.castFlow}:${order}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -343,7 +344,7 @@ export class SharesService {
     ORDER BY yearQuarter DESC
     `
     const data = await this.mssqlService.query<FinancialIndicatorsResponse[]>(query)
-    const dataMapped = FinancialIndicatorsResponse.mapToList(data)
+    const dataMapped = FinancialIndicatorsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.financialIndicators}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return data
   }
@@ -503,6 +504,78 @@ export class SharesService {
     const data = await this.mssqlService.query<TradingPriceFluctuationsResponse[]>(query)
     const dataMapped = new TradingPriceFluctuationsResponse(data[0])
     await this.redis.set(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+  
+  async averageTradingVolume(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.averageTradingVolume}:${stock.toUpperCase()}`)
+    if(redisData) return redisData
+    const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
+    const query = `
+    WITH week
+    AS (SELECT
+      SUM(totalVol) AS week,
+      '${stock.toUpperCase()}' AS code
+    FROM (SELECT TOP 5
+      totalVol
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock.toUpperCase()}'
+    ORDER BY date DESC) AS sub),
+    month
+    AS (SELECT
+      SUM(totalVol) AS month,
+      '${stock.toUpperCase()}' AS code
+    FROM (SELECT TOP 25
+      totalVol
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock.toUpperCase()}'
+    ORDER BY date DESC) AS sub),
+    quarter
+    AS (SELECT
+      SUM(totalVol) AS quarter,
+      '${stock.toUpperCase()}' AS code
+    FROM (SELECT TOP 60
+      totalVol
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock.toUpperCase()}'
+    ORDER BY date DESC) AS sub),
+    year
+    AS (SELECT
+      SUM(totalVol) AS year,
+      '${stock.toUpperCase()}' AS code
+    FROM (SELECT TOP 250
+      totalVol
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock.toUpperCase()}'
+    ORDER BY date DESC) AS sub),
+    minmax
+    AS (SELECT
+      MAX(totalVol) AS max,
+      MIN(totalVol) AS min,
+      '${stock.toUpperCase()}' AS code
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock.toUpperCase()}'
+    AND date >= '${week_52}')
+    SELECT
+      week,
+      month,
+      quarter,
+      year,
+      min,
+      max
+    FROM week
+    INNER JOIN month
+      ON week.code = month.code
+    INNER JOIN quarter
+      ON week.code = quarter.code
+    INNER JOIN year
+      ON week.code = year.code
+    INNER JOIN minmax
+      ON week.code = minmax.code
+    `
+    const data = await this.mssqlService.query(query)
+    const dataMapped = new AverageTradingVolumeResponse(data[0])
+    await this.redis.set(`${RedisKeys.averageTradingVolume}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 }

@@ -168,5 +168,6 @@ export enum RedisKeys {
   eventCalendar = 'event-calendar',
   headerStock = 'header-stock',
   transactionData = 'transaction-data',
-  tradingPriceFluctuations = 'trading-price-fluctuations'
+  tradingPriceFluctuations = 'trading-price-fluctuations',
+  averageTradingVolume = 'average-trading-volume'
 }

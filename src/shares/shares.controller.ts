@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { CastFlowDto } from './dto/castFlow.dto';
 import { EnterprisesSameIndustryDto } from './dto/enterprisesSameIndustry.dto';
 import { SearchStockDto } from './dto/searchStock.dto';
 import { StockOrderDto } from './dto/stock-order.dto';
@@ -87,7 +88,7 @@ export class SharesController {
   @Get('luu-chuyen-tien-te')
   @ApiOperation({summary: 'Lưu chuyển tiền tệ'})
   @ApiOkResponse({type: BusinessResultsResponse})
-  async castFlow(@Query() q: StockOrderDto, @Res() res: Response) {
+  async castFlow(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.castFlow(q.stock, +q.order)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
@@ -150,6 +151,18 @@ export class SharesController {
   async tradingPriceFluctuations(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.tradingPriceFluctuations(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('khoi-luong-giao-dich-binh-quan-ngay')
+  @ApiOperation({summary: 'Khối lượng giao dịch bình quân/ngày'})
+  @ApiOkResponse({type: TradingPriceFluctuationsResponse})
+  async averageTradingVolume(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.averageTradingVolume(q.stock)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
