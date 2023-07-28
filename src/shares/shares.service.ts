@@ -344,10 +344,53 @@ export class SharesService {
     WHERE code = '${stock}'
     ORDER BY yearQuarter DESC
     `
-    const data = await this.mssqlService.query<FinancialIndicatorsResponse[]>(query)
+
+    const query_2 = `
+    WITH temp
+    AS (SELECT
+      EPS AS value,
+      'EPS' AS name,
+      yearQuarter as date
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    UNION ALL
+    SELECT
+      BVPS AS value,
+      'BVPS' AS name,
+      yearQuarter as date
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    UNION ALL
+    SELECT
+      PE AS value,
+      'PE' AS name,
+      yearQuarter as date
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    UNION ALL
+    SELECT
+      ROE AS value,
+      'ROE' AS name,
+      yearQuarter as date
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    UNION ALL
+    SELECT
+      ROA AS value,
+      'ROA' AS name,
+      yearQuarter as date
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}')
+    SELECT TOP 20
+      *
+    FROM temp
+    ORDER BY date desc
+    `
+    
+    const data = await this.mssqlService.query<FinancialIndicatorsResponse[]>(query_2)
     const dataMapped = FinancialIndicatorsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.financialIndicators}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
-    return data
+    return dataMapped
   }
 
   async enterprisesSameIndustry(stock: string, exchange: string){
