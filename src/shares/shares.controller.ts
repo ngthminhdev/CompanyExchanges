@@ -16,6 +16,7 @@ import { FinancialIndicatorsResponse } from './responses/financialIndicators.res
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
 import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
+import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvestors.response';
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
@@ -182,17 +183,17 @@ export class SharesController {
     }
   }
 
-  // @Get('thong-ke-theo-cac-thang-quy-nam')
-  // @ApiOperation({summary: 'Giao dịch các nhóm nhà đầu tư'})
-  // @ApiOkResponse({type: StatisticsMonthQuarterYearResponse})
-  // async tradingGroupsInvestors(@Query() q: StockDto, @Res() res: Response) {
-  //   try {
-  //     const data = await this.sharesService.tradingGroupsInvestors(q.stock)
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
+  @Get('giao-dich-cac-nhom-nha-dau-tu')
+  @ApiOperation({summary: 'Giao dịch các nhóm nhà đầu tư'})
+  @ApiOkResponse({type: TradingGroupsInvestorsResponse})
+  async tradingGroupsInvestors(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.tradingGroupsInvestors(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
   
   
 

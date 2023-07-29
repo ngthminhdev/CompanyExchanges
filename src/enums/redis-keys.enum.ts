@@ -170,5 +170,6 @@ export enum RedisKeys {
   transactionData = 'transaction-data',
   tradingPriceFluctuations = 'trading-price-fluctuations',
   averageTradingVolume = 'average-trading-volume',
-  statisticsMonthQuarterYear = 'statistics-month-quarter-year'
+  statisticsMonthQuarterYear = 'statistics-month-quarter-year',
+  tradingGroupsInvestors = 'trading-groups-investors'
 }

@@ -13,6 +13,7 @@ import { FinancialIndicatorsResponse } from './responses/financialIndicators.res
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
 import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
+import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvestors.response';
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
@@ -673,8 +674,72 @@ export class SharesService {
   }
 
   async tradingGroupsInvestors(stock: string){
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+    const redisData = await this.redis.get(`${RedisKeys.tradingGroupsInvestors}:${stock.toUpperCase()}`)
+    if(redisData) return redisData
+    const query = `
+    WITH kn
+    AS (SELECT TOP 50
+      SUM(netVol) AS kn,
+      date
+    FROM marketTrade.dbo.[foreign]
+    GROUP BY date
+    ORDER BY date DESC),
+    td
+    AS (SELECT TOP 50
+      SUM(netVol) AS td,
+      date
+    FROM marketTrade.dbo.[proprietary]
+    GROUP BY date
+    ORDER BY date DESC),
+    cn
+    AS (SELECT TOP 50
+      SUM(netVol) AS cn,
+      date
+    FROM marketTrade.dbo.[retail]
+    GROUP BY date
+    ORDER BY date DESC),
+    price
+    AS (SELECT TOP 50
+      closePrice,
+      date
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock}'
+    ORDER BY date DESC),
+    stock
+    AS (SELECT TOP 1
+      CASE
+        WHEN floor = 'HOSE' THEN 'VNINDEX'
+        ELSE floor
+      END AS floor
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'),
+    temp
+    AS (SELECT
+      kn,
+      td,
+      cn,
+      kn.date,
+      closePrice AS price
+    FROM kn
+    LEFT JOIN td
+      ON td.date = kn.date
+    LEFT JOIN cn
+      ON cn.date = kn.date
+
+    LEFT JOIN price p
+      ON p.date = kn.date)
+    SELECT
+      i.closePrice AS price_exchange,
+      temp.*
+    FROM marketTrade.dbo.indexTradeVND i
+    INNER JOIN stock
+      ON i.code = stock.floor
+    INNER JOIN temp
+      ON temp.date = i.date
+    `
+    const data = await this.mssqlService.query<TradingGroupsInvestorsResponse[]>(query)
+    const dataMapped = TradingGroupsInvestorsResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.tradingGroupsInvestors}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
   }
 }
