@@ -472,6 +472,7 @@ export class SharesService {
       t.change,
       t.closePrice,
       t.totalVol,
+      t.totalVal,
       t.omVol,
       t.omVal,
       t.highPrice,
@@ -789,5 +790,11 @@ export class SharesService {
     const dataMapped = NewsStockResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.newsStock}:${stock}`, dataMapped, {ttl: TimeToLive.OneHour})
     return dataMapped
+  }
+
+  async castFlowDetail(stock: string, order: number){
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
   }
 }
