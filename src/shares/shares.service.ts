@@ -4,6 +4,7 @@ import * as moment from 'moment';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MssqlService } from '../mssql/mssql.service';
+import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
@@ -11,6 +12,7 @@ import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndu
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
+import { NewsStockResponse } from './responses/newsStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
 import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
 import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvestors.response';
@@ -23,7 +25,7 @@ export class SharesService {
   constructor(
     private readonly mssqlService: MssqlService,
     @Inject(CACHE_MANAGER) private readonly redis: Cache
-  ){}
+  ) { }
   async searchStock(key_search: string) {
     const query = `
     select code, LV2 as type, companyName as company_name, shortNameEng as short_name, floor from marketInfor.dbo.info
@@ -34,12 +36,12 @@ export class SharesService {
     return dataMapped
   }
 
-  async header(stock: string){
+  async header(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
-    if(!date) return {}
+    if (!date) return {}
 
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
@@ -186,7 +188,7 @@ export class SharesService {
     return dataMapped
   }
 
-  private getNameBusinessResults(type: string){
+  private getNameBusinessResults(type: string) {
     let name = ``
     switch (type) {
       case 'NH':
@@ -205,7 +207,7 @@ export class SharesService {
     return name
   }
 
-  private getNameBalanceSheet(type: string){
+  private getNameBalanceSheet(type: string) {
     let name = ``
     switch (type) {
       case 'NH':
@@ -226,7 +228,7 @@ export class SharesService {
 
   async businessResults(stock: string, order: number, type: string) {
     const redisData = await this.redis.get(`${RedisKeys.businessResults}:${order}:${stock}:${type}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     let group = ``
     let select = ``
@@ -235,15 +237,15 @@ export class SharesService {
         select = `value, yearQuarter as date`
         group = `order by yearQuarter desc`
         break;
-        case TimeTypeEnum.Year:
-          select = `sum(value) as value, cast(year as varchar) + '4' as date`
-          group = `group by year, name order by year desc`
-          break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as value, cast(year as varchar) + '4' as date`
+        group = `group by year, name order by year desc`
+        break;
       default:
         break;
     }
     const name = this.getNameBusinessResults(type)
-    
+
     const query = `
       SELECT TOP 20
       LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
@@ -260,9 +262,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async balanceSheet(stock: string, order: number, type: string){
+  async balanceSheet(stock: string, order: number, type: string) {
     const redisData = await this.redis.get(`${RedisKeys.balanceSheet}:${order}:${stock}:${type}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     let group = ``
     let select = ``
     switch (order) {
@@ -270,15 +272,15 @@ export class SharesService {
         select = `value, yearQuarter as date`
         group = `order by yearQuarter desc`
         break;
-        case TimeTypeEnum.Year:
-          select = `sum(value) as value, cast(year as varchar) + '4' as date`
-          group = `group by year, name order by year desc`
-          break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as value, cast(year as varchar) + '4' as date`
+        group = `group by year, name order by year desc`
+        break;
       default:
         break;
     }
     const name = this.getNameBalanceSheet(type)
-    
+
     const query = `
       SELECT TOP 20
       LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
@@ -295,9 +297,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async castFlow(stock: string, order: number){
+  async castFlow(stock: string, order: number) {
     const redisData = await this.redis.get(`${RedisKeys.castFlow}:${order}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     let group = ``
     let select = ``
     switch (order) {
@@ -305,14 +307,14 @@ export class SharesService {
         select = `value, yearQuarter as date`
         group = `order by yearQuarter desc`
         break;
-        case TimeTypeEnum.Year:
-          select = `sum(value) as value, cast(year as varchar) + '4' as date`
-          group = `group by year, name order by year desc`
-          break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as value, cast(year as varchar) + '4' as date`
+        group = `group by year, name order by year desc`
+        break;
       default:
         break;
     }
-    
+
     const query = `
       SELECT TOP 20
       LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) as name,
@@ -329,9 +331,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async financialIndicators(stock: string){
+  async financialIndicators(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialIndicators}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const query = `
     SELECT TOP 4
@@ -387,19 +389,19 @@ export class SharesService {
     FROM temp
     ORDER BY date desc
     `
-    
+
     const data = await this.mssqlService.query<FinancialIndicatorsResponse[]>(query_2)
     const dataMapped = FinancialIndicatorsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.financialIndicators}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 
-  async enterprisesSameIndustry(stock: string, exchange: string){
+  async enterprisesSameIndustry(stock: string, exchange: string) {
     const redisData = await this.redis.get(`${RedisKeys.enterprisesSameIndustry}:${exchange}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const date = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`)
-    
+
     const query = `
       WITH temp
       AS (SELECT
@@ -421,7 +423,7 @@ export class SharesService {
       INNER JOIN RATIO.dbo.ratio r
         ON temp.code = r.code
       WHERE ratioCode IN ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS', 'MARKETCAP')
-      AND r.date = '${UtilCommonTemplate.toDate( date[0].date)}') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS], [MARKETCAP])) AS chuyen)
+      AND r.date = '${UtilCommonTemplate.toDate(date[0].date)}') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS], [MARKETCAP])) AS chuyen)
       SELECT
         p.code as code,
         t.closePrice,
@@ -434,7 +436,7 @@ export class SharesService {
         ON t.code = p.code
       INNER JOIN pivotted
         ON pivotted.code = p.code
-      WHERE t.date = '${UtilCommonTemplate.toDate( date[0].date)}'
+      WHERE t.date = '${UtilCommonTemplate.toDate(date[0].date)}'
     `
     const data = await this.mssqlService.query<EnterprisesSameIndustryResponse[]>(query)
     const dataMapped = EnterprisesSameIndustryResponse.mapToList(data)
@@ -442,9 +444,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async eventCalendar(stock: string){
+  async eventCalendar(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.eventCalendar}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const query = `
     SELECT
@@ -460,7 +462,7 @@ export class SharesService {
     return dataMapped
   }
 
-  async transactionData(stock: string, from: string, to: string){
+  async transactionData(stock: string, from: string, to: string) {
     const query = `
     WITH temp
     AS (SELECT
@@ -489,15 +491,15 @@ export class SharesService {
       AND r.ratioCode = 'MARKETCAP'
     ORDER BY t.date DESC
     `
-    
+
     const data = await this.mssqlService.query<TransactionDataResponse[]>(query)
     const dataMapped = TransactionDataResponse.mapToList(data)
     return dataMapped
   }
 
-  async tradingPriceFluctuations(stock: string){
+  async tradingPriceFluctuations(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     const date = UtilCommonTemplate.getLastTwoQuarters()
 
     const now = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment().format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
@@ -507,7 +509,7 @@ export class SharesService {
     const quarter_start = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[2], 'YYYY/MM/DD').endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const quarter_end = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[5], 'YYYY/MM/DD').endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
-    
+
     const query = `
     WITH temp
     AS (SELECT
@@ -551,10 +553,10 @@ export class SharesService {
     await this.redis.set(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
-  
-  async averageTradingVolume(stock: string){
+
+  async averageTradingVolume(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.averageTradingVolume}:${stock.toUpperCase()}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
     const query = `
     WITH week
@@ -624,9 +626,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async statisticsMonthQuarterYear(stock: string, order: number){
+  async statisticsMonthQuarterYear(stock: string, order: number) {
     const redisData = await this.redis.get(`${RedisKeys.statisticsMonthQuarterYear}:${order}:${stock.toUpperCase()}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     let group = ``
     let select = ``
     switch (order) {
@@ -635,8 +637,8 @@ export class SharesService {
         group = `group by month(date), year(date), code
         order by date desc`
         break;
-      case TimeTypeEnum.Quarter: 
-      select = `
+      case TimeTypeEnum.Quarter:
+        select = `
       CASE
         WHEN DATEPART(QUARTER, date) = 1 THEN '31/1/' + CAST(DATEPART(YEAR, date) AS varchar)
         WHEN DATEPART(QUARTER, date) = 2 THEN '30/6/' + CAST(DATEPART(YEAR, date) AS varchar)
@@ -644,9 +646,9 @@ export class SharesService {
         WHEN DATEPART(QUARTER, date) = 4 THEN '31/12/' + CAST(DATEPART(YEAR, date) AS varchar)
       END AS date
       `
-      group = `group by datepart(quarter, date), datepart(year, date), code
+        group = `group by datepart(quarter, date), datepart(year, date), code
       order by datepart(year, date) desc, datepart(quarter, date) desc;`
-      break
+        break
       case TimeTypeEnum.Year:
         select = `'31/12/' + cast(year(date) as varchar) as date`
         group = `group by year(date), code
@@ -673,9 +675,9 @@ export class SharesService {
     return dataMapped
   }
 
-  async tradingGroupsInvestors(stock: string){
+  async tradingGroupsInvestors(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.tradingGroupsInvestors}:${stock.toUpperCase()}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
     const query = `
     WITH kn
     AS (SELECT TOP 50
@@ -740,6 +742,52 @@ export class SharesService {
     const data = await this.mssqlService.query<TradingGroupsInvestorsResponse[]>(query)
     const dataMapped = TradingGroupsInvestorsResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.tradingGroupsInvestors}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async eventCalendarDetail(stock: string, type: number) {
+    let query = ``
+    switch (type) {
+      case 0:
+        query = `select ticker as code, san as exchange, NgayGDKHQ as date_gdkhq, NgayDKCC as date_dkcc, case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date, NoiDungSuKien as content, LoaiSuKien as type from PHANTICH.dbo.LichSukien where ticker = '${stock}' order by NgayDKCC desc`
+        break;
+      case 1:
+        query = `
+        with temp as (select code from marketInfor.dbo.info where LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}'))
+        select l.ticker as code, san as exchange, NgayGDKHQ as date_gdkhq, NgayDKCC as date_dkcc, case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date, NoiDungSuKien as content, LoaiSuKien as type from PHANTICH.dbo.LichSukien l inner join temp t on t.code = l.ticker
+        order by NgayDKCC desc
+        `
+        break
+      case 2:
+        query = `select ticker as code, san as exchange, NgayGDKHQ as date_gdkhq, NgayDKCC as date_dkcc, case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date, NoiDungSuKien as content, LoaiSuKien as type from PHANTICH.dbo.LichSukien order by NgayDKCC desc`
+        break  
+      default:
+        break;
+    }
+    
+    const data = await this.mssqlService.query<NewsEventResponse[]>(query)
+    const dataMapped = NewsEventResponse.mapToList(data)
+    return dataMapped
+  }
+
+  async newsStock(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.newsStock}:${stock}`)
+    if(redisData) return redisData
+    
+    const query = `
+    SELECT
+        Title as title,
+        Href as href
+    FROM macroEconomic.dbo.TinTuc n
+    WHERE Href NOT LIKE 'https://cafef.vn%'  
+    AND Href NOT LIKE 'https://ndh.vn%'
+    AND TickerTitle = '${stock}'
+    ORDER BY n.date DESC
+    `
+    
+    const data = await this.mssqlService.query<NewsStockResponse[]>(query)
+    const dataMapped = NewsStockResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.newsStock}:${stock}`, dataMapped, {ttl: TimeToLive.OneHour})
     return dataMapped
   }
 }
