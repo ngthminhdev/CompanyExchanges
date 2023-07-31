@@ -2,9 +2,11 @@ import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
+import { NewsEventResponse } from '../news/response/event.response';
 import { BaseResponse } from '../utils/utils.response';
 import { CastFlowDto } from './dto/castFlow.dto';
 import { EnterprisesSameIndustryDto } from './dto/enterprisesSameIndustry.dto';
+import { EventCalendarDetailDto } from './dto/eventCalendarDetail.dto';
 import { SearchStockDto } from './dto/searchStock.dto';
 import { StockOrderDto } from './dto/stock-order.dto';
 import { StockDto } from './dto/stock.dto';
@@ -14,6 +16,7 @@ import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndu
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
+import { NewsStockResponse } from './responses/newsStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
 import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
 import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvestors.response';
@@ -195,9 +198,27 @@ export class SharesController {
     }
   }
   
-  
+  @Get('chi-tiet-lich-su-kien')
+  @ApiOperation({summary: 'Chi tiết lịch sự kiện (site tin tức và sự kiện)'})
+  @ApiOkResponse({type: NewsEventResponse})
+  async eventCalendarDetail(@Query() q: EventCalendarDetailDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.eventCalendarDetail(q.stock, +q.type)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 
-
-
-
+  @Get('tin-tuc')
+  @ApiOperation({summary: 'Tin tức)'})
+  @ApiOkResponse({type: NewsStockResponse})
+  async newsStock(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.newsStock(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
