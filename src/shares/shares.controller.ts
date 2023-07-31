@@ -230,7 +230,7 @@ export class SharesController {
   @ApiOkResponse({type: NewsStockResponse})
   async castFlowDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
-      const data = await this.sharesService.castFlowDetail(q.stock, +q.order)
+      const data = await this.sharesService.castFlowDetail(q.stock, +q.order, +q.is_chart)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

@@ -630,13 +630,14 @@ export class SharesService {
   async statisticsMonthQuarterYear(stock: string, order: number) {
     const redisData = await this.redis.get(`${RedisKeys.statisticsMonthQuarterYear}:${order}:${stock.toUpperCase()}`)
     if (redisData) return redisData
+
     let group = ``
     let select = ``
     switch (order) {
       case TimeTypeEnum.Month:
         select = `'1/' + cast(month(date) as varchar) + '/' + cast(year(date) as varchar) as date`
         group = `group by month(date), year(date), code
-        order by date desc`
+        order by year(date) desc, month(date) desc`
         break;
       case TimeTypeEnum.Quarter:
         select = `
@@ -761,20 +762,20 @@ export class SharesService {
         break
       case 2:
         query = `select ticker as code, san as exchange, NgayGDKHQ as date_gdkhq, NgayDKCC as date_dkcc, case when NgayThucHien = '1900-01-01' then null else NgayThucHien end AS date, NoiDungSuKien as content, LoaiSuKien as type from PHANTICH.dbo.LichSukien order by NgayDKCC desc`
-        break  
+        break
       default:
         break;
     }
-    
+
     const data = await this.mssqlService.query<NewsEventResponse[]>(query)
     const dataMapped = NewsEventResponse.mapToList(data)
     return dataMapped
   }
 
-  async newsStock(stock: string){
+  async newsStock(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.newsStock}:${stock}`)
-    if(redisData) return redisData
-    
+    if (redisData) return redisData
+
     const query = `
     SELECT
         Title as title,
@@ -785,15 +786,94 @@ export class SharesService {
     AND TickerTitle = '${stock}'
     ORDER BY n.date DESC
     `
-    
+
     const data = await this.mssqlService.query<NewsStockResponse[]>(query)
     const dataMapped = NewsStockResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsStock}:${stock}`, dataMapped, {ttl: TimeToLive.OneHour})
+    await this.redis.set(`${RedisKeys.newsStock}:${stock}`, dataMapped, { ttl: TimeToLive.OneHour })
     return dataMapped
   }
 
-  async castFlowDetail(stock: string, order: number){
-    const query = ``
+  private getChiTieuLCTT(type: string, is_chart: number) {
+    let chiTieu = ``
+    let top = 0
+    if (is_chart) {
+      switch (type) {
+        case 'Ngân hàng':
+          chiTieu = `N' - Thu nhập lãi và các khoản thu nhập tương tự nhận được',
+          N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+          N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+          N'LƯU CHUYỂN TIỀN THUẦN TRONG KỲ',
+          N'Tiền và tương đương tiền đầu kỳ',
+          N'Tiền và tương đương tiền cuối kỳ'`
+          top = 48
+          break;
+
+        default:
+          break;
+      }
+      return { chiTieu, top }
+    }
+    switch (type) {
+      case 'Ngân hàng':
+        chiTieu = `N'I. Lưu chuyển tiền từ hoạt động kinh doanh',
+        N' - Thu nhập lãi và các khoản thu nhập tương tự nhận được',
+        N'- Chi phí lãi và các chi phí tương tự đã trả',
+        N' - Thu nhập từ hoạt động dịch vụ nhận được',
+        N'- Chênh lệch số tiền thực thu/ thực chi từ hoạt động kinh doanh (ngoại tệ, vàng bạc, chứng khoán)',
+        N'- Thu nhập khác',
+        N'- Tiền thu các khoản nợ đã được xử lý xóa, bù đắp bằng nguồn rủi ro',
+        N'- Tiền chi trả cho nhân viên và hoạt động quản lý, công vụ',
+        N'- Tiền thuế thu nhập thực nộp trong kỳ',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh trước những thay đổi về tài sản và vốn lưu động',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+        N'II. Lưu chuyển tiền từ hoạt động đầu tư',
+        N'- Mua sắm TSCĐ',
+        N'- Tiền thu từ thanh lý, nhượng bán TSCĐ',
+        N'- Tiền chi từ thanh lý, nhượng bán TSCĐ',
+        N'- Tiền thu cổ tức và lợi nhuận được chia từ các khoản đầu tư, góp vốn dài hạn',
+        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        N'Lưu chuyển tiền thuần trong kỳ',
+        N'Tiền và tương đương tiền đầu kỳ',
+        N'Tiền và tương đương tiền cuối kỳ'`
+        top = 160
+        break;
+
+      default:
+        break;
+    }
+    return {chiTieu, top}
+  }
+
+  async castFlowDetail(stock: string, order: number, is_chart: number) {
+    const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
+    const { chiTieu, top } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
+
+    let group = ``
+    let select = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        group = `order by yearQuarter desc`
+        select = `yearQuarter as date, value`
+        break;
+      case TimeTypeEnum.Year:
+        group = `group by name, year order by year desc`
+        select = `year as date, sum(value) as value`
+        break;
+      default:
+        break;
+    }
+
+    const query = `
+    SELECT TOP ${top}
+    case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name))) else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
+      ${select}
+    FROM financialReport.dbo.financialReportV2
+    WHERE code = 'vcb'
+    AND name IN (${chiTieu})
+    AND yearQuarter NOT LIKE '%0'
+    ${group}
+    `
+
     const data = await this.mssqlService.query(query)
     return data
   }
