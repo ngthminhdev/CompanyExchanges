@@ -53,7 +53,7 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
-
+  //Tổng quan
   @Get('thong-ke-giao-dich')
   @ApiOperation({summary: 'Thống kê giao dịch'})
   @ApiOkResponse({type: TransactionStatisticsResponse})
@@ -138,6 +138,7 @@ export class SharesController {
     }
   }
 
+  //Thống kê GD
   @Get('du-lieu-giao-dich')
   @ApiOperation({summary: 'Dữ liệu giao dịch'})
   @ApiOkResponse({type: TransactionDataResponse})
@@ -198,6 +199,7 @@ export class SharesController {
     }
   }
   
+  //Tin tức và sự kiện
   @Get('chi-tiet-lich-su-kien')
   @ApiOperation({summary: 'Chi tiết lịch sự kiện (site tin tức và sự kiện)'})
   @ApiOkResponse({type: NewsEventResponse})
@@ -216,6 +218,19 @@ export class SharesController {
   async newsStock(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.newsStock(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  //LCTT
+  @Get('chi-tiet-luu-chuyen-tien-te')
+  @ApiOperation({summary: 'Báo cáo lưu chuyển tiền tệ'})
+  @ApiOkResponse({type: NewsStockResponse})
+  async castFlowDetail(@Query() q: CastFlowDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.castFlowDetail(q.stock, +q.order)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
