@@ -172,5 +172,6 @@ export enum RedisKeys {
   averageTradingVolume = 'average-trading-volume',
   statisticsMonthQuarterYear = 'statistics-month-quarter-year',
   tradingGroupsInvestors = 'trading-groups-investors',
-  newsStock = 'news-stock'
+  newsStock = 'news-stock',
+  castFlowDetail = 'cast-flow-detail'
 }
