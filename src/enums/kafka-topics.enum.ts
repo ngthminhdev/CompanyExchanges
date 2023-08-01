@@ -13,6 +13,7 @@ export enum Topics {
   Foreign = 'kafka-foreign-topic',
   ChiSoTrongNuoc2 = 'kafka-domestic-index-topic',
   CoPhieuAnhHuong = 'kafka-co-phieu-anh-huong-topic',
+  ChartNenCoPhieu = 'kafka-chart-nen-tung-co-phieu-topic',
 }
 
 //send

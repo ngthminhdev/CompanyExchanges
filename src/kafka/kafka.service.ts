@@ -287,7 +287,7 @@ export class KafkaService {
           );
           break;
         default:
-          this.logger.error('Invalid IndexCode');
+          // this.logger.error('Invalid IndexCode');
       }
     });
   }

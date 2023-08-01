@@ -9,6 +9,7 @@ import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
+import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
@@ -513,9 +514,9 @@ export class SharesService {
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
 
     let pivot = ``
-    if(month == quarter_end){
+    if (month == quarter_end) {
       pivot = `[${now}], [${week}], [${quarter_start}], [${month}], [${year}]`
-    } else if(month == quarter_start){
+    } else if (month == quarter_start) {
       pivot = `[${now}], [${week}], [${quarter_end}], [${month}], [${year}]`
     } else {
       pivot = `[${now}], [${week}], [${quarter_end}], [${quarter_start}], [${month}], [${year}]`
@@ -752,7 +753,7 @@ export class SharesService {
       ON temp.date = i.date
     `
     const data = await this.mssqlService.query<TradingGroupsInvestorsResponse[]>(query)
-    const dataMapped = TradingGroupsInvestorsResponse.mapToList(data)
+    const dataMapped = TradingGroupsInvestorsResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.tradingGroupsInvestors}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
@@ -829,21 +830,32 @@ export class SharesService {
           top = 48
           cate = `LCGT`
           break;
-        case 'Dịch vụ tài chính': 
-        chiTieu = `
-        N'V. Tiền và các khoản tương đương tiền đầu kỳ',
-        N'VI. Tiền và các khoản tương đương tiền cuối kỳ',
-        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        case 'Dịch vụ tài chính':
+          chiTieu = `
+          N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
         N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
-        N'Lưu chuyển tiền thuần từ hoạt động tài chính'
+        N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+        N'V. Tiền và các khoản tương đương tiền đầu kỳ',
+        N'VI. Tiền và các khoản tương đương tiền cuối kỳ'
         `
-        top = 40
-        cate = `LCGT`
-        break  
+          top = 40
+          cate = `LCGT`
+          break
         default:
+          chiTieu = `
+          N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+          N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+          N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+          N'Lưu chuyển tiền thuần trong kỳ',
+          N'Tiền và tương đương tiền đầu kỳ',
+          N'Tiền và tương đương tiền cuối kỳ'
+          `
+          top = 48
+          cate = `LCGT`
           break;
       }
-      return { chiTieu, top, cate }
+      const sort = `case ${chiTieu.split(',').map((item, index) => `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      return { chiTieu, top, cate, sort }
     }
     switch (type) {
       case 'Ngân hàng':
@@ -901,8 +913,8 @@ export class SharesService {
         top = 208
         cate = 'LCGT'
         break
-        case 'Dịch vụ tài chính':
-          chiTieu = `
+      case 'Dịch vụ tài chính':
+        chiTieu = `
           N'I. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH',
         N'1. Lợi nhuận trước Thuế Thu nhập doanh nghiệp',
         N'- Khấu hao TSCĐ',
@@ -933,55 +945,127 @@ export class SharesService {
         N'VI. Tiền và các khoản tương đương tiền cuối kỳ',
         N'Tiền gửi ngân hàng cuối kỳ'
           `
-          top = 248
-          cate = `LCGT`
-          break
+        top = 248
+        cate = `LCGT`
+        break
       default:
+        chiTieu = `
+        N'I. Lưu chuyển tiền từ hoạt động kinh doanh',
+        N'1. Lợi nhuận trước thuế',
+        N'- Khấu hao TSCĐ',
+        N'- Các khoản dự phòng',
+        N'- Lãi, lỗ từ hoạt động đầu tư',
+        N'- Chi phí lãi vay',
+        N'3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+        N'II. Lưu chuyển tiền từ hoạt động đầu tư',
+        N'1. Tiền chi để mua sắm, xây dựng TSCĐ, BĐSĐT và các tài sản khác',
+        N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản khác',
+        N'3. Tiền chi cho vay, mua các công cụ nợ của đơn vị khác',
+        N'4. Tiền thu hồi cho vay, bán lại các công cụ nợ của các đơn vị khác',
+        N'5. Đầu tư góp vốn vào công ty liên doanh liên kết',
+        N'6. Chi đầu tư ngắn hạn',
+        N'7. Tiền chi đầu tư góp vốn vào đơn vị khác',
+        N'8. Tiền thu hồi đầu tư góp vốn vào đơn vị khác',
+        N'9. Lãi tiền gửi đã thu',
+        N'10. Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia',
+        N'11. Tiền chi mua lại phần vốn góp của các cổ đông thiểu số',
+        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        N'III. Lưu chuyển tiền từ hoạt động tài chính',
+        N'1. Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu',
+        N'3. Tiền vay ngắn hạn, dài hạn nhận được',
+        N'4. Tiền chi trả nợ gốc vay',
+        N'8. Cổ tức, lợi nhuận đã trả cho chủ sở hữu',
+        N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+        N'Lưu chuyển tiền thuần trong kỳ',
+        N'Tiền và tương đương tiền đầu kỳ',
+        N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ',
+        N'Tiền và tương đương tiền cuối kỳ'
+        `
+        cate = `LCGT`
+        top = 248
         break;
     }
-    return { chiTieu, top, cate }
+    const sort = type != 'Dịch vụ tài chính' ? 
+    `case ${chiTieu.split(`',`).map((item, index) => index !== chiTieu.split(`',`).length - 1 ? `when name = ${item.replace(/\n/g, "").trim()}' then ${index}` : `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+    : `CASE
+    WHEN name = N'I. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH' THEN 0
+    WHEN name = N'1. Lợi nhuận trước Thuế Thu nhập doanh nghiệp' THEN 1
+    WHEN name = N'- Khấu hao TSCĐ' THEN 2
+    WHEN name = N'3. Tăng các chi phí phi tiền tệ' THEN 3
+    WHEN name = N'4. Giảm các doanh thu phi tiền tệ' THEN 4
+    WHEN name = N'5. Thay đổi tài sản và nợ phải trả hoạt động' THEN 5
+    WHEN name = N'6. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động' THEN 6
+    WHEN name = N'Lưu chuyển tiền thuần từ hoạt động kinh doanh' THEN 7
+    WHEN name = N'II. Lưu chuyển tiền từ hoạt động đầu tư' THEN 8
+    WHEN name = N'1. Tiền chi để mua sắm, xây dựng TSCĐ, BĐSĐT và các tài sản khác' THEN 9
+    WHEN name = N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản khác' THEN 10
+    WHEN name = N'3. Tiền chi đầu tư vốn vào công ty con, công ty liên doanh, liên kết và đầu tư khác' THEN 11
+    WHEN name = N'4. Tiền thanh lý các khoản đầu tư vào công ty con, công ty liên doanh, liên kết và đầu tư khác' THEN 12
+    WHEN name = N'5.Tiền thu về cổ tức và lợi nhuận được chia' THEN 13
+    WHEN name = N'Lưu chuyển tiền thuần từ hoạt động đầu tư' THEN 14
+    WHEN name = N'III. Lưu chuyển tiền từ hoạt động tài chính' THEN 15
+    WHEN name = N'1. Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu' THEN 16
+    WHEN name = N'2. Tiền chi trả vốn góp cho chủ sở hữu, mua lại cổ phiếu quỹ' THEN 17
+    WHEN name = N'3. Tiền vay gốc' THEN 18
+    WHEN name = N'4. Tiền chi trả nợ gốc vay' THEN 19
+    WHEN name = N'6. Cổ tức, lợi nhuận đã trả cho chủ sở hữu' THEN 20
+    WHEN name = N'Lưu chuyển tiền thuần từ hoạt động tài chính' THEN 21
+    WHEN name = N'IV. Tăng/giảm tiền thuần trong kỳ' THEN 22
+    WHEN name = N'V. Tiền và các khoản tương đương tiền đầu kỳ' THEN 23
+    WHEN name = N'Tiền gửi ngân hàng đầu kỳ' THEN 24
+    WHEN name = N'Các khoản tương đương tiền' and id = 502 then 25
+    WHEN name = N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ' and id = 503 then 26
+    WHEN name = N'VI. Tiền và các khoản tương đương tiền cuối kỳ' THEN 27
+    WHEN name = N'Tiền gửi ngân hàng cuối kỳ' THEN 28
+    WHEN name = N'Các khoản tương đương tiền' and id = 602 then 29
+     WHEN name = N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ' and id = 603 then 30
+  END AS row_num`
+    return { chiTieu, top, cate, sort }
   }
 
   async castFlowDetail(stock: string, order: number, is_chart: number) {
+    const redisData = await this.redis.get(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`)
+    if(redisData) return redisData
+
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    const { chiTieu, top, cate } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
-    console.log(LV2);
-    
+    const { chiTieu, top, cate, sort } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
+
     let group = ``
     let select = ``
     switch (order) {
       case TimeTypeEnum.Quarter:
         group = `order by yearQuarter desc`
-        select = `yearQuarter as date, value`
+        select = `name, value, yearQuarter as date, id`
         break;
       case TimeTypeEnum.Year:
-        group = `group by name, id, year order by year desc `
-        select = `year as date, sum(value) as value`
+        group = `group by name, id, year order by year desc`
+        select = `year as date, name, sum(value) as value, id`
         break;
       default:
         break;
     }
 
     const query = `
-    SELECT TOP ${top}
-    case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name))) 
-    when id = 602 then 'Cac khoan tuong duong tien cuoi ky'
-    when id = 502 then 'Cac khoan tuong duong tien dau ky'
-    when id = 503 then 'Anh huong dau ky'
-    when id = 603 then 'Anh huong cuoi ky'
-    else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
-      ${select}
+    with temp as (SELECT TOP ${top} ${select}
     FROM financialReport.dbo.financialReportV2
     WHERE code = '${stock}'
     AND name IN (${chiTieu})
     AND yearQuarter NOT LIKE '%0'
     AND type = '${cate}'
-    ${group}
+    ${group})
+    select 
+    case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+    else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
+    value,
+    date,
+    ${sort}
+    from temp
+    order by date asc, row_num asc
     `
-    console.log(query);
-    
-
-    const data = await this.mssqlService.query(query)
-    return data
+    const data = await this.mssqlService.query<CastFlowDetailResponse[]>(query)
+    const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart)
+    await this.redis.set(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
 }
