@@ -9,6 +9,7 @@ import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
+import { CandleChartResponse } from './responses/candleChart.response';
 import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
@@ -133,6 +134,14 @@ export class SharesService {
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
     await this.redis.set(`${RedisKeys.headerStock}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    return dataMapped
+  }
+
+  async candleChart(stock: string){
+    const query = `select openPrice, closePrice, highPrice, lowPrice, totalVol, time from tradeIntraday.dbo.tickerTradeVNDIntraday where code = '${stock}' and date = '${moment().format('YYYY-MM-DD')}' order by time asc`
+    
+    const data = await this.mssqlService.query<CandleChartResponse[]>(query)
+    const dataMapped = CandleChartResponse.mapToList(data)
     return dataMapped
   }
 
