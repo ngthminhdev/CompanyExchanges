@@ -12,6 +12,7 @@ import { StockOrderDto } from './dto/stock-order.dto';
 import { StockDto } from './dto/stock.dto';
 import { TransactionDataDto } from './dto/transactionData.dto';
 import { BusinessResultsResponse } from './responses/businessResults.response';
+import { CandleChartResponse } from './responses/candleChart.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
@@ -53,7 +54,21 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  @Get('chart-nen')
+  @ApiOperation({summary: 'Chart nến'})
+  @ApiOkResponse({type: CandleChartResponse})
+  async candleChart(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.candleChart(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   //Tổng quan
+
   @Get('thong-ke-giao-dich')
   @ApiOperation({summary: 'Thống kê giao dịch'})
   @ApiOkResponse({type: TransactionStatisticsResponse})
