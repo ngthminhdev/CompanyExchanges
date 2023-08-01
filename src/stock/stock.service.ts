@@ -570,24 +570,24 @@ export class StockService {
   }
 
   //Chỉ số trong nước
-  async getDomesticIndex(): Promise<DomesticIndexResponse[]> {
+  async getDomesticIndex() {
     try {
       const query: string = `
         with DomesticIndex as (
-            SELECT code as comGroupCode,
-                  timeInday as time,
-                  highPrice as indexValue,
-                  change as indexChange,
-                  totalVol as totalMatchVolume,
-                  totalVal as totalMatchValue,
-                  perChange as percentIndexChange,
+            SELECT code,
+                  timeInday,
+                  highPrice ,
+                  change,
+                  totalVol,
+                  totalVal,
+                  perChange,
                   rank() over (partition by code order by timeInday desc) as rank
             FROM tradeIntraday.dbo.indexTradeVNDIntraday
             WHERE code in ('VNINDEX', 'VN30', 'VNALL', 'HNX', 'HNX30', 'UPCOM')
                 and date = (select max(date) from tradeIntraday.dbo.indexTradeVNDIntraday)
         ) select * from DomesticIndex
         where rank = 1
-        order by comGroupCode desc;
+        order by code desc;
       `;
       const dataToday: LineChartInterface[] = await this.mssqlService.query<
         LineChartInterface[]
