@@ -1,5 +1,6 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import { group } from 'console';
 import * as moment from 'moment';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
@@ -511,6 +512,15 @@ export class SharesService {
     const quarter_end = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[5], 'YYYY/MM/DD').endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
 
+    let pivot = ``
+    if(month == quarter_end){
+      pivot = `[${now}], [${week}], [${quarter_start}], [${month}], [${year}]`
+    } else if(month == quarter_start){
+      pivot = `[${now}], [${week}], [${quarter_end}], [${month}], [${year}]`
+    } else {
+      pivot = `[${now}], [${week}], [${quarter_end}], [${quarter_start}], [${month}], [${year}]`
+    }
+
     const query = `
     WITH temp
     AS (SELECT
@@ -529,7 +539,7 @@ export class SharesService {
       [${quarter_start}] AS startQ,
       [${month}] AS month,
       [${year}] AS year
-    FROM temp AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${week}], [${quarter_end}], [${quarter_start}], [${month}], [${year}])) AS chuyen),
+    FROM temp AS source PIVOT (SUM(closePrice) FOR date IN (${pivot})) AS chuyen),
     mimax
     AS (SELECT
       MAX(closePrice) AS max_price,
@@ -796,6 +806,7 @@ export class SharesService {
   private getChiTieuLCTT(type: string, is_chart: number) {
     let chiTieu = ``
     let top = 0
+    let cate = ``
     if (is_chart) {
       switch (type) {
         case 'Ngân hàng':
@@ -806,12 +817,33 @@ export class SharesService {
           N'Tiền và tương đương tiền đầu kỳ',
           N'Tiền và tương đương tiền cuối kỳ'`
           top = 48
+          cate = `LCTT`
           break;
-
+        case 'Bảo hiểm':
+          chiTieu = `N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+            N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+            N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+            N'Lưu chuyển tiền thuần trong kỳ',
+            N'Tiền và tương đương tiền đầu kỳ',
+            N'Tiền và tương đương tiền cuối kỳ'`
+          top = 48
+          cate = `LCGT`
+          break;
+        case 'Dịch vụ tài chính': 
+        chiTieu = `
+        N'V. Tiền và các khoản tương đương tiền đầu kỳ',
+        N'VI. Tiền và các khoản tương đương tiền cuối kỳ',
+        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+        N'Lưu chuyển tiền thuần từ hoạt động tài chính'
+        `
+        top = 40
+        cate = `LCGT`
+        break  
         default:
           break;
       }
-      return { chiTieu, top }
+      return { chiTieu, top, cate }
     }
     switch (type) {
       case 'Ngân hàng':
@@ -836,18 +868,85 @@ export class SharesService {
         N'Tiền và tương đương tiền đầu kỳ',
         N'Tiền và tương đương tiền cuối kỳ'`
         top = 160
+        cate = `LCTT`
         break;
-
+      case 'Bảo hiểm':
+        chiTieu = `
+        N'I. Lưu chuyển tiền từ hoạt động kinh doanh',
+        N'1. Lợi nhuận trước thuế',
+        N'2. Điều chỉnh qua các khoản',
+        N'3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+        N'II. Lưu chuyển tiền từ hoạt động đầu tư',
+        N'1. Tiền chi để mua sắm, xây dựng TSCĐ và các TS dài hạn khác',
+        N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ và các TS dài hạn khác',
+        N'3. Tiền chi cho vay, mua các công cụ nợ của các đơn vị khác ',
+        N'4. Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác',
+        N'5. Tiền chi đầu tư góp vốn vào đơn vị khác',
+        N'6. Tiền thu hồi đầu tư góp vốn vào đơn vị khác',
+        N'7. Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia',
+        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        N'III. Lưu chuyển tiền từ hoạt động tài chính',
+        N'1. Tiền thu từ phát hành cổ phiếu',
+        N'2. Tiền chi trả vốn góp cho các chủ sở hữu, mua lại cổ phiếu của doanh nghiệp đã phát hành',
+        N'3. Tiền vay ngắn hạn, dài hạn nhận được',
+        N'4. Tiền chi trả nợ gốc vay',
+        N'5. Tiền chi trả nợ thuê tài chính',
+        N'6. Cổ tức, lợi nhuận đã trả cho chủ sở hữu',
+        N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+        N'Lưu chuyển tiền thuần trong kỳ',
+        N'Tiền và tương đương tiền đầu kỳ',
+        N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ',
+        N'Tiền và tương đương tiền cuối kỳ'`
+        top = 208
+        cate = 'LCGT'
+        break
+        case 'Dịch vụ tài chính':
+          chiTieu = `
+          N'I. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH',
+        N'1. Lợi nhuận trước Thuế Thu nhập doanh nghiệp',
+        N'- Khấu hao TSCĐ',
+        N'3. Tăng các chi phí phi tiền tệ',
+        N'4. Giảm các doanh thu phi tiền tệ',
+        N'5. Thay đổi tài sản và nợ phải trả hoạt động',
+        N'6. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động',
+        N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
+        N'II. Lưu chuyển tiền từ hoạt động đầu tư',
+        N'1. Tiền chi để mua sắm, xây dựng TSCĐ, BĐSĐT và các tài sản khác',
+        N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản khác',
+        N'3. Tiền chi đầu tư vốn vào công ty con, công ty liên doanh, liên kết và đầu tư khác',
+        N'4. Tiền thanh lý các khoản đầu tư vào công ty con, công ty liên doanh, liên kết và đầu tư khác',
+        N'5.Tiền thu về cổ tức và lợi nhuận được chia',
+        N'Lưu chuyển tiền thuần từ hoạt động đầu tư',
+        N'III. Lưu chuyển tiền từ hoạt động tài chính',
+        N'1. Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu',
+        N'2. Tiền chi trả vốn góp cho chủ sở hữu, mua lại cổ phiếu quỹ',
+        N'3. Tiền vay gốc',
+        N'4. Tiền chi trả nợ gốc vay',
+        N'6. Cổ tức, lợi nhuận đã trả cho chủ sở hữu',
+        N'Lưu chuyển tiền thuần từ hoạt động tài chính',
+        N'IV. Tăng/giảm tiền thuần trong kỳ',
+        N'V. Tiền và các khoản tương đương tiền đầu kỳ',
+        N'Tiền gửi ngân hàng đầu kỳ',
+        N'Các khoản tương đương tiền',
+        N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ',
+        N'VI. Tiền và các khoản tương đương tiền cuối kỳ',
+        N'Tiền gửi ngân hàng cuối kỳ'
+          `
+          top = 248
+          cate = `LCGT`
+          break
       default:
         break;
     }
-    return {chiTieu, top}
+    return { chiTieu, top, cate }
   }
 
   async castFlowDetail(stock: string, order: number, is_chart: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    const { chiTieu, top } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
-
+    const { chiTieu, top, cate } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
+    console.log(LV2);
+    
     let group = ``
     let select = ``
     switch (order) {
@@ -856,7 +955,7 @@ export class SharesService {
         select = `yearQuarter as date, value`
         break;
       case TimeTypeEnum.Year:
-        group = `group by name, year order by year desc`
+        group = `group by name, id, year order by year desc `
         select = `year as date, sum(value) as value`
         break;
       default:
@@ -865,14 +964,22 @@ export class SharesService {
 
     const query = `
     SELECT TOP ${top}
-    case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name))) else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
+    case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name))) 
+    when id = 602 then 'Cac khoan tuong duong tien cuoi ky'
+    when id = 502 then 'Cac khoan tuong duong tien dau ky'
+    when id = 503 then 'Anh huong dau ky'
+    when id = 603 then 'Anh huong cuoi ky'
+    else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
       ${select}
     FROM financialReport.dbo.financialReportV2
-    WHERE code = 'vcb'
+    WHERE code = '${stock}'
     AND name IN (${chiTieu})
     AND yearQuarter NOT LIKE '%0'
+    AND type = '${cate}'
     ${group}
     `
+    console.log(query);
+    
 
     const data = await this.mssqlService.query(query)
     return data
