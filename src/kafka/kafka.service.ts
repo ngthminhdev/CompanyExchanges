@@ -30,6 +30,7 @@ import { industries } from './chores';
 import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
 import { DB_SERVER } from '../constants';
 import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
+import { ChartNenInterface } from './interfaces/chart-nen.interface';
 
 @Injectable()
 export class KafkaService {
@@ -396,9 +397,15 @@ export class KafkaService {
     );
   }
 
-  handleChartNen(payload){
+  handleChartNen(payload: ChartNenInterface[]){
     payload.map(item => {
-      this.send(`${SocketEmit.CoPhieu}-${item.code}`, item)
+      this.send(`${SocketEmit.CoPhieu}-${item.code}`, {...item, time: Date.UTC(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        new Date().getDate(),
+        new Date(`${item?.time} ${item.date}`)?.getHours(),
+        new Date(`${item?.time} ${item.date}`)?.getMinutes(),
+      ).valueOf()})
     })
   }
 
