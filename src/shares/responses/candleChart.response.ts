@@ -28,9 +28,9 @@ export class CandleChartResponse {
     totalVol: number
 
     @ApiProperty({
-        type: String
+        type: Number
     })
-    time: string
+    time: number
 
     constructor(data?: CandleChartResponse) {
         this.openPrice = data?.openPrice || 0
@@ -38,7 +38,13 @@ export class CandleChartResponse {
         this.highPrice = data?.highPrice || 0
         this.lowPrice = data?.lowPrice || 0
         this.totalVol = data?.totalVol || 0
-        this.time = data?.time ? moment(data.time).utcOffset("+00:00").format('HH:mm:ss') : ''
+        this.time = data?.time ? Date.UTC(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            new Date().getDate(),
+            new Date(data?.time)?.getHours(),
+            new Date(data?.time)?.getMinutes(),
+          ).valueOf() : 0
     }
 
 
