@@ -287,7 +287,7 @@ export class KafkaService {
           );
           break;
         default:
-          // this.logger.error('Invalid IndexCode');
+        // this.logger.error('Invalid IndexCode');
       }
     });
   }
@@ -331,6 +331,7 @@ export class KafkaService {
       new MarketCashFlowResponse(calculatedData),
     );
   }
+
 
   async handleForeign(payload: ForeignKafkaInterface[]) {
     const tickerBuyHSX = await this.filterAndSortPayload(payload, 'HOSE', 1);
@@ -394,4 +395,11 @@ export class KafkaService {
       new TopNetForeignKafkaResponse().mapToList(UPData),
     );
   }
+
+  handleChartNen(payload){
+    payload.map(item => {
+      this.send(`${SocketEmit.CoPhieu}-${item.code}`, item)
+    })
+  }
+
 }
