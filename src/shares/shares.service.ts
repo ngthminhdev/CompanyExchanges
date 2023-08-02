@@ -1,6 +1,5 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { group } from 'console';
 import * as moment from 'moment';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
@@ -39,12 +38,15 @@ export class SharesService {
     return dataMapped
   }
 
-  async header(stock: string) {
-    const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}`)
+  async header(stock: string, type: string) {
+    const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}:${type}`)
     if (redisData) return redisData
 
     const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
     if (!date) return {}
+
+    const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
+    if(!isStock || isStock != type.toUpperCase()) return {}
 
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
@@ -133,13 +135,13 @@ export class SharesService {
     `
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
-    await this.redis.set(`${RedisKeys.headerStock}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    await this.redis.set(`${RedisKeys.headerStock}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.Minute })
     return dataMapped
   }
 
-  async candleChart(stock: string){
+  async candleChart(stock: string) {
     const query = `select distinct openPrice, closePrice, highPrice, lowPrice, totalVol, time from tradeIntraday.dbo.tickerTradeVNDIntraday where code = '${stock}' and date = '${moment().format('YYYY-MM-DD')}' order by time asc`
-    
+
     const data = await this.mssqlService.query<CandleChartResponse[]>(query)
     const dataMapped = CandleChartResponse.mapToList(data)
     return dataMapped
@@ -792,24 +794,59 @@ export class SharesService {
     return dataMapped
   }
 
-  async newsStock(stock: string) {
-    const redisData = await this.redis.get(`${RedisKeys.newsStock}:${stock}`)
-    if (redisData) return redisData
-
-    const query = `
-    SELECT
-        Title as title,
-        Href as href
-    FROM macroEconomic.dbo.TinTuc n
-    WHERE Href NOT LIKE 'https://cafef.vn%'  
-    AND Href NOT LIKE 'https://ndh.vn%'
-    AND TickerTitle = '${stock}'
-    ORDER BY n.date DESC
-    `
+  async newsStock(stock: string, type: number) {
+    let query = ``
+    switch (type) {
+      case 0:
+        query = `
+        SELECT
+            Title as title,
+            Href as href
+        FROM macroEconomic.dbo.TinTuc n
+        WHERE Href NOT LIKE 'https://cafef.vn%'  
+        AND Href NOT LIKE 'https://ndh.vn%'
+        AND TickerTitle = '${stock}'
+        ORDER BY n.date DESC
+        `
+        break;
+      case 1:
+        query = `
+      WITH temp
+      AS (SELECT
+        code
+      FROM marketInfor.dbo.info
+      WHERE LV2 = (SELECT
+        LV2
+      FROM marketInfor.dbo.info
+      WHERE code = '${stock}'))
+      SELECT
+        Title AS title,
+        Href AS href
+      FROM macroEconomic.dbo.TinTuc t
+      INNER JOIN temp i
+        ON t.TickerTitle = i.code
+      WHERE Href NOT LIKE 'https://cafef.vn%'
+      AND Href NOT LIKE 'https://ndh.vn%'
+      ORDER BY t.date DESC
+      `
+        break
+      case 2:
+        query = `
+        SELECT
+          Title AS title,
+          Href AS href
+        FROM macroEconomic.dbo.TinTuc
+        WHERE Href NOT LIKE 'https://cafef.vn%'
+        AND Href NOT LIKE 'https://ndh.vn%'
+        ORDER BY date DESC
+        `
+        break
+      default:
+        break;
+    }
 
     const data = await this.mssqlService.query<NewsStockResponse[]>(query)
     const dataMapped = NewsStockResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.newsStock}:${stock}`, dataMapped, { ttl: TimeToLive.OneHour })
     return dataMapped
   }
 
@@ -995,9 +1032,9 @@ export class SharesService {
         top = 248
         break;
     }
-    const sort = type != 'Dịch vụ tài chính' ? 
-    `case ${chiTieu.split(`',`).map((item, index) => index !== chiTieu.split(`',`).length - 1 ? `when name = ${item.replace(/\n/g, "").trim()}' then ${index}` : `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-    : `CASE
+    const sort = type != 'Dịch vụ tài chính' ?
+      `case ${chiTieu.split(`',`).map((item, index) => index !== chiTieu.split(`',`).length - 1 ? `when name = ${item.replace(/\n/g, "").trim()}' then ${index}` : `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      : `CASE
     WHEN name = N'I. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH' THEN 0
     WHEN name = N'1. Lợi nhuận trước Thuế Thu nhập doanh nghiệp' THEN 1
     WHEN name = N'- Khấu hao TSCĐ' THEN 2
@@ -1035,7 +1072,7 @@ export class SharesService {
 
   async castFlowDetail(stock: string, order: number, is_chart: number) {
     const redisData = await this.redis.get(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
     const { chiTieu, top, cate, sort } = this.getChiTieuLCTT(LV2[0].LV2, is_chart)
@@ -1072,9 +1109,46 @@ export class SharesService {
     from temp
     order by date asc, row_num asc
     `
+
     const data = await this.mssqlService.query<CastFlowDetailResponse[]>(query)
     const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart)
     await this.redis.set(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
+  }
+
+  private getChiTieuKQKD(type: string, is_chart: number) {
+    let chiTieu = ``
+    if (is_chart) {
+      switch (type) {
+        case 'Ngân hàng':
+          chiTieu = '1, 2, 8, 11, 13, 10'
+          break;
+        case 'Bảo hiểm':
+          chiTieu = '7, 18, 15, 31, 35, 8'
+          break
+        case 'Dịch vụ tài chính':
+          chiTieu = '1, 2, 3, 4, 9, 11'
+          break
+        default:
+          chiTieu = '3, 15, 5, 19'
+          break;
+      }
+      return chiTieu
+    }
+  }
+
+  async businessResultDetail(stock: string, order: number, is_chart: number) {
+    const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
+    const chiTieu = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
+
+    const query = `
+    select value, name, yearQuarter
+    from financialReport.dbo.financialReportV2
+    where code = '${stock}'
+      and type = 'KQKD'
+      and id IN (${chiTieu})
+    `
+    const data = await this.mssqlService.query(query)
+    return data
   }
 }
