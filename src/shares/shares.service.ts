@@ -1114,9 +1114,6 @@ export class SharesService {
     from temp
     order by date asc, row_num asc
     `
-    console.log(query);
-    
-
     const data = await this.mssqlService.query<CastFlowDetailResponse[]>(query)
     const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
     await this.redis.set(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
