@@ -1006,8 +1006,8 @@ export class SharesService {
         N'3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động',
         N'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
         N'II. Lưu chuyển tiền từ hoạt động đầu tư',
-        N'1. Tiền chi để mua sắm, xây dựng TSCĐ, BĐSĐT và các tài sản khác',
-        N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản khác',
+        N'1. Tiền chi để mua sắm, xây dựng TSCĐ và các tài sản dài hạn khác',
+        N'2. Tiền thu từ thanh lý, nhượng bán TSCĐ và các tài sản dài hạn khác',
         N'3. Tiền chi cho vay, mua các công cụ nợ của đơn vị khác',
         N'4. Tiền thu hồi cho vay, bán lại các công cụ nợ của các đơn vị khác',
         N'5. Đầu tư góp vốn vào công ty liên doanh liên kết',
@@ -1114,6 +1114,8 @@ export class SharesService {
     from temp
     order by date asc, row_num asc
     `
+    console.log(query);
+    
 
     const data = await this.mssqlService.query<CastFlowDetailResponse[]>(query)
     const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
