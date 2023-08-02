@@ -18,6 +18,7 @@ import { LineChartInterface } from './interfaces/line-chart.interface';
 import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
 import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
+import { ChartNenInterface } from './interfaces/chart-nen.interface';
 
 @Controller()
 export class KafkaConsumer {
@@ -190,7 +191,7 @@ export class KafkaConsumer {
   }
 
   @MessagePattern(Topics.ChartNenCoPhieu)
-  async handleChartNen(@Payload() payload: any, @Ctx() context: KafkaContext){
+  async handleChartNen(@Payload() payload: ChartNenInterface[], @Ctx() context: KafkaContext){
     try {
       this.kafkaService.handleChartNen(payload)
     } catch (error) {
