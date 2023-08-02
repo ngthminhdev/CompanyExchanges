@@ -1,8 +1,9 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
+import { ExceptionResponse } from '../exceptions/common.exception';
 import { MssqlService } from '../mssql/mssql.service';
 import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
@@ -46,7 +47,7 @@ export class SharesService {
     if (!date) return {}
 
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
-    if(!isStock || isStock != type.toUpperCase()) return {}
+    if(!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
 
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
