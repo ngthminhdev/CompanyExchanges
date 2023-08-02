@@ -1103,6 +1103,10 @@ export class SharesService {
     ${group})
     select 
     case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+    when name = N'Các khoản tương đương tiền' and id = 502 then 'Cac khoan tuong duong tien dau ky'
+    when name = N'Các khoản tương đương tiền' and id = 602 then 'Cac khoan tuong duong tien cuoi ky'
+    when name = N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ' and id = 503 then 'Anh huong dau ky'
+    when name = N'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ' and id = 603 then 'Anh huong cuoi ky'
     else LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name))) end as name,
     value,
     date,
@@ -1112,7 +1116,7 @@ export class SharesService {
     `
 
     const data = await this.mssqlService.query<CastFlowDetailResponse[]>(query)
-    const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart)
+    const dataMapped = CastFlowDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
     await this.redis.set(`${RedisKeys.castFlowDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }

@@ -38,13 +38,7 @@ export class CandleChartResponse {
         this.highPrice = data?.highPrice || 0
         this.lowPrice = data?.lowPrice || 0
         this.totalVol = data?.totalVol || 0
-        this.time = data?.time ? Date.UTC(
-            new Date().getFullYear(),
-            new Date().getMonth(),
-            new Date().getDate(),
-            new Date(data?.time)?.getHours(),
-            new Date(data?.time)?.getMinutes(),
-          ).valueOf() : 0
+        this.time = moment(`${moment(data.time).utcOffset(420).hour()}:${moment(data.time).utcOffset(420).minute()}`, 'HH:mm').valueOf()
     }
 
 
