@@ -189,10 +189,12 @@ export class KafkaConsumer {
     }
   }
 
-  // @MessagePattern(Topics.ChartNenCoPhieu)
-  // async handleChartNen(@Payload() payload: any, @Ctx() context: KafkaContext){
-  //   console.log(Topics.ChartNenCoPhieu);
-  //   console.log(payload.length);
-    
-  // }
+  @MessagePattern(Topics.ChartNenCoPhieu)
+  async handleChartNen(@Payload() payload: any, @Ctx() context: KafkaContext){
+    try {
+      this.kafkaService.handleChartNen(payload)
+    } catch (error) {
+      this.logger.error(error)
+    }
+  }
 }

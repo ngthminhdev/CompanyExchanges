@@ -45,4 +45,6 @@ export enum SocketEmit {
   PhanNganhHOSE = 'listen-phan-nganh-HOSE',
   PhanNganhHNX = 'listen-phan-nganh-HNX',
   PhanNganhUPCOM = 'listen-phan-nganh-UPCOM',
+
+  CoPhieu = 'listen-co-phieu'
 }
