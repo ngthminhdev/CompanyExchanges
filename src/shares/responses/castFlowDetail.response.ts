@@ -13,7 +13,21 @@ export class CastFlowDetailResponse {
                     data?.name == 'Tiền và tương đương tiền đầu kỳ' ||
                     data?.name == 'Tiền và tương đương tiền cuối kỳ' ?
                     data.name.toUpperCase() : data?.name
-
+                this.color = is_chart ? {
+                    linearGradient: {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1,
+                    },
+                    stops: [
+                        [0, 'rgba(57,234,202,1)'],
+                        [0.2, 'rgba(44,185,185,1)'],
+                        [0.4, 'rgba(48,153,198,1)'],
+                        [0.61, 'rgba(54,90,185,1)'],
+                        [0.78, 'rgba(49,23,201,1)'],
+                    ],
+                } : {}
                 break;
             case 'Bảo hiểm':
                 this.name = data?.name == 'Lưu chuyển tiền từ hoạt động kinh doanh' ||
@@ -25,6 +39,21 @@ export class CastFlowDetailResponse {
                     data?.name == 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ' ||
                     data?.name == 'Tiền và tương đương tiền cuối kỳ' ?
                     data.name.toUpperCase() : data?.name
+                this.color = is_chart ? {
+                    linearGradient: {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1,
+                    },
+                    stops: [
+                        [0, 'rgba(57,234,202,1)'],
+                        [0.2, 'rgba(44,185,185,1)'],
+                        [0.4, 'rgba(48,153,198,1)'],
+                        [0.61, 'rgba(54,90,185,1)'],
+                        [0.78, 'rgba(49,23,201,1)'],
+                    ],
+                } : {}
                 break
             case 'Dịch vụ tài chính':
                 this.name = data?.name == 'Lưu chuyển tiền từ hoạt động kinh doanh' ||
@@ -40,7 +69,7 @@ export class CastFlowDetailResponse {
                 if (data.name == 'Anh huong dau ky') this.name = 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ đầu kỳ'
                 if (data.name == 'Anh huong cuoi ky') this.name = 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ cuối kỳ'
                 switch (data?.name) {
-                    case 'Lưu chuyển tiền thuần từ hoạt động đầu tư':
+                    case 'LƯU CHUYỂN TIỀN THUẦN TỪ HOẠT ĐỘNG ĐẦU TƯ':
                         this.color = is_chart ? {// Thêm thuộc tính color ở đây
                             linearGradient: {
                                 x1: 0,
@@ -55,7 +84,7 @@ export class CastFlowDetailResponse {
                             ],
                         } : {}
                         break;
-                    case 'Lưu chuyển tiền thuần từ hoạt động kinh doanh':
+                    case 'LƯU CHUYỂN TIỀN THUẦN TỪ HOẠT ĐỘNG KINH DOANH':
                         this.color = is_chart ? {// Thêm thuộc tính color ở đây
                             linearGradient: {
                                 x1: 0,
@@ -69,7 +98,7 @@ export class CastFlowDetailResponse {
                             ],
                         } : {}
                         break;
-                        case 'Lưu chuyển tiền thuần từ hoạt động tài chính':
+                    case 'LƯU CHUYỂN TIỀN THUẦN TỪ HOẠT ĐỘNG TÀI CHÍNH':
                         this.color = {// Thêm thuộc tính color ở đây
                             linearGradient: {
                                 x1: 0,
@@ -85,6 +114,21 @@ export class CastFlowDetailResponse {
                         }
                         break;
                     default:
+                        this.color = is_chart ? {
+                            linearGradient: {
+                                x1: 0,
+                                y1: 0,
+                                x2: 0,
+                                y2: 1,
+                            },
+                            stops: [
+                                [0, 'rgba(57,234,202,1)'],
+                                [0.2, 'rgba(44,185,185,1)'],
+                                [0.4, 'rgba(48,153,198,1)'],
+                                [0.61, 'rgba(54,90,185,1)'],
+                                [0.78, 'rgba(49,23,201,1)'],
+                            ],
+                        } : {}
                         break;
                 }
                 break
@@ -111,7 +155,7 @@ export class CastFlowDetailResponse {
                         [0.61, 'rgba(54,90,185,1)'],
                         [0.78, 'rgba(49,23,201,1)'],
                     ],
-                } : {} 
+                } : {}
                 break;
         }
 
