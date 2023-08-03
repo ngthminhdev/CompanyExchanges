@@ -1238,12 +1238,12 @@ export class StockService {
           low = '0.935';
           indexCode = " and i.floor = 'HOSE' and i.[indexCode] = 'VN30'";
           break;
-        case 'VNXALL':
+        case 'VNALL':
           high = '1.065';
           low = '0.935';
           indexCode = " and i.floor = 'HOSE' or i.floor = 'HNX'";
           break;
-        case 'HNXINDEX':
+        case 'HNX':
           high = '1.062';
           low = '0.938';
           indexCode = " and i.floor = 'HNX'";
@@ -1253,7 +1253,7 @@ export class StockService {
           low = '0.938';
           indexCode = " and i.floor = 'HNX' and i.[indexCode] = 'HNX30'";
           break;
-        case 'UPINDEX':
+        case 'UPCOM':
           high = '1.12';
           low = '0.88';
           indexCode = " and i.floor = 'UPCOM'";
@@ -1281,8 +1281,6 @@ export class StockService {
       join [marketInfor].[dbo].[info] i on i.code = now.code
       where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' ${indexCode};
       `;
-      console.log(query);
-      
 
       const data: IndustryFullInterface = await this.dbServer.query(query, [
         latestDate,
