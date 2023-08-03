@@ -160,7 +160,7 @@ export class ChartService {
               and date >= '${startDate}' and date <= '${latestDate}'
           order by code desc, date;
         `;
-
+      
       const mappedData = new VnIndexResponse().mapToList(
         await this.mssqlService.query<LineChartInterface[]>(query),
         type,
@@ -182,7 +182,7 @@ export class ChartService {
       const query: string = `
           select code      as comGroupCode,
                 CONCAT(date, ' ', timeInday) AS tradingDate,
-                highPrice as indexValue,
+                closePrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
                 totalVal   as totalMatchValue,
