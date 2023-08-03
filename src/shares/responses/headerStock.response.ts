@@ -5,7 +5,7 @@ export class HeaderStockResponse {
     company: string
     company_eng: string
     summary: string
-    price: number
+    closePrice: number
     change: number
     perChange: number
     kldg: number
@@ -18,6 +18,7 @@ export class HeaderStockResponse {
     roaa: number
     roae: number
     image: string
+    price: number
 
     constructor(data?: HeaderStockResponse) {
         this.code = data?.code || ''
@@ -26,7 +27,7 @@ export class HeaderStockResponse {
         this.company = data?.company || ''
         this.company_eng = data?.company_eng || ''
         this.summary = data?.summary || ''
-        this.price = data?.price || 0
+        this.closePrice = data?.price || 0
         this.change = data?.change || 0
         this.perChange = data?.perChange || 0
         this.kldg = data?.kldg || 0

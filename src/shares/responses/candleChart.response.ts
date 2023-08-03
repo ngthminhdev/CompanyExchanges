@@ -41,7 +41,6 @@ export class CandleChartResponse {
         this.time = moment(`${moment(data.time).utcOffset(420).hour()}:${moment(data.time).utcOffset(420).minute()}`, 'HH:mm').valueOf()
     }
 
-
     static mapToList(data?: CandleChartResponse[]) {
         return data.map(item => new CandleChartResponse(item))
     }
