@@ -576,7 +576,7 @@ export class StockService {
         with DomesticIndex as (
             SELECT code,
                   timeInday,
-                  highPrice ,
+                  closePrice,
                   change,
                   totalVol,
                   totalVal,

@@ -53,7 +53,7 @@ export class DomesticIndexResponse {
 
   code: string
   timeInday: string
-  highPrice: number
+  closePrice: number
   change: number
   totalVol: number
   totalVal: number
@@ -62,7 +62,7 @@ export class DomesticIndexResponse {
   constructor(data?: any) {
     this.code = data?.code || ''
     this.timeInday = data?.timeInday || ''
-    this.highPrice = data?.highPrice || 0
+    this.closePrice = data?.closePrice || 0
     this.change = data?.change || 0
     this.totalVol = data?.totalVol || 0
     this.totalVal = data?.totalVal || 0

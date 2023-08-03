@@ -150,7 +150,7 @@ export class ChartService {
       const query: string = `
           select code      as comGroupCode,
                 date AS tradingDate,
-                highPrice as indexValue,
+                closePrice as indexValue,
                 change     as indexChange,
                 totalVol   as totalMatchVolume,
                 totalVal   as totalMatchValue,
