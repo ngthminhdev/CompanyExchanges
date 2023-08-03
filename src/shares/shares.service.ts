@@ -50,13 +50,14 @@ export class SharesService {
     if(!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
 
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
+    
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
     const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const year = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
 
     const query = `
     WITH temp
-    AS (SELECT
+    AS (SELECT top 1
       i.code,
       CASE
         WHEN i.floor = 'HOSE' THEN 'VNINDEX'
@@ -73,10 +74,12 @@ export class SharesService {
     FROM marketInfor.dbo.info i
     INNER JOIN marketInfor.dbo.overview o
       ON i.code = o.code
-    INNER JOIN marketTrade.dbo.tickerTradeVND t
+    INNER JOIN tradeIntraday.dbo.tickerTradeVNDIntraday t
       ON i.code = t.code
     WHERE i.code = '${stock}'
-    AND t.date = '${now}'),
+    AND t.date = '${moment().format('YYYY-MM-DD')}'
+    order by t.timeInday desc
+    ),
     pivotted
     AS (SELECT
       [${now}] AS now,
@@ -1122,36 +1125,64 @@ export class SharesService {
 
   private getChiTieuKQKD(type: string, is_chart: number) {
     let chiTieu = ``
+    let top = 0
     if (is_chart) {
       switch (type) {
         case 'Ngân hàng':
-          chiTieu = '1, 2, 8, 11, 13, 10'
+          chiTieu = '1,2,8,11,13,10'
+          top = 48
           break;
         case 'Bảo hiểm':
-          chiTieu = '7, 18, 15, 31, 35, 8'
+          chiTieu = '7,18,15,31,35,8'
+          top = 48
           break
         case 'Dịch vụ tài chính':
-          chiTieu = '1, 2, 3, 4, 9, 11'
+          chiTieu = '1,2,3,4,9,11'
+          top = 48
           break
         default:
-          chiTieu = '3, 15, 5, 19'
+          chiTieu = '3,15,5,19'
+          top = 32
           break;
       }
-      return chiTieu
+      const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
+      return {chiTieu, top, sort}
+    }
+    switch (type) {
+      case 'Ngân hàng':
+        chiTieu = '1,101,102,2,201,202,3,4,5,6,601,602,7,8,9,10,11,12,1201,1202,13,14,15'
+        top = 184
+        break;
+    
+      default:
+        break;
     }
   }
 
   async businessResultDetail(stock: string, order: number, is_chart: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    const chiTieu = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
+    if(!LV2[0]) return []
+    const {chiTieu, top, sort} = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
 
     const query = `
-    select value, name, yearQuarter
+    with temp as(select top ${top} value, 
+    case when CHARINDEX('(', name) = 0 and CHARINDEX('.', name) = 0 then name
+        when CHARINDEX('(', name) = 0 and CHARINDEX('.', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
+            when CHARINDEX('(', name) <> 0 and CHARINDEX('.', name) = 0 then LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+    else LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX('.', name)),
+               CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX('.', name))) - 2)) end as name,
+               yearQuarter as date,
+               ${sort}
     from financialReport.dbo.financialReportV2
     where code = '${stock}'
       and type = 'KQKD'
       and id IN (${chiTieu})
+      and RIGHT(yearQuarter, 1) <> 0
+    order by yearQuarter desc  
+    )
+    select * from temp order by date asc, row_num asc
     `
+    
     const data = await this.mssqlService.query(query)
     return data
   }
