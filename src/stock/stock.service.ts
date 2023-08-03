@@ -1281,6 +1281,8 @@ export class StockService {
       join [marketInfor].[dbo].[info] i on i.code = now.code
       where now.closePrice is not null and prev.closePrice is not null and i.[type] = 'STOCK' ${indexCode};
       `;
+      console.log(query);
+      
 
       const data: IndustryFullInterface = await this.dbServer.query(query, [
         latestDate,
