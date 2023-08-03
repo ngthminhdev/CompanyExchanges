@@ -8,6 +8,7 @@ import { MssqlService } from '../mssql/mssql.service';
 import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
+import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
 import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
@@ -41,14 +42,15 @@ export class SharesService {
 
   async header(stock: string, type: string) {
     const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}:${type}`)
-    if (redisData) return redisData
+    // if (redisData) return redisData
 
     const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
     if (!date) return {}
 
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
     if(!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
-
+    console.log({date, isStock});
+    
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
@@ -137,6 +139,7 @@ export class SharesService {
     INNER JOIN pe e
       ON e.code = t.code
     `
+    
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
     await this.redis.set(`${RedisKeys.headerStock}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.Minute })
@@ -1164,26 +1167,49 @@ export class SharesService {
     if(!LV2[0]) return []
     const {chiTieu, top, sort} = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
 
+    let select = ``, group = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, ((value - LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) / LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) * 100 AS per, yearQuarter AS date,`
+        group = `order by yearQuarter desc`
+        break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as value, ((sum(value) - lead(sum(value), 1) over ( partition by name order by year desc)) / lead(sum(value), 1) over ( partition by name order by year desc)) * 100 as per, year as date,`
+        group = `group by year, name, id order by year desc`
+        break
+      default:
+        break;
+    }
     const query = `
-    with temp as(select top ${top} value, 
-    case when CHARINDEX('(', name) = 0 and CHARINDEX('.', name) = 0 then name
-        when CHARINDEX('(', name) = 0 and CHARINDEX('.', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
-            when CHARINDEX('(', name) <> 0 and CHARINDEX('.', name) = 0 then LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
-    else LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX('.', name)),
-               CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX('.', name))) - 2)) end as name,
-               yearQuarter as date,
-               ${sort}
-    from financialReport.dbo.financialReportV2
-    where code = '${stock}'
-      and type = 'KQKD'
-      and id IN (${chiTieu})
-      and RIGHT(yearQuarter, 1) <> 0
-    order by yearQuarter desc  
-    )
-    select * from temp order by date asc, row_num asc
+    WITH temp
+    AS (SELECT TOP ${top}
+      ${select}
+      CASE
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) = 0 THEN name
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
+        WHEN CHARINDEX('(', name) <> 0 AND
+          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX('.', name)),
+          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX('.', name))) - 2))
+      END AS name,
+      ${sort}
+    FROM financialReport.dbo.financialReportV2
+    WHERE code = '${stock}'
+    AND type = 'KQKD'
+    AND id IN (${chiTieu})
+    AND RIGHT(yearQuarter, 1) <> 0
+    ${group})
+    SELECT
+      *
+    FROM temp
+    ORDER BY date ASC, row_num ASC
     `
+    console.log(query);
     
-    const data = await this.mssqlService.query(query)
-    return data
+    const data = await this.mssqlService.query<BusinessResultDetailResponse[]>(query)
+    const dataMapped = BusinessResultDetailResponse.mapToList(data)
+    return dataMapped
   }
 }

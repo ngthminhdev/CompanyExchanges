@@ -4,33 +4,32 @@ import { Cache } from 'cache-manager';
 import * as _ from 'lodash';
 import { Server } from 'socket.io';
 import { DataSource } from 'typeorm';
+import { DB_SERVER } from '../constants';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { SocketEmit } from '../enums/socket-enum';
 import { CatchSocketException } from '../exceptions/socket.exception';
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { ChartNenInterface } from './interfaces/chart-nen.interface';
 import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
 import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
-import { LineChartInterface } from './interfaces/line-chart.interface';
+import { LineChartInterfaceV2 } from './interfaces/line-chart.interface';
 import { MarketBreadthKafkaInterface } from './interfaces/market-breadth-kafka.interface';
 import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
 import { MarketLiquidityKafkaInterface } from './interfaces/market-liquidity-kakfa.interface';
 import { TickerChangeInterface } from './interfaces/ticker-change.interface';
+import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
 import { TickerIndustryInterface } from './interfaces/ticker-industry.interface';
 import { DomesticIndexKafkaResponse } from './responses/DomesticIndexKafka.response';
 import { ForeignKafkaResponse } from './responses/ForeignResponseKafka.response';
 import { IndustryKafkaResponse } from './responses/IndustryKafka.response';
-import { LineChartResponse } from './responses/LineChart.response';
+import { LineChartResponseV2 } from './responses/LineChart.response';
 import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
-import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
-import { industries } from './chores';
 import { TickerContributeKafkaResponse } from './responses/TickerContributeKafka.response';
-import { DB_SERVER } from '../constants';
-import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
-import { ChartNenInterface } from './interfaces/chart-nen.interface';
+import { TopNetForeignKafkaResponse } from './responses/TopNetForeignKafka.response';
 
 @Injectable()
 export class KafkaService {
@@ -150,10 +149,10 @@ export class KafkaService {
     );
   }
 
-  handleDomesticIndex2(payload: LineChartInterface[]): void {
+  handleDomesticIndex2(payload: LineChartInterfaceV2[]): void {
     this.send(
       SocketEmit.ChiSoTrongNuoc2,
-      [...payload].sort((a, b) => (a.comGroupCode > b.comGroupCode ? -1 : 1)),
+      [...payload].sort((a, b) => (a.code > b.code ? -1 : 1)),
     );
   }
 
@@ -248,43 +247,43 @@ export class KafkaService {
     }
   }
 
-  handleLineChart(payload: LineChartInterface[]) {
+  handleLineChart(payload: LineChartInterfaceV2[]) {
     payload.forEach((item) => {
-      switch (item.comGroupCode) {
+      switch (item.code) {
         case 'VNINDEX':
           this.send(
             SocketEmit.ChiSoVnIndex,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         case 'VNXALL':
           this.send(
             SocketEmit.ChiSoVNAll,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         case 'VN30':
           this.send(
             SocketEmit.ChiSoVN30,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         case 'HNX30':
           this.send(
             SocketEmit.ChiSoHNX30,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         case 'HNXINDEX':
           this.send(
             SocketEmit.ChiSoHNX,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         case 'UPINDEX':
           this.send(
             SocketEmit.ChiSoUPCOM,
-            new LineChartResponse().mapToList([item]),
+            LineChartResponseV2.mapToList([item]),
           );
           break;
         default:

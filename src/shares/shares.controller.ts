@@ -254,15 +254,15 @@ export class SharesController {
     }
   }
 
-  // @Get('chi-tiet-ket-qua-kinh-doanh')
-  // @ApiOperation({summary: 'Báo cáo kết quả kinh doanh'})
-  // @ApiOkResponse({type: NewsStockResponse})
-  // async businessResultDetail(@Query() q: CastFlowDto, @Res() res: Response) {
-  //   try {
-  //     const data = await this.sharesService.businessResultDetail(q.stock, +q.order, +q.is_chart)
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
+  @Get('chi-tiet-ket-qua-kinh-doanh')
+  @ApiOperation({summary: 'Báo cáo kết quả kinh doanh'})
+  @ApiOkResponse({type: NewsStockResponse})
+  async businessResultDetail(@Query() q: CastFlowDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.businessResultDetail(q.stock, +q.order, +q.is_chart)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }

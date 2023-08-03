@@ -4,21 +4,21 @@ import {
   Ctx,
   KafkaContext,
   MessagePattern,
-  Payload,
+  Payload
 } from '@nestjs/microservices';
-import { KafkaService } from './kafka.service';
 import { KAFKA_MODULE } from '../constants';
 import { requestPatterns, Topics } from '../enums/kafka-topics.enum';
-import { MarketBreadthKafkaInterface } from './interfaces/market-breadth-kafka.interface';
-import { MarketLiquidityKafkaInterface } from './interfaces/market-liquidity-kakfa.interface';
-import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
-import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
-import { TickerChangeInterface } from './interfaces/ticker-change.interface';
-import { LineChartInterface } from './interfaces/line-chart.interface';
-import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
-import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
-import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
 import { ChartNenInterface } from './interfaces/chart-nen.interface';
+import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
+import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
+import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
+import { LineChartInterfaceV2 } from './interfaces/line-chart.interface';
+import { MarketBreadthKafkaInterface } from './interfaces/market-breadth-kafka.interface';
+import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
+import { MarketLiquidityKafkaInterface } from './interfaces/market-liquidity-kakfa.interface';
+import { TickerChangeInterface } from './interfaces/ticker-change.interface';
+import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-kafka.interface';
+import { KafkaService } from './kafka.service';
 
 @Controller()
 export class KafkaConsumer {
@@ -114,7 +114,7 @@ export class KafkaConsumer {
 
   @MessagePattern(Topics.LineChart)
   handleLineChart(
-    @Payload() payload: LineChartInterface[],
+    @Payload() payload: LineChartInterfaceV2[],
     @Ctx() context: KafkaContext,
   ) {
     try {
@@ -168,7 +168,7 @@ export class KafkaConsumer {
 
   @MessagePattern(Topics.ChiSoTrongNuoc2)
   handleDomesticIndex2(
-    @Payload() payload: LineChartInterface[],
+    @Payload() payload: LineChartInterfaceV2[],
     @Ctx() context: KafkaContext,
   ) {
     try {
