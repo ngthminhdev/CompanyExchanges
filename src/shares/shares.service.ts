@@ -42,14 +42,13 @@ export class SharesService {
 
   async header(stock: string, type: string) {
     const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}:${type}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
 
     const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
     if (!date) return {}
 
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
     if(!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
-    console.log({date, isStock});
     
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
     
