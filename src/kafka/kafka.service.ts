@@ -2,6 +2,7 @@ import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as _ from 'lodash';
+import * as moment from 'moment';
 import { Server } from 'socket.io';
 import { DataSource } from 'typeorm';
 import { DB_SERVER } from '../constants';
@@ -397,15 +398,8 @@ export class KafkaService {
   }
 
   handleChartNen(payload: ChartNenInterface[]){
-    payload.map(item => {
-      this.send(`${SocketEmit.CoPhieu}-${item.code}`, {...item, time: Date.UTC(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        new Date().getDate(),
-        new Date(`${item?.time} ${item.date}`)?.getHours(),
-        new Date(`${item?.time} ${item.date}`)?.getMinutes(),
-      ).valueOf()})
-    })
+    payload.map(item => this.send(`${SocketEmit.CoPhieu}-${item.code}`, {...item, time: moment(item.timeInday, 'HH:mm').valueOf()})
+    )
   }
 
 }
