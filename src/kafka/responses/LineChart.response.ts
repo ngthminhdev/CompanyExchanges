@@ -52,7 +52,13 @@ export class LineChartResponseV2 {
   constructor(data?: LineChartInterfaceV2) {
     this.comGroupCode = data?.code || '';
     this.indexValue = data?.closePrice || 0;
-    this.tradingDate = moment(data.timeInday, 'HH:mm').valueOf()
+    this.tradingDate = Date.UTC(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      new Date().getDate(),
+      moment(data.timeInday, 'HH:mm:ss').hour(),
+      moment(data.timeInday, 'HH:mm:ss').minute(),
+    ).valueOf()
     this.indexChange = data?.change || 0;
     this.percentIndexChange = data?.perChange || 0;
     this.openIndex = data?.openPrice || 0;

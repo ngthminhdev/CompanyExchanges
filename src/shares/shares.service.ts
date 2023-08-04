@@ -145,7 +145,7 @@ export class SharesService {
   }
 
   async candleChart(stock: string) {
-    const query = `select distinct openPrice, closePrice, highPrice, lowPrice, totalVol, time from tradeIntraday.dbo.tickerTradeVNDIntraday where code = '${stock}' and date = '${moment().format('YYYY-MM-DD')}' order by time asc`
+    const query = `select distinct openPrice, closePrice, highPrice, lowPrice, totalVol, timeInday as time from tradeIntraday.dbo.tickerTradeVNDIntraday where code = '${stock}' and date = '${moment().format('YYYY-MM-DD')}' order by time asc`
 
     const data = await this.mssqlService.query<CandleChartResponse[]>(query)
     const dataMapped = CandleChartResponse.mapToList(data)

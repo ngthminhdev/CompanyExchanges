@@ -38,10 +38,18 @@ export class CandleChartResponse {
         this.highPrice = data?.highPrice || 0
         this.lowPrice = data?.lowPrice || 0
         this.totalVol = data?.totalVol || 0
-        this.time = moment(`${moment(data.time).utcOffset(420).hour()}:${moment(data.time).utcOffset(420).minute()}`, 'HH:mm').valueOf()
+        this.time = Date.UTC(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            new Date().getDate(),
+            moment(data.time).utcOffset('+00:00').hour(),
+            moment(data.time).utcOffset('+00:00').minute(),
+          ).valueOf()
     }
 
     static mapToList(data?: CandleChartResponse[]) {
         return data.map(item => new CandleChartResponse(item))
     }
+
+    
 }
