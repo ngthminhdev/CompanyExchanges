@@ -48,10 +48,10 @@ export class SharesService {
     if (!date) return {}
 
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
-    if(!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
-    
+    if (!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
+
     const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
-    
+
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
     const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const year = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
@@ -138,7 +138,6 @@ export class SharesService {
     INNER JOIN pe e
       ON e.code = t.code
     `
-    
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
     await this.redis.set(`${RedisKeys.headerStock}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.Minute })
@@ -419,7 +418,7 @@ export class SharesService {
     const redisData = await this.redis.get(`${RedisKeys.enterprisesSameIndustry}:${exchange}:${stock}`)
     if (redisData) return redisData
 
-    const date = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`)
+    const date = await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' and ratioCode = 'PRICE_TO_BOOK' order by date desc`)
 
     const query = `
       WITH temp
@@ -1148,32 +1147,46 @@ export class SharesService {
           break;
       }
       const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
-      return {chiTieu, top, sort}
+      return { chiTieu, top, sort }
     }
     switch (type) {
       case 'Ngân hàng':
         chiTieu = '1,101,102,2,201,202,3,4,5,6,601,602,7,8,9,10,11,12,1201,1202,13,14,15'
         top = 184
         break;
-    
+      case 'Bảo hiểm':
+        chiTieu = '1,2,3,4,5,7,8,9,305,11,13,14,15,16,17,18,20,21,22,23,24,25,28,29,31,33,34,35,36,37'
+        top = 240
+      case 'Dịch vụ tài chính':
+        chiTieu = '1,101,102,103,104,106,108,110,111,112,2,201,206,207,209,211,212,214,3,301,302,304,4,401,402,404,405,6,7,9,901,902,10,1001,1002,11,1101'
+        top = 296
+        break
       default:
+        chiTieu = '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21'
+        top = 168
         break;
     }
+    const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
+    return { chiTieu, top, sort }
   }
 
   async businessResultDetail(stock: string, order: number, is_chart: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    if(!LV2[0]) return []
-    const {chiTieu, top, sort} = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
+    if (!LV2[0]) return []
+
+    const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
+    if(redisData) return redisData
+
+    const { chiTieu, top, sort } = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
 
     let select = ``, group = ``
     switch (order) {
       case TimeTypeEnum.Quarter:
-        select = `value, ((value - LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) / LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) * 100 AS per, yearQuarter AS date,`
+        select = `value, case when LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC) <> 0 then ((value - LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) / LEAD(value, 1) OVER (PARTITION BY name ORDER BY yearQuarter DESC)) * 100 else 0 end AS per, yearQuarter AS date,`
         group = `order by yearQuarter desc`
         break;
       case TimeTypeEnum.Year:
-        select = `sum(value) as value, ((sum(value) - lead(sum(value), 1) over ( partition by name order by year desc)) / lead(sum(value), 1) over ( partition by name order by year desc)) * 100 as per, year as date,`
+        select = `sum(value) as value, case when (lead(sum(value), 1) over ( partition by name order by year desc)) <> 0 then ((sum(value) - lead(sum(value), 1) over ( partition by name order by year desc)) / (lead(sum(value), 1) over ( partition by name order by year desc))) * 100 else 0 end as per, year as date,`
         group = `group by year, name, id order by year desc`
         break
       default:
@@ -1184,14 +1197,15 @@ export class SharesService {
     AS (SELECT TOP ${top}
       ${select}
       CASE
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) = 0 THEN name
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
-        WHEN CHARINDEX('(', name) <> 0 AND
-          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
-        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX('.', name)),
-          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX('.', name))) - 2))
+      WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+      WHEN CHARINDEX('(', name) = 0 AND
+        CHARINDEX('.', name) = 0 THEN name
+      WHEN CHARINDEX('(', name) = 0 AND
+        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX(' ', name)))
+      WHEN CHARINDEX('(', name) <> 0 AND
+        CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+      ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
+        CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
       END AS name,
       ${sort}
     FROM financialReport.dbo.financialReportV2
@@ -1205,10 +1219,9 @@ export class SharesService {
     FROM temp
     ORDER BY date ASC, row_num ASC
     `
-    console.log(query);
-    
     const data = await this.mssqlService.query<BusinessResultDetailResponse[]>(query)
-    const dataMapped = BusinessResultDetailResponse.mapToList(data)
+    const dataMapped = BusinessResultDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
+    await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 }
