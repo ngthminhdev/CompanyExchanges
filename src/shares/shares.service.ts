@@ -1138,7 +1138,7 @@ export class SharesService {
           top = 48
           break
         case 'Dịch vụ tài chính':
-          chiTieu = '1,2,3,4,9,11'
+          chiTieu = '112,214,305,405,9,11'
           top = 48
           break
         default:
@@ -1175,7 +1175,7 @@ export class SharesService {
     if (!LV2[0]) return []
 
     const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
-    if(redisData) return redisData
+    // if (redisData) return redisData
 
     const { chiTieu, top, sort } = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
 
@@ -1225,14 +1225,59 @@ export class SharesService {
     return dataMapped
   }
 
-  async balanceSheetDetail(stock: string, order: number, is_chart: number){
+  private getChiTieuCDKT(type: string, is_chart: number) {
+    let chiTieu = '', top = 0
+    if (is_chart) {
+      switch (type) {
+        case 'Ngân hàng':
+          chiTieu = '102,108,2,302,303,308'
+          top = 48
+          break;
+        case 'Bảo hiểm':
+          chiTieu = '10101,10104,2,301,302,303'
+          top = 48
+          break;
+        case 'Dịch vụ tài chính':
+          chiTieu = '10101,10201,3,4,2,5'
+          top = 48
+          break;
+        default:
+          break;
+      }
+      const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
+      return { chiTieu, top, sort }
+    }
+    switch (type) {
+      case 'Ngân hàng':
+        chiTieu = '1,101,102,104,105,106,108,109,110,111,112,2,301,302,303,304,305,306,307,308,309,4'
+        top = 176
+        break;
+      case 'Bảo hiểm':
+        chiTieu = '101,10101,10102,10103,10104,10105,102,10201,10202,10203,10204,10205,10206,2,301,30101,30102,30103,30104,302,30201,30202,303,304'
+        top = 192
+        break
+      case 'Dịch vụ tài chính':
+        chiTieu = '1,10101,10102,10201,10202,10205,2,3,30101,30103,30106,30109,30110,30113,30117,302,30204,4,40101,40107,5'
+        top = 176
+        break  
+      default:
+        break;
+    }
+    const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
+    return { chiTieu, top, sort }
+  }
+
+  async balanceSheetDetail(stock: string, order: number, is_chart: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
     if (!LV2[0]) return []
+
+    console.log(LV2);
+
 
     // const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
     // if(redisData) return redisData
 
-    const { chiTieu, top, sort } = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
+    const { chiTieu, top, sort } = this.getChiTieuCDKT(LV2[0].LV2, is_chart)
 
     let select = ``, group = ``
     switch (order) {
@@ -1241,7 +1286,7 @@ export class SharesService {
         group = `order by yearQuarter desc`
         break;
       case TimeTypeEnum.Year:
-        select = `sum(value) as valua, year as date,`
+        select = `sum(value) as value, year as date,`
         group = `group by year, name, id order by year desc`
         break
       default:
@@ -1265,7 +1310,7 @@ export class SharesService {
       ${sort}
     FROM financialReport.dbo.financialReportV2
     WHERE code = '${stock}'
-    AND type = 'KQKD'
+    AND type = 'CDKT'
     AND id IN (${chiTieu})
     AND RIGHT(yearQuarter, 1) <> 0
     ${group})
@@ -1274,9 +1319,11 @@ export class SharesService {
     FROM temp
     ORDER BY date ASC, row_num ASC
     `
+    console.log(query);
+
     const data = await this.mssqlService.query<BusinessResultDetailResponse[]>(query)
-    const dataMapped = BusinessResultDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
-    await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
-    return dataMapped
+    // const dataMapped = BusinessResultDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
+    // await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return data
   }
 }

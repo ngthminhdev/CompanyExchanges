@@ -55,7 +55,7 @@ export class BusinessResultDetailResponse {
                 this.name = data?.name || ''
                 if (is_chart) {
                     switch (data.name) {
-                        case 'DOANH THU HOẠT ĐỘNG':
+                        case 'Cộng doanh thu hoạt động':
                             this.color = {// Thêm thuộc tính color ở đây
                                 linearGradient: {
                                     x1: 0,
@@ -69,7 +69,7 @@ export class BusinessResultDetailResponse {
                                 ],
                             }
                             break;
-                        case 'CHI PHÍ HOẠT ĐỘNG':
+                        case 'Cộng chi phí hoạt động':
                             this.color = {// Thêm thuộc tính color ở đây
                                 linearGradient: {
                                     x1: 0,
@@ -84,7 +84,7 @@ export class BusinessResultDetailResponse {
                                 ],
                             }
                             break
-                        case 'DOANH THU HOẠT ĐỘNG TÀI CHÍNH':
+                        case 'Cộng doanh thu hoạt động tài chính':
                             this.color = { // Thêm thuộc tính color ở đây
                                 linearGradient: {
                                     x1: 0,
@@ -98,7 +98,7 @@ export class BusinessResultDetailResponse {
                                 ],
                             }
                             break
-                        case 'CHI PHÍ TÀI CHÍNH':
+                        case 'Cộng chi phí tài chính':
                             this.color = {// Thêm thuộc tính color ở đây
                                 linearGradient: {
                                     x1: 0,
