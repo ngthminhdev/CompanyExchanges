@@ -42,7 +42,7 @@ export class KafkaService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
-  ) {}
+  ) { }
 
   send<T>(event: string, message: T): void {
     try {
@@ -397,8 +397,18 @@ export class KafkaService {
     );
   }
 
-  handleChartNen(payload: ChartNenInterface[]){
-    payload.map(item => this.send(`${SocketEmit.CoPhieu}-${item.code}`, {...item, time: moment(item.timeInday, 'HH:mm').valueOf()})
+  handleChartNen(payload: ChartNenInterface[]) {
+    payload.map(item => {
+      this.send(`${SocketEmit.CoPhieu}-${item.code}`, {
+        ...item, time: Date.UTC(
+          new Date().getFullYear(),
+          new Date().getMonth(),
+          new Date().getDate(),
+          moment(item.timeInday, 'HH:mm:ss').hour(),
+          moment(item.timeInday, 'HH:mm:ss').minute(),
+        ).valueOf()
+      })
+    }
     )
   }
 
