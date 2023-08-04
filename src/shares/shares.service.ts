@@ -1224,4 +1224,59 @@ export class SharesService {
     await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
+
+  async balanceSheetDetail(stock: string, order: number, is_chart: number){
+    const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
+    if (!LV2[0]) return []
+
+    // const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
+    // if(redisData) return redisData
+
+    const { chiTieu, top, sort } = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
+
+    let select = ``, group = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, yearQuarter AS date,`
+        group = `order by yearQuarter desc`
+        break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as valua, year as date,`
+        group = `group by year, name, id order by year desc`
+        break
+      default:
+        break;
+    }
+    const query = `
+    WITH temp
+    AS (SELECT TOP ${top}
+      ${select}
+      CASE
+      WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+      WHEN CHARINDEX('(', name) = 0 AND
+        CHARINDEX('.', name) = 0 THEN name
+      WHEN CHARINDEX('(', name) = 0 AND
+        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX(' ', name)))
+      WHEN CHARINDEX('(', name) <> 0 AND
+        CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+      ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
+        CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
+      END AS name,
+      ${sort}
+    FROM financialReport.dbo.financialReportV2
+    WHERE code = '${stock}'
+    AND type = 'KQKD'
+    AND id IN (${chiTieu})
+    AND RIGHT(yearQuarter, 1) <> 0
+    ${group})
+    SELECT
+      *
+    FROM temp
+    ORDER BY date ASC, row_num ASC
+    `
+    const data = await this.mssqlService.query<BusinessResultDetailResponse[]>(query)
+    const dataMapped = BusinessResultDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
+    await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
 }

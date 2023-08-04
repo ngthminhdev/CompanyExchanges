@@ -12,8 +12,10 @@ import { StockOrderDto } from './dto/stock-order.dto';
 import { StockDto } from './dto/stock.dto';
 import { StockTypeDto } from './dto/stockType.dto';
 import { TransactionDataDto } from './dto/transactionData.dto';
+import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
+import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
@@ -244,7 +246,7 @@ export class SharesController {
 
   @Get('chi-tiet-luu-chuyen-tien-te')
   @ApiOperation({summary: 'Báo cáo lưu chuyển tiền tệ'})
-  @ApiOkResponse({type: NewsStockResponse})
+  @ApiOkResponse({type: CastFlowDetailResponse})
   async castFlowDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.castFlowDetail(q.stock, +q.order, +q.is_chart)
@@ -256,7 +258,7 @@ export class SharesController {
 
   @Get('chi-tiet-ket-qua-kinh-doanh')
   @ApiOperation({summary: 'Báo cáo kết quả kinh doanh'})
-  @ApiOkResponse({type: NewsStockResponse})
+  @ApiOkResponse({type: BusinessResultDetailResponse})
   async businessResultDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.businessResultDetail(q.stock, +q.order, +q.is_chart)
@@ -265,4 +267,16 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  // @Get('chi-tiet-can-doi-ke-toan')
+  // @ApiOperation({summary: 'Báo cáo cân đối kế toán'})
+  // @ApiOkResponse({type: BusinessResultDetailResponse})
+  // async balanceSheetDetail(@Query() q: CastFlowDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.sharesService.balanceSheetDetail(q.stock, +q.order, +q.is_chart)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
 }

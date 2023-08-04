@@ -34,6 +34,7 @@ export class BusinessResultDetailResponse {
                 } : {}
                 break;
             case 'Bảo hiểm':
+                this.name = data?.name || ''
                 this.color = is_chart ? {
                     linearGradient: {
                         x1: 0,
@@ -51,6 +52,7 @@ export class BusinessResultDetailResponse {
                 } : {}
                 break
             case 'Dịch vụ tài chính':
+                this.name = data?.name || ''
                 if (is_chart) {
                     switch (data.name) {
                         case 'DOANH THU HOẠT ĐỘNG':
