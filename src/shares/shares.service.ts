@@ -8,6 +8,7 @@ import { MssqlService } from '../mssql/mssql.service';
 import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
+import { BalanceSheetDetailResponse } from './responses/balanceSheetDetail.response';
 import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
@@ -47,6 +48,8 @@ export class SharesService {
     const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
     if (!date) return {}
 
+    const dateTickerTrade = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where code = '${stock}' order by date desc`))[0]?.date
+
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
     if (!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
 
@@ -78,7 +81,7 @@ export class SharesService {
     INNER JOIN tradeIntraday.dbo.tickerTradeVNDIntraday t
       ON i.code = t.code
     WHERE i.code = '${stock}'
-    AND t.date = '${moment().format('YYYY-MM-DD')}'
+    AND t.date = '${UtilCommonTemplate.toDate(dateTickerTrade)}'
     order by t.timeInday desc
     ),
     pivotted
@@ -1175,7 +1178,7 @@ export class SharesService {
     if (!LV2[0]) return []
 
     const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
 
     const { chiTieu, top, sort } = this.getChiTieuKQKD(LV2[0].LV2, is_chart)
 
@@ -1201,7 +1204,7 @@ export class SharesService {
       WHEN CHARINDEX('(', name) = 0 AND
         CHARINDEX('.', name) = 0 THEN name
       WHEN CHARINDEX('(', name) = 0 AND
-        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX(' ', name)))
+        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
       WHEN CHARINDEX('(', name) <> 0 AND
         CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
       ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
@@ -1242,6 +1245,8 @@ export class SharesService {
           top = 48
           break;
         default:
+          chiTieu = '102,101,301,302,4'
+          top = 40
           break;
       }
       const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
@@ -1257,10 +1262,12 @@ export class SharesService {
         top = 192
         break
       case 'Dịch vụ tài chính':
-        chiTieu = '1,10101,10102,10201,10202,10205,2,3,30101,30103,30106,30109,30110,30113,30117,302,30204,4,40101,40107,5'
+        chiTieu = '1,10101,10102,10201,10202,10205,2,3,30101,30103,30106,30109,30110,30111,30113,30117,302,30204,4,40101,40107,5'
         top = 176
-        break  
+        break
       default:
+        chiTieu = '101,10101,10102,10103,10104,10105,102,10201,10202,10203,10204,10205,10206,10207,2,301,30101,30102,302,30201,30202,4'
+        top = 176
         break;
     }
     const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
@@ -1271,11 +1278,8 @@ export class SharesService {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
     if (!LV2[0]) return []
 
-    console.log(LV2);
-
-
-    // const redisData = await this.redis.get(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`)
-    // if(redisData) return redisData
+    const redisData = await this.redis.get(`${RedisKeys.balanceSheetDetail}:${order}:${stock}:${is_chart}`)
+    if(redisData) return redisData
 
     const { chiTieu, top, sort } = this.getChiTieuCDKT(LV2[0].LV2, is_chart)
 
@@ -1292,7 +1296,7 @@ export class SharesService {
       default:
         break;
     }
-    const query = `
+    let query = `
     WITH temp
     AS (SELECT TOP ${top}
       ${select}
@@ -1301,7 +1305,7 @@ export class SharesService {
       WHEN CHARINDEX('(', name) = 0 AND
         CHARINDEX('.', name) = 0 THEN name
       WHEN CHARINDEX('(', name) = 0 AND
-        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX(' ', name)))
+        CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
       WHEN CHARINDEX('(', name) <> 0 AND
         CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
       ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
@@ -1319,11 +1323,193 @@ export class SharesService {
     FROM temp
     ORDER BY date ASC, row_num ASC
     `
-    console.log(query);
 
-    const data = await this.mssqlService.query<BusinessResultDetailResponse[]>(query)
-    // const dataMapped = BusinessResultDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
-    // await this.redis.set(`${RedisKeys.businessResultDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
-    return data
+    if (is_chart && LV2[0].LV2 == 'Dịch vụ tài chính') {
+      query = `
+      WITH temp
+      AS (SELECT TOP ${top}
+        ${select}
+        CASE
+        WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) = 0 THEN name
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
+        WHEN CHARINDEX('(', name) <> 0 AND
+          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
+          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
+        END AS name,
+        id,
+        ${sort}
+      FROM financialReport.dbo.financialReportV2
+      WHERE code = '${stock}'
+      AND type = 'CDKT'
+      AND id IN (${chiTieu})
+      AND RIGHT(yearQuarter, 1) <> 0
+      ${group}),
+      ngan_han
+      AS (SELECT
+        date,
+        [10101] / [2] * 100 AS value,
+        'ngan han' AS name,
+        4 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([10101], [2])) AS chuyen),
+      dai_han
+      AS (SELECT
+        [10201] / [2] * 100 AS value,
+        date,
+        'dai han' AS name,
+        5 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([10201], [2])) AS chuyen),
+      no_phai_tra
+      AS (SELECT
+        [3] / [5] * 100 AS value,
+        date,
+        'no phai tra' AS name,
+        6 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([3], [5])) AS chuyen),
+      von_so_huu
+      AS (SELECT
+        [4] / [5] * 100 AS value,
+        date,
+        'von so huu' AS name,
+        7 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([4], [5])) AS chuyen),
+      unionnn
+      AS (SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM temp
+      WHERE row_num NOT IN (4, 5)
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM ngan_han
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM dai_han
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM no_phai_tra
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM von_so_huu)
+      SELECT
+        *
+      FROM unionnn
+      ORDER BY date ASC, row_num ASC
+      `
+    } else if (is_chart && LV2[0].LV2 != 'Ngân hàng' && LV2[0].LV2 != 'Bảo hiểm' && LV2[0].LV2 != 'Dịch vụ tài chính') {
+      query = `
+      WITH temp
+      AS (SELECT TOP ${top}
+        ${select}
+        CASE
+        WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) = 0 THEN name
+        WHEN CHARINDEX('(', name) = 0 AND
+          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
+        WHEN CHARINDEX('(', name) <> 0 AND
+          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
+        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
+          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
+        END AS name,
+        id,
+        ${sort}
+      FROM financialReport.dbo.financialReportV2
+      WHERE code = '${stock}'
+      AND type = 'CDKT'
+      AND id IN (${chiTieu})
+      AND RIGHT(yearQuarter, 1) <> 0
+      ${group}),
+      no_phai_tra
+      AS (SELECT
+        [301] / [4] * 100 AS value,
+        date,
+        'no phai tra' AS name,
+        4 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([301], [4])) AS chuyen),
+      von_so_huu
+      AS (SELECT
+        [302] / [4] * 100 AS value,
+        date,
+        'von so huu' AS name,
+        5 AS row_num
+      FROM (SELECT
+        date,
+        id,
+        value
+      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([302], [4])) AS chuyen),
+      unionnn
+      AS (SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM temp
+      WHERE row_num NOT IN (4, 5)
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM no_phai_tra
+      UNION ALL
+      SELECT
+        date,
+        value,
+        name,
+        row_num
+      FROM von_so_huu)
+      SELECT
+        *
+      FROM unionnn
+      ORDER BY date ASC, row_num ASC
+      `
+    }
+    const data = await this.mssqlService.query<BalanceSheetDetailResponse[]>(query)
+    const dataMapped = BalanceSheetDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
+    await this.redis.set(`${RedisKeys.balanceSheetDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
 }
