@@ -17,6 +17,7 @@ import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
+import { FinancialIndicatorsDetailResponse } from './responses/financialIndicatorsDetail.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { NewsStockResponse } from './responses/newsStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
@@ -1332,7 +1333,7 @@ export class SharesService {
 
   async balanceSheetDetailCircle(stock: string, order: number){
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    if(!LV2[0]?.LV2) return {}
+    if(!LV2[0]?.LV2) return []
 
     const redisData = await this.redis.get(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`)
     if(redisData) return redisData
@@ -1356,6 +1357,7 @@ export class SharesService {
           where code = '${stock}'
           and id IN (10101, 10201, 3, 4, 2, 5)
           and type = 'CDKT'
+          AND RIGHT(yearQuarter, 1) <> 0
           ${group}
           ),
         ngan_han as (
@@ -1386,6 +1388,7 @@ export class SharesService {
                 where code = '${stock}'
                 and id IN (301, 302, 4)
                 and type = 'CDKT'
+                AND RIGHT(yearQuarter, 1) <> 0
               ${group}),
      no_phai_tra as (select 'no phai tra' as name, [301] / [4] * 100 as value, date
                      from temp as source pivot ( sum(value) for id in ([301], [4])) as chuyen),
@@ -1408,6 +1411,73 @@ export class SharesService {
     const data = await this.mssqlService.query<BalanceSheetDetailCircleResponse[]>(query)
     const dataMapped = BalanceSheetDetailCircleResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  private getChiTieuCSTC(industry: string, stock: string): string{
+    if(industry == 'Ngân hàng'){
+      return ``
+    }else{
+      return [
+        {name: 'Chi so danh gia', value: 0},
+        {name: 'P/E', value: 'PE'},
+        {name: 'P/B', value: 'PB'},
+        {name: 'EPS', value: 'EPS'},
+        {name: 'BVPS', value: 'BVPS'},
+        {name: 'Hieu qua hoat dong', value: 0},
+        {name: 'Vong quay tai san co dinh', value: 'FAT'},
+        {name: 'Vong quay tong tai san', value: 'ATR'},
+        {name: 'Vong quay tien', value: 'CTR'},
+        {name: 'Vong quay VCSH', value: 'CT'},
+        {name: 'Kha nang thanh toan', value: 0},
+        {name: 'Chi so kha nang tra no', value: 'DSCR'},
+        {name: 'Ty le no hien tai/Tong tai san', value: 'totalDebtToTotalAssets'},
+        {name: 'Ty le no hien tai/VCSH', value: 'DE'},
+        {name: 'Ty le dam bao tra no bang tai san', value: 'ACR'},
+        {name: 'Thanh khoan', value: 0},
+        {name: 'Ty so thanh toan hien hanh', value: 'currentRatio'},
+        {name: 'Ty so thanh nhanh', value: 'quickRatio'},
+        {name: 'Ty so thanh toan tien mat', value: 'cashRatio'},
+        {name: 'Kha nang thanh toan lai vay', value: 'interestCoverageRatio'},
+        {name: 'Kha nang sinh loi', value: 0},
+        {name: 'Ty suat loi nhuan gop bien', value: 'GPM'},
+        {name: 'Ty suat loi nhuan rong', value: 'NPM'},
+        {name: 'ROE', value: 'ROE'},
+        {name: 'ROA', value: 'ROA'},
+      ].map((item, index) => `
+      select '${item.name}' as name, ${item.value} as value, yearQuarter as date, ${index} as row from financialReport.dbo.calBCTC where code = '${stock}' and RIGHT(yearQuarter, 1) <> 0
+      `).join(`union all`)
+    }
+  }
+
+  async financialIndicatorsDetail(stock: string, order: number, is_chart: number){
+    const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
+    if(!LV2[0]?.LV2) return []
+
+    const temp = this.getChiTieuCSTC(LV2[0]?.LV2, stock);
+    if(!temp) return []
+
+    let select = ``
+
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `select top 200 * from temp order by date desc`
+        break;
+      case TimeTypeEnum.Year:
+        select = `select top 200 name, sum(value) as value, LEFT(date, 4) as date, sum(row) as row from temp group by LEFT(date, 4), name order by LEFT(date, 4) desc`
+        break
+      default:
+        break;
+    }
+
+    const query = `
+    with temp as (${temp}),
+    date as (${select})
+    select * from date order by date asc, row asc
+    `
+    
+    const data: any[] = await this.mssqlService.query<FinancialIndicatorsDetailResponse[]>(query)
+    const dataMapped = FinancialIndicatorsDetailResponse.mapToList(data, is_chart)
     return dataMapped
   }
 }
