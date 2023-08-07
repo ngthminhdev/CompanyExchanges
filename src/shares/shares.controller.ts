@@ -293,4 +293,16 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  @Get('chi-tiet-chi-so-tai-chinh')
+  @ApiOperation({summary: 'Báo cáo chỉ số tài chính'})
+  @ApiOkResponse({type: BalanceSheetDetailResponse})
+  async financialIndicatorsDetail(@Query() q: CastFlowDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.financialIndicatorsDetail(q.stock, +q.order, +q.is_chart)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
