@@ -18,6 +18,9 @@ import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-b
 import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
 import { ListOfBondsToMaturityResponse } from './responses/list-of-bonds-to-maturity.response';
 import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enterprises-with-late-bond.response';
+import { CentralExchangeRateResponse } from './responses/central-exchange-rate.response';
+import { InterestRateResponse } from './responses/interest-rate.response';
+import { ExchangeRateIndexTableResponse } from './responses/exchange-rate-index-table.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -496,5 +499,53 @@ export class MacroController {
     }
   }
 
-  
+  //Tỷ giá và lãi suất
+
+  @Get('ty-gia-trung-tam')
+  @ApiOperation({summary: 'Tỷ giá trung tâm USD/VND'})
+  @ApiOkResponse({type: CentralExchangeRateResponse})
+  async centralExchangeRate (@Res() res: Response){
+    try {
+      const data = await this.macrosService.centralExchangeRate()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('bang-chi-so-ty-gia')
+  @ApiOperation({summary: 'Bảng chỉ số tỷ giá'})
+  @ApiOkResponse({type: ExchangeRateIndexTableResponse})
+  async exchangeRateIndexTable (@Res() res: Response){
+    try {
+      const data = await this.macrosService.exchangeRateIndexTable()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  // @Get('bien-dong-ty-gia-lai-suat-voi-thi-truong')
+  // @ApiOperation({summary: 'Biến động tỷ giá & lãi suất với thị trường'})
+  // @ApiOkResponse({type: CentralExchangeRateResponse})
+  // async exchangeRateAndInterestRate (@Res() res: Response){
+  //   try {
+  //     const data = await this.macrosService.exchangeRateAndInterestRate()
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
+
+  @Get('lai-suat')
+  @ApiOperation({summary: 'Lãi suất (%)'})
+  @ApiOkResponse({type: InterestRateResponse})
+  async interestRate(@Res() res: Response){
+    try {
+      const data = await this.macrosService.interestRate()
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }

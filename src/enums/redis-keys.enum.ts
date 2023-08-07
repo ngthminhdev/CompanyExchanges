@@ -151,6 +151,11 @@ export enum RedisKeys {
   listOfEnterprisesWithLateBond = 'list-of-enterprises-with-late-bond',
   structureOfOutstandingDebt = 'structure-of-outstanding-debt',
   proportionOfOutstandingLoansOfEnterprises = 'proportion-of-outstanding-loans-of-enterprises',
+
+  //Ty gia va lai suat
+  centralExchangeRate = 'central-exchange-rate',
+  exchangeRateIndexTable = 'exchange-rate-index-table',
+  interestRate = 'interest-rate',
     
   //Filter
   filter = 'filter',
