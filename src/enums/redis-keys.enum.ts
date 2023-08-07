@@ -175,5 +175,6 @@ export enum RedisKeys {
   newsStock = 'news-stock',
   castFlowDetail = 'cast-flow-detail',
   businessResultDetail = 'business-result-detail',
-  balanceSheetDetail = 'balance-sheet-detail'
+  balanceSheetDetail = 'balance-sheet-detail',
+  balanceSheetDetailCircle = 'balance-sheet-detail-circle'
 }

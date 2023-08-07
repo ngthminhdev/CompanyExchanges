@@ -13,6 +13,7 @@ import { StockDto } from './dto/stock.dto';
 import { StockTypeDto } from './dto/stockType.dto';
 import { TransactionDataDto } from './dto/transactionData.dto';
 import { BalanceSheetDetailResponse } from './responses/balanceSheetDetail.response';
+import { BalanceSheetDetailCircleResponse } from './responses/balanceSheetDetailCircle.response';
 import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
@@ -275,6 +276,18 @@ export class SharesController {
   async balanceSheetDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.balanceSheetDetail(q.stock, +q.order, +q.is_chart)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('chi-tiet-can-doi-ke-toan-chart-tron')
+  @ApiOperation({summary: 'Báo cáo cân đối kế toán chart tròn'})
+  @ApiOkResponse({type: BalanceSheetDetailCircleResponse})
+  async balanceSheetDetailCircle(@Query() q: CastFlowDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.balanceSheetDetailCircle(q.stock, +q.order)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

@@ -9,6 +9,7 @@ import { NewsEventResponse } from '../news/response/event.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BalanceSheetDetailResponse } from './responses/balanceSheetDetail.response';
+import { BalanceSheetDetailCircleResponse } from './responses/balanceSheetDetailCircle.response';
 import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
@@ -1240,12 +1241,12 @@ export class SharesService {
           top = 48
           break;
         case 'Dịch vụ tài chính':
-          chiTieu = '10101,10201,3,4,2,5'
-          top = 48
+          chiTieu = '10101,10201,3,4'
+          top = 32
           break;
         default:
-          chiTieu = '102,101,301,302,4'
-          top = 40
+          chiTieu = '102,101,301,302'
+          top = 32
           break;
       }
       const sort = `case ${chiTieu.split(',').map((item, index) => `when id = ${+item} then ${index}`).join(' ')} end as row_num`
@@ -1322,193 +1323,91 @@ export class SharesService {
     FROM temp
     ORDER BY date ASC, row_num ASC
     `
-
-    if (is_chart && LV2[0].LV2 == 'Dịch vụ tài chính') {
-      query = `
-      WITH temp
-      AS (SELECT TOP ${top}
-        ${select}
-        CASE
-        WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) = 0 THEN name
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
-        WHEN CHARINDEX('(', name) <> 0 AND
-          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
-        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
-          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
-        END AS name,
-        id,
-        ${sort}
-      FROM financialReport.dbo.financialReportV2
-      WHERE code = '${stock}'
-      AND type = 'CDKT'
-      AND id IN (${chiTieu})
-      AND RIGHT(yearQuarter, 1) <> 0
-      ${group}),
-      ngan_han
-      AS (SELECT
-        date,
-        [10101] / [2] * 100 AS value,
-        'ngan han' AS name,
-        4 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([10101], [2])) AS chuyen),
-      dai_han
-      AS (SELECT
-        [10201] / [2] * 100 AS value,
-        date,
-        'dai han' AS name,
-        5 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([10201], [2])) AS chuyen),
-      no_phai_tra
-      AS (SELECT
-        [3] / [5] * 100 AS value,
-        date,
-        'no phai tra' AS name,
-        6 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([3], [5])) AS chuyen),
-      von_so_huu
-      AS (SELECT
-        [4] / [5] * 100 AS value,
-        date,
-        'von so huu' AS name,
-        7 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([4], [5])) AS chuyen),
-      unionnn
-      AS (SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM temp
-      WHERE row_num NOT IN (4, 5)
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM ngan_han
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM dai_han
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM no_phai_tra
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM von_so_huu)
-      SELECT
-        *
-      FROM unionnn
-      ORDER BY date ASC, row_num ASC
-      `
-    } else if (is_chart && LV2[0].LV2 != 'Ngân hàng' && LV2[0].LV2 != 'Bảo hiểm' && LV2[0].LV2 != 'Dịch vụ tài chính') {
-      query = `
-      WITH temp
-      AS (SELECT TOP ${top}
-        ${select}
-        CASE
-        WHEN CHARINDEX('- ', name) <> 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) = 0 THEN name
-        WHEN CHARINDEX('(', name) = 0 AND
-          CHARINDEX('.', name) <> 0 THEN LTRIM(RIGHT(name, LEN(name) - CHARINDEX('.', name)))
-        WHEN CHARINDEX('(', name) <> 0 AND
-          CHARINDEX('.', name) = 0 THEN LTRIM(LEFT(name, CHARINDEX('(', name) - 2))
-        ELSE LTRIM(LEFT(RIGHT(name, LEN(name) - CHARINDEX(' ', name)),
-          CHARINDEX('(', RIGHT(name, LEN(name) - CHARINDEX(' ', name))) - 2))
-        END AS name,
-        id,
-        ${sort}
-      FROM financialReport.dbo.financialReportV2
-      WHERE code = '${stock}'
-      AND type = 'CDKT'
-      AND id IN (${chiTieu})
-      AND RIGHT(yearQuarter, 1) <> 0
-      ${group}),
-      no_phai_tra
-      AS (SELECT
-        [301] / [4] * 100 AS value,
-        date,
-        'no phai tra' AS name,
-        4 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([301], [4])) AS chuyen),
-      von_so_huu
-      AS (SELECT
-        [302] / [4] * 100 AS value,
-        date,
-        'von so huu' AS name,
-        5 AS row_num
-      FROM (SELECT
-        date,
-        id,
-        value
-      FROM temp) AS source PIVOT (SUM(value) FOR id IN ([302], [4])) AS chuyen),
-      unionnn
-      AS (SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM temp
-      WHERE row_num NOT IN (4, 5)
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM no_phai_tra
-      UNION ALL
-      SELECT
-        date,
-        value,
-        name,
-        row_num
-      FROM von_so_huu)
-      SELECT
-        *
-      FROM unionnn
-      ORDER BY date ASC, row_num ASC
-      `
-    }
+    
     const data = await this.mssqlService.query<BalanceSheetDetailResponse[]>(query)
     const dataMapped = BalanceSheetDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
     await this.redis.set(`${RedisKeys.balanceSheetDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async balanceSheetDetailCircle(stock: string, order: number){
+    const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
+    if(!LV2[0]?.LV2) return {}
+
+    const redisData = await this.redis.get(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`)
+    if(redisData) return redisData
+
+    let select = ``, group = ``, query = ``
+    switch (order) {
+      case TimeTypeEnum.Quarter:
+        select = `value, yearQuarter as date, id`
+        group = `order by yearQuarter desc`
+        break;
+      case TimeTypeEnum.Year:
+        select = `sum(value) as value, year as date, id`
+        group = `group by year, id order by year desc`
+      default:
+        break;
+    }
+    if(LV2[0]?.LV2 == 'Dịch vụ tài chính'){
+      query = `
+      with temp as (select top 6 ${select}
+        from financialReport.dbo.financialReportV2
+          where code = '${stock}'
+          and id IN (10101, 10201, 3, 4, 2, 5)
+          and type = 'CDKT'
+          ${group}
+          ),
+        ngan_han as (
+            select 'ngan han' as name, [10101] / [2] * 100 as value, date from temp as source pivot ( sum(value) for id in([10101], [2])) as chuyen
+        ),
+        dai_han as (
+            select 'dai han' as name, [10201] / [2] * 100 as value, date from temp as source pivot ( sum(value) for id in([10201], [2])) as chuyen
+        ),
+            no_phai_tra as (
+            select 'no phai tra' as name, [3] / [5] * 100 as value, date from temp as source pivot ( sum(value) for id in([3], [5])) as chuyen
+        ),
+            von_so_huu as (
+            select 'von chu so huu' as name, [4] / [5] * 100 as value, date from temp as source pivot ( sum(value) for id in([4], [5])) as chuyen
+        )
+        select * from ngan_han
+        union all
+        select * from dai_han
+        union all
+        select * from no_phai_tra
+        union all
+        select * from von_so_huu
+      `
+
+    }else{
+      query = `
+      with temp as (select top 3 ${select}
+              from financialReport.dbo.financialReportV2
+                where code = '${stock}'
+                and id IN (301, 302, 4)
+                and type = 'CDKT'
+              ${group}),
+     no_phai_tra as (select 'no phai tra' as name, [301] / [4] * 100 as value, date
+                     from temp as source pivot ( sum(value) for id in ([301], [4])) as chuyen),
+     von_so_huu as (select 'von chu so huu' as name, [302] / [4] * 100 as value, date
+                    from temp as source pivot ( sum(value) for id in ([302], [4])) as chuyen),
+     tong_von as (select 'tong nguon von' as name, value, date
+                  from temp
+                  where id = 4)
+      select *
+      from no_phai_tra
+      union all
+      select *
+      from von_so_huu
+      union all
+      select *
+      from tong_von
+      `
+    }
+    
+    const data = await this.mssqlService.query<BalanceSheetDetailCircleResponse[]>(query)
+    const dataMapped = BalanceSheetDetailCircleResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 }
