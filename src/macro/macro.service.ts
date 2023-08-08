@@ -1356,13 +1356,14 @@ export class MacroService {
   async centralExchangeRate() {
     const redisData = await this.redis.get(`${RedisKeys.centralExchangeRate}`)
     if (redisData) return redisData
+    
     const query = `
-    select giaTri as value, thoiDiem as date from macroEconomic.dbo.DuLieuViMo
+    with temp as (select top 30 giaTri as value, thoiDiem as date from macroEconomic.dbo.DuLieuViMo
     where phanBang = N'TỶ GIÁ'
     and nhomDulieu = N'CHỈ SỐ TỶ GIÁ'
     and chiTieu = N'Tỷ giá trung tâm (từ 04/01/2016) (VNĐ/USD)	'
-    and thoiDiem >= '2018-01-01'
-    order by thoiDiem asc
+    order by thoiDiem desc)
+    select * from temp order by date asc
     `
     const data = await this.mssqlService.query<CentralExchangeRateResponse[]>(query)
     const dataMapped = CentralExchangeRateResponse.mapToList(data)
