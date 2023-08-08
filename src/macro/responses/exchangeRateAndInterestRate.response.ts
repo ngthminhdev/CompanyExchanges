@@ -33,8 +33,8 @@ export class ExchangeRateAndInterestRateResponse {
                 this.name = 'Tỷ giá'
                 this.color = '#65A6FA'
                 break;
-            case 'VN-Index':
-                this.name = 'VNINDEX'
+            case 'VNINDEX':
+                this.name = 'VN-Index'
                 this.color = '#00CADC'
                 break;
             default:
