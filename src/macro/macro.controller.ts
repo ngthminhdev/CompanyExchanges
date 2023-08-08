@@ -1,26 +1,28 @@
 import { Body, Controller, Get, HttpStatus, Post, Query, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { CatchException } from '../exceptions/common.exception';
 import { OrderDto } from '../market/dto/order.dto';
 import { BaseResponse } from '../utils/utils.response';
-import { MacroService } from './macro.service';
-import { GDPSwagger } from './responses/gdp.response';
-import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
-import { LaborForceResponse } from './responses/labor-force.response';
-import { CatchException } from '../exceptions/common.exception';
-import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
+import { ExchangeRateAndInterestRateDto } from './dto/exchange-rate-interest-rate.dto';
 import { FDIOrderDto } from './dto/fdi-order.dto';
-import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
 import { ForeignInvestmentIndexDto } from './dto/foreign-investment-index.dto';
-import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
+import { IndustrialIndexDto } from './dto/ipp-industry-index.dto';
+import { IPPIndustryDto, IPPMostIndusProductionDto, IPPProductionIndexDto } from './dto/ipp-industry.dto';
+import { MacroService } from './macro.service';
 import { AccumulatedResponse } from './responses/accumulated.response';
-import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
+import { CentralExchangeRateResponse } from './responses/central-exchange-rate.response';
 import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
+import { ExchangeRateIndexTableResponse } from './responses/exchange-rate-index-table.response';
+import { ExchangeRateAndInterestRateResponse } from './responses/exchangeRateAndInterestRate.response';
+import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
+import { GDPSwagger } from './responses/gdp.response';
+import { InterestRateResponse } from './responses/interest-rate.response';
+import { LaborForceResponse } from './responses/labor-force.response';
 import { ListOfBondsToMaturityResponse } from './responses/list-of-bonds-to-maturity.response';
 import { ListOfEnterprisesWithLateBondResponse } from './responses/list-of-enterprises-with-late-bond.response';
-import { CentralExchangeRateResponse } from './responses/central-exchange-rate.response';
-import { InterestRateResponse } from './responses/interest-rate.response';
-import { ExchangeRateIndexTableResponse } from './responses/exchange-rate-index-table.response';
+import { TotalInvestmentProjectsResponse } from './responses/total-invesment-project.response';
+import { TotalOutstandingBalanceResponse } from './responses/total-outstanding-balance.response';
 
 @ApiTags('API - macro')
 @Controller('macro')
@@ -525,17 +527,17 @@ export class MacroController {
     }
   }
 
-  // @Get('bien-dong-ty-gia-lai-suat-voi-thi-truong')
-  // @ApiOperation({summary: 'Biến động tỷ giá & lãi suất với thị trường'})
-  // @ApiOkResponse({type: CentralExchangeRateResponse})
-  // async exchangeRateAndInterestRate (@Res() res: Response){
-  //   try {
-  //     const data = await this.macrosService.exchangeRateAndInterestRate()
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
+  @Get('bien-dong-ty-gia-lai-suat-voi-thi-truong')
+  @ApiOperation({summary: 'Biến động tỷ giá & lãi suất với thị trường'})
+  @ApiOkResponse({type: ExchangeRateAndInterestRateResponse})
+  async exchangeRateAndInterestRate (@Query() query: ExchangeRateAndInterestRateDto,@Res() res: Response){
+    try {
+      const data = await this.macrosService.exchangeRateAndInterestRate(+query.type)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 
   @Get('lai-suat')
   @ApiOperation({summary: 'Lãi suất (%)'})
