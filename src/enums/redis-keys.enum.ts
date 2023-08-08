@@ -182,5 +182,6 @@ export enum RedisKeys {
   castFlowDetail = 'cast-flow-detail',
   businessResultDetail = 'business-result-detail',
   balanceSheetDetail = 'balance-sheet-detail',
-  balanceSheetDetailCircle = 'balance-sheet-detail-circle'
+  balanceSheetDetailCircle = 'balance-sheet-detail-circle',
+  financialIndicatorsDetail = 'financial-indicators-detail'
 }

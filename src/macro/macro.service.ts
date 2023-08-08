@@ -1529,7 +1529,7 @@ export class MacroService {
     ORDER BY date DESC
     `
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
-    const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data)
+    const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }

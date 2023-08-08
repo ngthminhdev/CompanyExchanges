@@ -1416,7 +1416,35 @@ export class SharesService {
 
   private getChiTieuCSTC(industry: string, stock: string): string{
     if(industry == 'Ngân hàng'){
-      return ``
+      return [
+        {name: 'Chi so danh gia', value: 0},
+        {name: 'P/E', value: 'PE'},
+        {name: 'P/B', value: 'PB'},
+        {name: 'EPS', value: 'EPS'},
+        {name: 'BVPS', value: 'BVPS'},
+        {name: 'Hieu qua hoat dong', value: 0},
+        {name: 'ROE', value: 'ROE'},
+        {name: 'ROA', value: 'ROA'},
+        {name: 'NIM', value: 'NIM'},
+        {name: 'YOEA', value: 'YOEA'},
+        {name: 'Co cau tai san', value: 0},
+        {name: 'LAR_EAA', value: 'LAR_EAA'},
+        {name: 'LAR_TR', value: 'LAR_TR'},
+        {name: 'DDA_EAA', value: 'DDA_EAA'},
+        {name: 'LDR', value: 'LDR'},
+        {name: 'Thanh khoan', value: 0},
+        {name: 'LFR', value: 'LFR'},
+        {name: 'LTR', value: 'LTR'},
+        {name: 'CAR', value: 'CAR'},
+        {name: 'LAR_AR', value: 'LAR_AR'},
+        {name: 'Chat luong tin dung', value: 0},
+        {name: 'NPLR', value: 'NPLR'},
+        {name: 'NDR', value: 'NDR'},
+        {name: 'LLP_NPL', value: 'LLP_NPL'},
+        {name: 'NPL_TR', value: 'NPL_TR'},
+      ].map((item, index) => `
+      select '${item.name}' as name, ${item.value} as value, cast(year as varchar) + cast(quarter as varchar) as date, ${index} as row from financialReport.dbo.calBCTCNH where code = '${stock}'
+      `).join(`union all`)
     }else{
       return [
         {name: 'Chi so danh gia', value: 0},
@@ -1454,6 +1482,9 @@ export class SharesService {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
     if(!LV2[0]?.LV2) return []
 
+    const redisData = await this.redis.get(`${RedisKeys.financialIndicatorsDetail}:${order}:${stock}:${is_chart}`)
+    if(redisData) return redisData
+
     const temp = this.getChiTieuCSTC(LV2[0]?.LV2, stock);
     if(!temp) return []
 
@@ -1478,6 +1509,7 @@ export class SharesService {
     
     const data: any[] = await this.mssqlService.query<FinancialIndicatorsDetailResponse[]>(query)
     const dataMapped = FinancialIndicatorsDetailResponse.mapToList(data, is_chart)
+    await this.redis.set(`${RedisKeys.financialIndicatorsDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 }
