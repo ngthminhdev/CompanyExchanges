@@ -67,11 +67,53 @@ export class FinancialIndicatorsDetailResponse {
             case 'Ty suat loi nhuan rong':
                 this.name = 'Tỷ suất lợi nhuận ròng'
                 break
-            case 'Ty suat loi nhuan gop bien':
-                this.name = 'Tỷ suất lợi nhuận gộp biên'
+            case 'Co cau tai san':
+                this.name = 'CƠ CẤU TÀI SẢN'
                 break
-            case 'Ty suat loi nhuan gop bien':
-                this.name = 'Tỷ suất lợi nhuận gộp biên'
+            case 'NIM':
+                this.name = 'Tỷ lệ thu nhập lãi thuần (NIM)'
+                break
+            case 'YOEA':
+                this.name = 'Tỷ suất sinh lợi của tài sản có sinh lãi'
+                break
+            case 'LAR_EAA':
+                this.name = 'Cho vay/Tài sản sinh lãi'
+                break
+            case 'LAR_TR':
+                this.name = 'Cho vay/Tổng tài sản'
+                break
+            case 'DDA_EAA':
+                this.name = 'Tiền gửi khách hàng/Tài sản sinh lãi'
+                break
+            case 'LDR':
+                this.name = 'Cho vay/Tiền gửi khách hàng'
+                break
+            case 'LFR':
+                this.name = 'Dư nợ cho vay khách hàng/Tổng vốn huy động'
+                break
+            case 'LTR':
+                this.name = 'Dư nợ cho vay khách hàng/Tổng tài sản'
+                break
+            case 'CAR':
+                this.name = 'Vốn chủ sở hữu/Tổng tài sản'
+                break
+            case 'LAR_AR':
+                this.name = 'Tài sản thanh khoản/Nợ phải trả'
+                break
+            case 'Chat luong tin dung':
+                this.name = 'CHẤT LƯỢNG TÍN DỤNG'
+                break
+            case 'NPLR':
+                this.name = 'Tỷ lệ nợ xấu'
+                break
+            case 'NDR':
+                this.name = 'Tỷ lệ xóa nợ'
+                break
+            case 'LLP_NPL':
+                this.name = 'Dự phòng/Nợ xấu'
+                break
+            case 'NPL_TR':
+                this.name = 'Nợ xấu/Tổng tài sản'
                 break
             default:
                 break;
