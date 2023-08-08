@@ -13,6 +13,7 @@ import { AccumulatedResponse } from './responses/accumulated.response';
 import { CentralExchangeRateResponse } from './responses/central-exchange-rate.response';
 import { CorporateBondsIssuedSuccessfullyResponse } from './responses/corporate-bonds-issued-successfully.response';
 import { ExchangeRateIndexTableResponse } from './responses/exchange-rate-index-table.response';
+import { ExchangeRateAndInterestRateResponse } from './responses/exchangeRateAndInterestRate.response';
 import { ForeignInvestmentIndexResponse } from './responses/foreign-investment.response';
 import { GDPResponse } from './responses/gdp.response';
 import { InterestRateResponse } from './responses/interest-rate.response';
@@ -1459,10 +1460,78 @@ export class MacroService {
     return dataMapped
   }
 
-  async exchangeRateAndInterestRate() {
-    const query = ``
-    const data = await this.mssqlService.query(query)
-    return data
+  async exchangeRateAndInterestRate(type: number) {
+    const redisData = await this.redis.get(`${RedisKeys.exchangeRateAndInterestRate}:${type}`)
+    if(redisData) return redisData
+    const query = `
+    WITH ty_gia
+    AS (SELECT
+      'Ty gia' AS name,
+      CASE
+        WHEN LEAD(giaTri) OVER (ORDER BY thoiDiem DESC) = 0 THEN NULL
+        ELSE (giaTri - LEAD(giaTri) OVER (ORDER BY thoiDiem DESC)) / LEAD(giaTri) OVER (ORDER BY thoiDiem DESC) * 100
+      END AS value,
+      thoiDiem AS date
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'TỶ GIÁ'
+    AND nhomDulieu = N'CHỈ SỐ TỶ GIÁ'),
+    lai_suat
+    AS (SELECT
+      'Lai suat' AS name,
+      giaTri AS value,
+      thoiDiem AS date
+    FROM macroEconomic.dbo.DuLieuViMo
+    WHERE phanBang = N'LÃI SUẤT'
+    AND nhomDulieu = N'CHỈ SỐ LÃI SUẤT'
+    AND chiTieu = N'Lãi suất % (Qua đêm)'),
+    union_ls_tg
+    AS (SELECT
+      *
+    FROM ty_gia
+    UNION ALL
+    SELECT
+      *
+    FROM lai_suat),
+    vn
+    AS (SELECT
+      code AS name,
+      date,
+      closePrice AS value
+    FROM marketTrade.dbo.indexTradeVND
+    WHERE code = 'VNINDEX'
+    AND date IN (SELECT
+      date
+    FROM union_ls_tg
+    GROUP BY date
+    HAVING COUNT(date) >= 2)),
+    join_with_vnindex
+    AS (SELECT
+      name,
+      date,
+      value
+    FROM union_ls_tg
+    WHERE date IN (SELECT
+      date
+    FROM union_ls_tg
+    GROUP BY date
+    HAVING COUNT(date) >= 2)
+    UNION ALL
+    SELECT
+      name,
+      date,
+      value
+    FROM vn)
+    SELECT TOP 90
+      name, date,
+      ${type ? `case when name = 'VNINDEX' then (value - lead(value) over (partition by name order by date desc))/lead(value) over (partition by name order by date desc) * 100 else value end
+      as value` : `value`}
+    FROM join_with_vnindex
+    ORDER BY date DESC
+    `
+    const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
+    const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
   }
 
   async interestRate() {

@@ -156,6 +156,7 @@ export enum RedisKeys {
   centralExchangeRate = 'central-exchange-rate',
   exchangeRateIndexTable = 'exchange-rate-index-table',
   interestRate = 'interest-rate',
+  exchangeRateAndInterestRate = 'exchange-rate-and-interest-rate',
     
   //Filter
   filter = 'filter',
