@@ -404,8 +404,10 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getYearQuarters(2, order);
-
+    //Lấy ngày gần nhất trong db
+    const lastDate = (await this.mssqlService.query(`select top 1 year from financialReport.dbo.financialReport where reportName in (N'Tiền và tương đương tiền', N'Nợ ngắn hạn') order by year desc`))[0]?.year
+    
+    const date = UtilCommonTemplate.getYearQuarters(2, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').endOf('quarter').toDate());
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
     const query: string = `
@@ -456,7 +458,10 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getYearQuarters(2, order);
+    //Lấy ngày gần nhất trong db
+    const lastDate = (await this.mssqlService.query(`select top 1 year from financialReport.dbo.financialReport where reportName in (N'Doanh số thuần', N'Thu nhập lãi thuần') order by year desc`))[0]?.year
+    
+    const date = UtilCommonTemplate.getYearQuarters(2, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').startOf('quarter').toDate());
 
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
