@@ -19,6 +19,7 @@ import { ISRotationRatio } from './interfaces/rotation-ratio.interface';
 import { MarketService } from './market.service';
 import { CashRatioResponse } from './responses/cash-ratio.response';
 import { DebtSolvencyResponse } from './responses/debt-solvency.response';
+import { IndsProfitMarginsTableResponse } from './responses/indsProfitMarginsTable.response';
 import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
 import { InterestRatesOnLoansResponse } from './responses/interest-rates-on-loans.response';
 import { PayoutRatioResponse } from './responses/payout-ratio.response';
@@ -755,6 +756,36 @@ export class FinanceHealthService {
 
     const dataMapped = InterestRatesOnLoansResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.interestRatesOnLoans}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped;
+  }
+
+  async indsProfitMarginsTable(ex: string, type: number, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}:${type}`)
+    if(redisData) return redisData
+
+    const lastDate = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.pb_nganh order by date desc`))[0].date
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').startOf('quarter').toDate());
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+          SELECT
+              date,
+              industry,
+              floor,
+              gpm,
+              npm,
+              roa * 100 as roa,
+              roe * 100 as roe
+          FROM VISUALIZED_DATA.dbo.pb_nganh
+          WHERE floor = '${ex}'
+          and date IN ${dateFilter}
+        `;
+        
+    const data = await this.mssqlService.query<IndsProfitMarginsTableResponse[]>(query);
+
+    const dataMapped = IndsProfitMarginsTableResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }
 
