@@ -209,4 +209,24 @@ export class FinanceHealthController {
   //   );
   //   return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   // }
+
+
+  @Get('ty-suat-loi-nhuan-rong-cac-nganh')
+  @ApiOperation({
+    summary: `
+    Tỷ suất lợi nhuận ròng các ngành (%)
+    `,
+  })
+  @ApiOkResponse({ type: IndusInterestCoverageResponse })
+  async netProfitMarginByIndustries(
+    @Query() q: TimeFrameDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.fHealthService.netProfitMarginByIndustries(
+      q.exchange.toUpperCase(),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 }
