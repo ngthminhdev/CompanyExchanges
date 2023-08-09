@@ -202,7 +202,7 @@ export class FinanceHealthController {
     `,
   })
   @ApiOkResponse({ type: ProfitMarginSwagger })
-  async indsProfitMarginsTable(@Query() q: TimeFrameDto, @Res() res: Response) {
+  async indsProfitMarginsTable(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.indsProfitMarginsTable(
       q.exchange.toUpperCase(),
       parseInt(q.order),
