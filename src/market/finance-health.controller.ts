@@ -195,20 +195,21 @@ export class FinanceHealthController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  // @Get('ty-suat-loi-nhuan-cac-nhom-nganh-table')
-  // @ApiOperation({
-  //   summary: `
-  //     Diễn biến Tỷ suất lợi nhuận gộp biên các nhóm ngành
-  //   `,
-  // })
-  // @ApiOkResponse({ type: ProfitMarginSwagger })
-  // async indsProfitMarginsTable(@Query() q: TimeFrameDto, @Res() res: Response) {
-  //   const data = await this.fHealthService.indsProfitMarginsTable(
-  //     q.exchange.toUpperCase(),
-  //     parseInt(q.order),
-  //   );
-  //   return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  // }
+  @Get('ty-suat-loi-nhuan-cac-nhom-nganh-table')
+  @ApiOperation({
+    summary: `
+      Diễn biến Tỷ suất lợi nhuận gộp biên các nhóm ngành
+    `,
+  })
+  @ApiOkResponse({ type: ProfitMarginSwagger })
+  async indsProfitMarginsTable(@Query() q: TimeFrameDto, @Res() res: Response) {
+    const data = await this.fHealthService.indsProfitMarginsTable(
+      q.exchange.toUpperCase(),
+      parseInt(q.type),
+      parseInt(q.order),
+    );
+    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  }
 
 
   @Get('ty-suat-loi-nhuan-rong-cac-nganh')

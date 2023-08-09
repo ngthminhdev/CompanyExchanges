@@ -77,8 +77,10 @@ export enum RedisKeys {
 
   IndsDebtSolvency = 'inds-debt-solvency',
   IndsProfitMargins = 'inds-profit-margin',
+  indsProfitMarginsTable = 'inds-profit-margins-table',
 
   IndsInterestCoverage = 'inds-coverage',
+  
   interestRatesOnLoans = 'interest-rates-on-loans',
   netProfitMarginByIndustries = 'net-profit-margin-by-industries',
 
