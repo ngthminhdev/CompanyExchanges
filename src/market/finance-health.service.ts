@@ -757,4 +757,31 @@ export class FinanceHealthService {
     await this.redis.set(`${RedisKeys.interestRatesOnLoans}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }
+
+  async netProfitMarginByIndustries(ex: string, type: number, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.netProfitMarginByIndustries}:${ex}:${order}:${type}`)
+    if(redisData) return redisData
+
+    const lastDate = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.pb_nganh order by date desc`))[0].date
+
+    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').startOf('quarter').toDate());
+    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
+
+    const query = `
+          SELECT
+              date,
+              industry,
+              floor,
+              npm AS value
+          FROM VISUALIZED_DATA.dbo.pb_nganh
+          WHERE floor = '${ex}'
+          and date IN ${dateFilter}
+        `;
+        
+    const data = await this.mssqlService.query<InterestRatesOnLoansResponse[]>(query);
+
+    const dataMapped = InterestRatesOnLoansResponse.mapToList(data)
+    await this.redis.set(`${RedisKeys.netProfitMarginByIndustries}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    return dataMapped;
+  }
 }
