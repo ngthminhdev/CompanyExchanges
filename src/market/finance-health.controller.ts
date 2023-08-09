@@ -205,7 +205,6 @@ export class FinanceHealthController {
   async indsProfitMarginsTable(@Query() q: TimeFrameDto, @Res() res: Response) {
     const data = await this.fHealthService.indsProfitMarginsTable(
       q.exchange.toUpperCase(),
-      parseInt(q.type),
       parseInt(q.order),
     );
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));

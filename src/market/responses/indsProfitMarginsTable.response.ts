@@ -5,11 +5,6 @@ export class IndsProfitMarginsTableResponse {
         type: String
     })
     industry: string
-    
-    @ApiProperty({
-        type: String
-    })
-    date: string
 
     @ApiProperty({
         type: Number,
@@ -37,7 +32,6 @@ export class IndsProfitMarginsTableResponse {
 
     constructor(data?: IndsProfitMarginsTableResponse) {
         this.industry = data?.industry || ''
-        this.date = data?.date || ''
         this.gpm = data?.gpm || 0
         this.npm = data?.npm || 0
         this.roa = data?.roa || 0

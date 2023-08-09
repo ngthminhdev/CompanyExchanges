@@ -759,13 +759,13 @@ export class FinanceHealthService {
     return dataMapped;
   }
 
-  async indsProfitMarginsTable(ex: string, type: number, order: number){
-    const redisData = await this.redis.get(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}:${type}`)
-    if(redisData) return redisData
+  async indsProfitMarginsTable(ex: string, order: number){
+    const redisData = await this.redis.get(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}`)
+    // if(redisData) return redisData
 
     const lastDate = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.pb_nganh order by date desc`))[0].date
 
-    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').startOf('quarter').toDate());
+    const date = UtilCommonTemplate.getYearQuarters(1, order, moment(lastDate, 'YYYYQ').add(1, 'quarter').startOf('quarter').toDate());
     const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
 
     const query = `
@@ -785,7 +785,7 @@ export class FinanceHealthService {
     const data = await this.mssqlService.query<IndsProfitMarginsTableResponse[]>(query);
 
     const dataMapped = IndsProfitMarginsTableResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}:${type}`, dataMapped, {ttl: TimeToLive.OneWeek})
+    await this.redis.set(`${RedisKeys.indsProfitMarginsTable}:${ex}:${order}`, dataMapped, {ttl: TimeToLive.OneWeek})
     return dataMapped;
   }
 
