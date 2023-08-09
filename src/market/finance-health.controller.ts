@@ -16,6 +16,7 @@ import { ProfitMarginSwagger } from './responses/profit-margin.response';
 import { PEIndustrySwagger } from './responses/pe-industry.response';
 import { PEPBIndustrySwagger } from './responses/pepb-industry.response';
 import { IndusInterestCoverageResponse } from './responses/indus-interest-coverage.response';
+import { IndsProfitMarginsTableResponse } from './responses/indsProfitMarginsTable.response';
 
 @ApiTags('Sức khỏe tài chính - API')
 @Controller('finance-health')
@@ -201,7 +202,7 @@ export class FinanceHealthController {
       Diễn biến Tỷ suất lợi nhuận gộp biên các nhóm ngành
     `,
   })
-  @ApiOkResponse({ type: ProfitMarginSwagger })
+  @ApiOkResponse({ type: IndsProfitMarginsTableResponse })
   async indsProfitMarginsTable(@Query() q: ExchangeOrderDto, @Res() res: Response) {
     const data = await this.fHealthService.indsProfitMarginsTable(
       q.exchange.toUpperCase(),
