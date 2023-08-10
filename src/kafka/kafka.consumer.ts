@@ -93,7 +93,7 @@ export class KafkaConsumer {
     @Ctx() context: KafkaContext,
   ) {
     try {
-      this.kafkaService.handleIndustry(payload);
+      this.kafkaService.handleIndustry();
     } catch (error) {
       this.logger.error(error);
     }

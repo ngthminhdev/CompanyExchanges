@@ -357,10 +357,10 @@ export class StockService {
   }
 
   //Phân ngành
-  async getIndustry(exchange: string): Promise<any> {
+  async getIndustry(exchange: string, is_socket?: number): Promise<any> {
     try {
       //Check caching data is existed
-      const redisData: IndustryResponse[] = await this.redis.get(
+      const redisData: IndustryResponse[] = !is_socket && await this.redis.get(
         `${RedisKeys.Industry}:${exchange}`,
       );
       if (redisData) return redisData;
