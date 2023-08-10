@@ -5,10 +5,10 @@ import { HttpStatus } from '@nestjs/common';
 process.on('message', async (data: any) => {
   try {
     const { marketCapQuery } = data;
-
+    
     // tạo database connection mới và thực hiện truy vấn
     const sql = await connectDB();
-
+    
     const marketCap = (await sql.query(marketCapQuery)).recordset;
 
     const groupByIndustry = marketCap.reduce((result, item) => {

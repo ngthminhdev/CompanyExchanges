@@ -373,36 +373,58 @@ export class StockService {
         monthDate,
         firstDateYear,
       }: SessionDatesInterface = await this.getSessionDate(
-        '[PHANTICH].[dbo].[database_mkt]',
+        '[marketTrade].[dbo].[inDusTrade]',
+        'date',
+        this.dbServer
       );
 
-      const byExchange: string =
-        exchange == 'ALL' ? ' ' : ` AND c.EXCHANGE = '${exchange}' `;
-      const groupBy: string = exchange == 'ALL' ? ' ' : ', c.EXCHANGE ';
-
       const query = (date): string => `
-                SELECT c.LV2 AS industry, p.ticker, p.close_price, p.ref_price, p.high, p.low, p.date_time
-                FROM [WEBSITE_SERVER].[dbo].[ICBID] c JOIN [PHANTICH].[dbo].[database_mkt] p
-                ON c.TICKER = p.ticker WHERE p.date_time = '${date}' ${byExchange} AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
+      SELECT
+        i.LV2 AS industry,
+        t.code AS ticker,
+        t.closePrice AS close_price,
+        t.highPrice AS high,
+        t.lowPrice AS low,
+        t.date AS date_time
+      FROM marketTrade.dbo.tickerTradeVND t
+      INNER JOIN marketInfor.dbo.info i
+        ON t.code = i.code
+      WHERE t.date = '${date}'
+    ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange}'`)}
             `;
-
-      const marketCapQuery: string = `
-                SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
-                ${groupBy} FROM [PHANTICH].[dbo].[database_mkt] p JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
-                ON p.ticker = c.TICKER 
-                WHERE p.date_time IN 
-                    ('${UtilCommonTemplate.toDate(latestDate)}', 
-                    '${UtilCommonTemplate.toDate(previousDate)}', 
-                    '${UtilCommonTemplate.toDate(weekDate)}', 
-                    '${UtilCommonTemplate.toDate(monthDate)}', 
-                    '${UtilCommonTemplate.toDate(
-        firstDateYear,
-      )}' ) ${byExchange}
-                AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
-                GROUP BY c.LV2 ${groupBy}, p.date_time
-                ORDER BY p.date_time DESC
-            `;
-
+      // const marketCapQuery: string = `
+      //           SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
+      //           ${groupBy} FROM [PHANTICH].[dbo].[database_mkt] p JOIN [WEBSITE_SERVER].[dbo].[ICBID] c
+      //           ON p.ticker = c.TICKER 
+      //           WHERE p.date_time IN 
+      //               ('${UtilCommonTemplate.toDate(latestDate)}', 
+      //               '${UtilCommonTemplate.toDate(previousDate)}', 
+      //               '${UtilCommonTemplate.toDate(weekDate)}', 
+      //               '${UtilCommonTemplate.toDate(monthDate)}', 
+      //               '${UtilCommonTemplate.toDate(
+      //   firstDateYear,
+      // )}' ) ${byExchange}
+      //           AND c.LV2 != '#N/A' AND c.LV2 NOT LIKE 'C__________________'
+      //           GROUP BY c.LV2 ${groupBy}, p.date_time
+      //           ORDER BY p.date_time DESC
+      //       `;
+      const marketCapQuery = `
+      SELECT
+        i.code AS industry,
+        i.date AS date_time,
+        i.closePrice AS total_market_cap,
+        i.floor AS EXCHANGE
+      FROM marketTrade.dbo.inDusTrade i
+      WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+      '${UtilCommonTemplate.toDate(previousDate)}', 
+      '${UtilCommonTemplate.toDate(weekDate)}', 
+      '${UtilCommonTemplate.toDate(monthDate)}', 
+      '${UtilCommonTemplate.toDate(
+      firstDateYear,
+      )}')
+      AND floor = '${exchange == 'HSX' ? 'HOSE' : `${exchange}`}'
+      ORDER BY i.date DESC
+      `
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',
       );
@@ -415,7 +437,7 @@ export class StockService {
           if (code !== 0) reject(e);
         });
       })) as any;
-
+      
       const industryDataChild: ChildProcess = fork(
         __dirname + '/processes/industry-data-child.js',
       );
@@ -484,10 +506,10 @@ export class StockService {
       ].sort((a, b) => (a.industry > b.industry ? 1 : -1));
 
       //Caching data for the next request
-      await this.redis.store.set(`${RedisKeys.Industry}:${exchange}`, {
+      await this.redis.set(`${RedisKeys.Industry}:${exchange}`, {
         data: mappedData,
         buySellData: buySellData?.[0],
-      });
+      }, {ttl: TimeToLive.Minute});
 
       return { data: mappedData, buySellData: buySellData?.[0] };
     } catch (error) {

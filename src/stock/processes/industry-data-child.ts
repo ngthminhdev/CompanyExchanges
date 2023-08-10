@@ -33,7 +33,7 @@ process.on('message', async (data: any) => {
     try {
 
         const { query1, query2 } = data;
-
+        
         // tạo database connection mới và thực hiện truy vấn
         const sql = await connectDB();
 
