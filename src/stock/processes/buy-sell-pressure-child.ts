@@ -32,7 +32,6 @@ process.on('message', async (data: any) => {
                 where Ticker in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
             `;
     }
-
     // tạo database connection mới và thực hiện truy vấn
     const sql = await connectDB();
     const buySellData = (await sql.query(query)).recordset;
