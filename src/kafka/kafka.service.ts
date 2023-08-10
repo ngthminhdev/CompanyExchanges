@@ -11,6 +11,7 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { SocketEmit } from '../enums/socket-enum';
 import { CatchSocketException } from '../exceptions/socket.exception';
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
+import { StockService } from '../stock/stock.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { ChartNenInterface } from './interfaces/chart-nen.interface';
 import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
@@ -42,6 +43,7 @@ export class KafkaService {
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
+    private readonly stockService: StockService
   ) { }
 
   send<T>(event: string, message: T): void {
@@ -132,13 +134,19 @@ export class KafkaService {
     this.send(SocketEmit.ThanhKhoanPhienHienTai, payload);
   }
 
-  handleIndustry(payload: IndustryKafkaInterface[]): void {
-    this.send(
-      SocketEmit.PhanNganh,
-      [...new IndustryKafkaResponse().mapToList(payload)].sort((a, b) =>
-        a.industry > b.industry ? 1 : -1,
-      ),
-    );
+  async handleIndustry() {
+    const array = [
+      {floor: 'ALL', event: SocketEmit.PhanNganh},
+      {floor: 'HSX', event: SocketEmit.PhanNganhHOSE},
+      {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
+      {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
+    ]
+    await Promise.all(array.map(async item => {
+      this.send(
+        item.event,
+        await this.stockService.getIndustry(item.floor, 1)
+      );
+    }))
   }
 
   handleDomesticIndex(payload: DomesticIndexKafkaInterface[]): void {
