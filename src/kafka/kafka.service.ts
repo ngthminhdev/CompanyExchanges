@@ -10,13 +10,15 @@ import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { SocketEmit } from '../enums/socket-enum';
 import { CatchSocketException } from '../exceptions/socket.exception';
+import { SessionDatesInterface } from '../stock/interfaces/session-dates.interface';
+import { isDecrease, isEqual, isHigh, isIncrease, isLow } from '../stock/processes/industry-data-child';
+import { IndustryResponse } from '../stock/responses/Industry.response';
 import { MarketBreadthResponse } from '../stock/responses/MarketBreadth.response';
 import { StockService } from '../stock/stock.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { ChartNenInterface } from './interfaces/chart-nen.interface';
 import { DomesticIndexKafkaInterface } from './interfaces/domestic-index-kafka.interface';
 import { ForeignKafkaInterface } from './interfaces/foreign-kafka.interface';
-import { IndustryKafkaInterface } from './interfaces/industry-kafka.interface';
 import { LineChartInterfaceV2 } from './interfaces/line-chart.interface';
 import { MarketBreadthKafkaInterface } from './interfaces/market-breadth-kafka.interface';
 import { MarketCashFlowInterface } from './interfaces/market-cash-flow.interface';
@@ -26,7 +28,6 @@ import { TickerContributeKafkaInterface } from './interfaces/ticker-contribute-k
 import { TickerIndustryInterface } from './interfaces/ticker-industry.interface';
 import { DomesticIndexKafkaResponse } from './responses/DomesticIndexKafka.response';
 import { ForeignKafkaResponse } from './responses/ForeignResponseKafka.response';
-import { IndustryKafkaResponse } from './responses/IndustryKafka.response';
 import { LineChartResponseV2 } from './responses/LineChart.response';
 import { MarketCashFlowResponse } from './responses/MarketCashFlow.response';
 import { MarketVolatilityKafkaResponse } from './responses/MarketVolatilityKafka.response';
@@ -141,12 +142,159 @@ export class KafkaService {
       {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
       {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
     ]
-    await Promise.all(array.map(async item => {
-      this.send(
-        item.event,
-        await this.stockService.getIndustry(item.floor, 1)
+    for(const exchange of array) {
+      const {
+        latestDate,
+        previousDate,
+        weekDate,
+        monthDate,
+        firstDateYear,
+      }: SessionDatesInterface = await this.getSessionDate(
+        '[marketTrade].[dbo].[inDusTrade]',
+        'date',
+        this.dbServer
       );
-    }))
+      const marketCapQuery = `
+        SELECT
+          i.code AS industry,
+          i.date AS date_time,
+          i.closePrice AS total_market_cap,
+          i.floor AS EXCHANGE
+        FROM marketTrade.dbo.inDusTrade i
+        WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+        '${UtilCommonTemplate.toDate(previousDate)}', 
+        '${UtilCommonTemplate.toDate(weekDate)}', 
+        '${UtilCommonTemplate.toDate(monthDate)}', 
+        '${UtilCommonTemplate.toDate(
+        firstDateYear,
+      )}')
+        AND floor = '${exchange.floor == 'HSX' ? 'HOSE' : `${exchange.floor}`}'
+        ORDER BY i.date DESC
+        `
+      const marketCap = await this.dbServer.query(marketCapQuery)
+      const groupByIndustry = marketCap.reduce((result, item) => {
+        (result[item.industry] || (result[item.industry] = [])).push(item);
+        return result;
+      }, {});
+  
+      //Calculate change percent per day, week, month
+      const industryChanges = Object.entries(groupByIndustry).map(
+        ([industry, values]: any) => {
+          return {
+            industry,
+            day_change_percent:
+              ((values[0].total_market_cap - values[1].total_market_cap) /
+                values[1].total_market_cap) *
+              100,
+            week_change_percent:
+              ((values[0].total_market_cap - values[2].total_market_cap) /
+                values[2].total_market_cap) *
+              100,
+            month_change_percent:
+              ((values[0].total_market_cap - values[3].total_market_cap) /
+                values[3].total_market_cap) *
+              100,
+            ytd:
+              ((values[0].total_market_cap - values[4].total_market_cap) /
+                values[4].total_market_cap) *
+              100,
+          };
+        },
+      );
+  
+      const query = (date): string => `
+        SELECT
+          i.LV2 AS industry,
+          t.code AS ticker,
+          t.closePrice AS close_price,
+          t.highPrice AS high,
+          t.lowPrice AS low,
+          t.date AS date_time
+        FROM marketTrade.dbo.tickerTradeVND t
+        INNER JOIN marketInfor.dbo.info i
+          ON t.code = i.code
+        WHERE t.date = '${date}'
+      ${exchange.floor == 'ALL' ? `` : (exchange.floor == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange.floor}'`)}
+        `
+      const dataToday = await this.dbServer.query(query(latestDate))
+      const dataYesterday = await this.dbServer.query(query(previousDate))
+  
+      const result = dataToday.map((item) => {
+        const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
+        if (!yesterdayItem) return;
+        return {
+          industry: item.industry,
+          equal: isEqual(yesterdayItem, item),
+          increase: isIncrease(yesterdayItem, item),
+          decrease: isDecrease(yesterdayItem, item),
+          high: isHigh(yesterdayItem, item),
+          low: isLow(yesterdayItem, item),
+        };
+      });
+  
+      const final = result.reduce((stats, record) => {
+        const existingStats = stats.find(
+          (s) => s?.industry === record?.industry,
+        );
+        const industryChange = industryChanges.find(
+          (i) => i?.industry == record?.industry,
+        );
+        if (!industryChange) return stats;
+  
+        if (existingStats) {
+          existingStats.equal += record.equal;
+          existingStats.increase += record.increase;
+          existingStats.decrease += record.decrease;
+          existingStats.high += record.high;
+          existingStats.low += record.low;
+        } else {
+          stats.push({
+            industry: record.industry,
+            equal: record.equal,
+            increase: record.increase,
+            decrease: record.decrease,
+            high: record.high,
+            low: record.low,
+            ...industryChange,
+          });
+        }
+        return stats;
+      }, []);
+  
+      
+      let ex = '';
+      switch (exchange.floor) {
+        case 'HSX':
+          ex = 'VNINDEX';
+          break;
+        case 'HNX':
+          ex = 'HNXINDEX';
+          break;
+        default:
+          ex = 'UPINDEX';
+      }
+      let query_buy_sell: string = `
+              select top 1 Khoi_luong_cung as sellPressure, Khoi_luong_cau as buyPressure
+              from [PHANTICH].[dbo].[INDEX_AC_CC]
+              where Ticker = '${ex}' order by
+              [DateTime] desc
+          `;
+  
+      if (exchange.floor == 'ALL') {
+        query_buy_sell = `
+                  select sum(CAST(Khoi_luong_cung AS float)) as sellPressure, sum(CAST(Khoi_luong_cau AS float)) as buyPressure
+                  from [PHANTICH].[dbo].[INDEX_AC_CC]
+                  where Ticker in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+              `;
+      }
+      const buySellData = await this.dbServer.query(query_buy_sell)
+  
+      const mappedData: IndustryResponse[] = [
+        ...new IndustryResponse().mapToList(final),
+      ].sort((a, b) => (a.industry > b.industry ? 1 : -1));
+      this.send(exchange.event, { data: mappedData, buySellData: buySellData?.[0] });
+    }
+    
   }
 
   handleDomesticIndex(payload: DomesticIndexKafkaInterface[]): void {
@@ -420,4 +568,52 @@ export class KafkaService {
     )
   }
 
+  public async getSessionDate(
+    table: string,
+    column: string = 'date_time',
+    instance: any = this.db,
+  ): Promise<SessionDatesInterface> {
+    const redisData = await this.redis.get<SessionDatesInterface>(
+      `${RedisKeys.SessionDate}:${table}:${column}`,
+    );
+    if (redisData) return redisData;
+
+    let dateColumn = column;
+    if (column.startsWith('[')) {
+      dateColumn = column.slice(1, column.length - 1);
+    }
+
+    const lastYear = moment().subtract('1', 'year').format('YYYY-MM-DD');
+    const firstDateYear = moment().startOf('year').format('YYYY-MM-DD');
+
+    const dates = await instance.query(`
+            SELECT DISTINCT TOP 20 ${column} FROM ${table}
+            WHERE ${column} IS NOT NULL ORDER BY ${column} DESC 
+        `);
+
+    const query: string = `
+          SELECT TOP 1 ${column}
+          FROM ${table}
+          WHERE ${column} IS NOT NULL
+          AND ${column} >= @0
+          ORDER BY ${column};
+        `;
+    const result = {
+      latestDate: UtilCommonTemplate.toDate(dates[0]?.[dateColumn]),
+      previousDate: UtilCommonTemplate.toDate(dates[1]?.[dateColumn]),
+      weekDate: UtilCommonTemplate.toDate(dates[4]?.[dateColumn]),
+      monthDate: UtilCommonTemplate.toDate(
+        dates[dates.length - 1]?.[dateColumn],
+      ),
+      yearDate: UtilCommonTemplate.toDate(
+        (await instance.query(query, [lastYear]))[0]?.[dateColumn],
+      ),
+      firstDateYear: UtilCommonTemplate.toDate(
+        (await instance.query(query, [firstDateYear]))[0]?.[dateColumn],
+      ),
+    };
+
+    await this.redis.set(`${RedisKeys.SessionDate}:${table}:${column}`, result);
+    return result;
+  }
 }
