@@ -5,27 +5,27 @@ import {BooleanEnum} from "../../enums/common.enum";
 import {ExceptionResponse} from "../../exceptions/common.exception";
 import {HttpStatus} from "@nestjs/common";
 
-const isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+export const isEqual = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
     const change = item.close_price - yesterdayItem.close_price;
     return change === 0 ? BooleanEnum.True : BooleanEnum.False
 };
 
-const isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+export const isIncrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
     return item.close_price > yesterdayItem.close_price && item.close_price < yesterdayItem.close_price * 1.07
         ? BooleanEnum.True : BooleanEnum.False;
 };
 
-const isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+export const isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
     return item.close_price < yesterdayItem.close_price && item.close_price > yesterdayItem.close_price * 0.93
         ? BooleanEnum.True : BooleanEnum.False;
 };
 
-const isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+export const isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
     return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
         ? BooleanEnum.True : BooleanEnum.False;
 };
 
-const isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
+export const isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
     return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
         ? BooleanEnum.True : BooleanEnum.False;
 };
