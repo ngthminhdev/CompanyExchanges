@@ -21,6 +21,7 @@ export class ConfigServiceProvider {
       autoLoadEntities: true,
       synchronize: false,
       options: { encrypt: false },
+      requestTimeout: 30000
     };
   }
 
@@ -37,6 +38,7 @@ export class ConfigServiceProvider {
       synchronize: false,
       // logging: true,
       options: { encrypt: false },
+      requestTimeout: 30000
     };
   }
 
