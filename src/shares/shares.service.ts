@@ -26,6 +26,7 @@ import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvesto
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
+import { ValuationRatingResponse } from './responses/valuationRating.response';
 
 @Injectable()
 export class SharesService {
@@ -1517,7 +1518,82 @@ export class SharesService {
 
   }
 
+  private checkStarValuationRating(value: number){
+    if(value > 20) return 5
+    if(value < 20 && value >= 10 ) return 4
+    if(value < 10 && value > -10) return 3
+    if(value <= -10 && value >= -20) return 2
+    if(value < -20) return 1
+  }
+
   async valuationRating(stock: string){
-    
+    const query = `
+    WITH tang_truong
+    AS (SELECT TOP 4
+      EPS,
+      yearQuarter,
+      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
+    FROM financialReport.dbo.calBCTC
+    WHERE RIGHT(yearQuarter, 1) = 0
+    AND code = '${stock}'
+    ORDER BY yearQuarter DESC)
+    SELECT
+      ((r.PE * c.EPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pe,
+      ((r.PB * c.BVPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pb,
+      (POWER((22.5 * c.EPS * c.BVPS), 0.5) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_3,
+      ((c.EPS * (7 + 1.5 * (SELECT
+        AVG(tang) AS binh_quan
+      FROM tang_truong)
+      ) * 4.4) / (SELECT TOP 1
+        laiSuatPhatHanh
+      FROM [marketBonds].[dbo].[BondsInfor]
+      WHERE kyHan = N'15 Năm'
+      AND code = 'VCB'
+      ORDER BY ngayPhatHanh DESC)
+      - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_2,
+      ((c.EPS) * (8.5 + 2 * (SELECT
+        AVG(tang) AS binh_quan
+      FROM tang_truong)
+      ) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_1
+    FROM RATIO.dbo.ratioInday r
+    INNER JOIN financialReport.dbo.calBCTC c
+      ON c.code = '${stock}'
+    INNER JOIN marketTrade.dbo.tickerTradeVND t
+      ON t.code = '${stock}'
+    WHERE r.code = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    AND r.date = (SELECT
+      MAX(date)
+    FROM RATIO.dbo.ratioInday)
+    AND c.yearQuarter = (SELECT
+      MAX(yearQuarter)
+    FROM financialReport.dbo.calBCTC)
+    AND t.date = (SELECT
+      MAX(date)
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code = '${stock}')
+    `
+    const data = await this.mssqlService.query(query)
+    let tong = 0, index_graham = 0
+    const map = Object.keys(data[0]).reduce((acc, current) => {
+      const index = acc.findIndex(item => item.name == 'graham')
+      
+      if(current.includes('graham') && index == -1) {
+        tong += this.checkStarValuationRating(data[0][current])
+        return [...acc, {name: 'graham', value: 0, child: [{name: current, value: this.checkStarValuationRating(data[0][current])}]}]
+      }
+      if(current.includes('graham') && index != -1) {
+        index_graham = index
+        tong += this.checkStarValuationRating(data[0][current])
+        acc[index].child.push({name: current, value: this.checkStarValuationRating(data[0][current])})
+        return acc
+      }
+      return [...acc, {name: current, value: this.checkStarValuationRating(data[0][current])}]
+    }, [])
+    map[index_graham].value = tong / map[index_graham].child.length
+    const dataMapped = ValuationRatingResponse.mapToList(map)
+    return dataMapped
   }
 }

@@ -29,6 +29,7 @@ import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvesto
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
+import { ValuationRatingResponse } from './responses/valuationRating.response';
 import { SharesService } from './shares.service';
 
 @Controller('shares')
@@ -319,4 +320,16 @@ export class SharesController {
   //     throw new CatchException(e)
   //   }
   // }
+
+  @Get('rating-dinh-gia')
+  @ApiOperation({summary: 'Rating định giá'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async valuationRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.valuationRating(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
