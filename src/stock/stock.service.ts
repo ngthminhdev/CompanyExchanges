@@ -424,7 +424,7 @@ export class StockService {
       '${UtilCommonTemplate.toDate(
       firstDateYear,
       )}')
-      ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange}'`)}
+      ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange}'`)}
       GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, i.floor`} 
       ORDER BY i.date DESC
       `
