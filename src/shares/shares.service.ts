@@ -1512,4 +1512,12 @@ export class SharesService {
     await this.redis.set(`${RedisKeys.financialIndicatorsDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
+
+  async financialHealthRating(stock: string){
+
+  }
+
+  async valuationRating(stock: string){
+    
+  }
 }

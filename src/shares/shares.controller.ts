@@ -305,4 +305,18 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  //Rating
+  
+  // @Get('rating-suc-khoe-tai-chinh')
+  // @ApiOperation({summary: 'Rating sức khoẻ tài chính'})
+  // @ApiOkResponse({type: BalanceSheetDetailResponse})
+  // async financialHealthRating(@Query() q: StockDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.sharesService.financialHealthRating(q.stock)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
 }
