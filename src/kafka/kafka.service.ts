@@ -169,7 +169,7 @@ export class KafkaService {
       '${UtilCommonTemplate.toDate(
       firstDateYear,
       )}')
-      ${exchange.floor == 'ALL' ? `` : `AND f.floor = '${exchange.floor}'`}
+      ${exchange.floor == 'ALL' ? `` : ( exchange.floor == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange.floor}'`)}
       GROUP BY f.LV2, i.date ${exchange.floor == 'ALL' ? `` : `, i.floor`} 
       ORDER BY i.date DESC
       `
