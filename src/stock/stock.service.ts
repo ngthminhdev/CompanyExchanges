@@ -35,6 +35,7 @@ import { StockEventsInterface } from './interfaces/stock-events.interface';
 import { TopNetForeignByExInterface } from './interfaces/top-net-foreign-by-ex.interface';
 import { TopNetForeignInterface } from './interfaces/top-net-foreign.interface';
 import { TopRocInterface } from './interfaces/top-roc-interface';
+import { isDecrease, isEqual, isHigh, isIncrease, isLow } from './processes/industry-data-child';
 import { DomesticIndexResponse } from './responses/DomesticIndex.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
@@ -410,11 +411,12 @@ export class StockService {
       //       `;
       const marketCapQuery = `
       SELECT
-        i.code AS industry,
-        i.date AS date_time,
-        i.closePrice AS total_market_cap,
-        i.floor AS EXCHANGE
-      FROM marketTrade.dbo.inDusTrade i
+      i.date AS date_time,
+      sum(i.closePrice * s.share_out)  AS total_market_cap,
+      f.LV2 as industry
+      FROM marketTrade.dbo.tickerTradeVND i
+      inner join VISUALIZED_DATA.dbo.share_out s on s.code = i.code
+      inner join marketInfor.dbo.info f on f.code = i.code
       WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
       '${UtilCommonTemplate.toDate(previousDate)}', 
       '${UtilCommonTemplate.toDate(weekDate)}', 
@@ -422,9 +424,11 @@ export class StockService {
       '${UtilCommonTemplate.toDate(
       firstDateYear,
       )}')
-      AND floor = '${exchange == 'HSX' ? 'HOSE' : `${exchange}`}'
+      ${exchange == 'ALL' ? `` : `AND f.floor = '${exchange}'`}
+      GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, i.floor`} 
       ORDER BY i.date DESC
       `
+      
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',
       );

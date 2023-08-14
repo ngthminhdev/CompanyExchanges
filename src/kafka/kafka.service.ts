@@ -155,22 +155,24 @@ export class KafkaService {
         this.dbServer
       );
       const marketCapQuery = `
-        SELECT
-          i.code AS industry,
-          i.date AS date_time,
-          i.closePrice AS total_market_cap,
-          i.floor AS EXCHANGE
-        FROM marketTrade.dbo.inDusTrade i
-        WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
-        '${UtilCommonTemplate.toDate(previousDate)}', 
-        '${UtilCommonTemplate.toDate(weekDate)}', 
-        '${UtilCommonTemplate.toDate(monthDate)}', 
-        '${UtilCommonTemplate.toDate(
-        firstDateYear,
+      SELECT
+      i.date AS date_time,
+      sum(i.closePrice * s.share_out)  AS total_market_cap,
+      f.LV2 as industry
+      FROM marketTrade.dbo.tickerTradeVND i
+      inner join VISUALIZED_DATA.dbo.share_out s on s.code = i.code
+      inner join marketInfor.dbo.info f on f.code = i.code
+      WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+      '${UtilCommonTemplate.toDate(previousDate)}', 
+      '${UtilCommonTemplate.toDate(weekDate)}', 
+      '${UtilCommonTemplate.toDate(monthDate)}', 
+      '${UtilCommonTemplate.toDate(
+      firstDateYear,
       )}')
-        AND floor = '${exchange.floor == 'HSX' ? 'HOSE' : `${exchange.floor}`}'
-        ORDER BY i.date DESC
-        `
+      ${exchange.floor == 'ALL' ? `` : `AND f.floor = '${exchange.floor}'`}
+      GROUP BY f.LV2, i.date ${exchange.floor == 'ALL' ? `` : `, i.floor`} 
+      ORDER BY i.date DESC
+      `
       const marketCap = await this.dbServer.query(marketCapQuery)
       const groupByIndustry = marketCap.reduce((result, item) => {
         (result[item.industry] || (result[item.industry] = [])).push(item);
