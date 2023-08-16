@@ -332,4 +332,16 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  @Get('rating-ky-thuat')
+  @ApiOperation({summary: 'Rating kỹ thuật'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.techniqueRating(q.stock)
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }

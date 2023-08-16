@@ -1,6 +1,9 @@
 import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
+var gauss = require('gauss');
+var talib = require('ta-lib')
+var talib_2 = require('talib')
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { ExceptionResponse } from '../exceptions/common.exception';
@@ -1281,7 +1284,7 @@ export class SharesService {
     if (!LV2[0]) return []
 
     const redisData = await this.redis.get(`${RedisKeys.balanceSheetDetail}:${order}:${stock}:${is_chart}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const { chiTieu, top, sort } = this.getChiTieuCDKT(LV2[0].LV2, is_chart)
 
@@ -1325,19 +1328,19 @@ export class SharesService {
     FROM temp
     ORDER BY date ASC, row_num ASC
     `
-    
+
     const data = await this.mssqlService.query<BalanceSheetDetailResponse[]>(query)
     const dataMapped = BalanceSheetDetailResponse.mapToList(data, is_chart, LV2[0].LV2)
     await this.redis.set(`${RedisKeys.balanceSheetDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 
-  async balanceSheetDetailCircle(stock: string, order: number){
+  async balanceSheetDetailCircle(stock: string, order: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    if(!LV2[0]?.LV2) return []
+    if (!LV2[0]?.LV2) return []
 
     const redisData = await this.redis.get(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     let select = ``, group = ``, query = ``
     switch (order) {
@@ -1351,7 +1354,7 @@ export class SharesService {
       default:
         break;
     }
-    if(LV2[0]?.LV2 == 'Dịch vụ tài chính'){
+    if (LV2[0]?.LV2 == 'Dịch vụ tài chính') {
       query = `
       with temp as (select top 6 ${select}
         from financialReport.dbo.financialReportV2
@@ -1382,7 +1385,7 @@ export class SharesService {
         select * from von_so_huu
       `
 
-    }else{
+    } else {
       query = `
       with temp as (select top 3 ${select}
               from financialReport.dbo.financialReportV2
@@ -1408,86 +1411,86 @@ export class SharesService {
       from tong_von
       `
     }
-    
+
     const data = await this.mssqlService.query<BalanceSheetDetailCircleResponse[]>(query)
     const dataMapped = BalanceSheetDetailCircleResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.balanceSheetDetailCircle}:${order}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 
-  private getChiTieuCSTC(industry: string, stock: string): string{
-    if(industry == 'Ngân hàng'){
+  private getChiTieuCSTC(industry: string, stock: string): string {
+    if (industry == 'Ngân hàng') {
       return [
-        {name: 'Chi so danh gia', value: 0},
-        {name: 'P/E', value: 'PE'},
-        {name: 'P/B', value: 'PB'},
-        {name: 'EPS', value: 'EPS'},
-        {name: 'BVPS', value: 'BVPS'},
-        {name: 'Hieu qua hoat dong', value: 0},
-        {name: 'ROE', value: 'ROE'},
-        {name: 'ROA', value: 'ROA'},
-        {name: 'NIM', value: 'NIM'},
-        {name: 'YOEA', value: 'YOEA'},
-        {name: 'Co cau tai san', value: 0},
-        {name: 'LAR_EAA', value: 'LAR_EAA'},
-        {name: 'LAR_TR', value: 'LAR_TR'},
-        {name: 'DDA_EAA', value: 'DDA_EAA'},
-        {name: 'LDR', value: 'LDR'},
-        {name: 'Thanh khoan', value: 0},
-        {name: 'LFR', value: 'LFR'},
-        {name: 'LTR', value: 'LTR'},
-        {name: 'CAR', value: 'CAR'},
-        {name: 'LAR_AR', value: 'LAR_AR'},
-        {name: 'Chat luong tin dung', value: 0},
-        {name: 'NPLR', value: 'NPLR'},
-        {name: 'NDR', value: 'NDR'},
-        {name: 'LLP_NPL', value: 'LLP_NPL'},
-        {name: 'NPL_TR', value: 'NPL_TR'},
+        { name: 'Chi so danh gia', value: 0 },
+        { name: 'P/E', value: 'PE' },
+        { name: 'P/B', value: 'PB' },
+        { name: 'EPS', value: 'EPS' },
+        { name: 'BVPS', value: 'BVPS' },
+        { name: 'Hieu qua hoat dong', value: 0 },
+        { name: 'ROE', value: 'ROE' },
+        { name: 'ROA', value: 'ROA' },
+        { name: 'NIM', value: 'NIM' },
+        { name: 'YOEA', value: 'YOEA' },
+        { name: 'Co cau tai san', value: 0 },
+        { name: 'LAR_EAA', value: 'LAR_EAA' },
+        { name: 'LAR_TR', value: 'LAR_TR' },
+        { name: 'DDA_EAA', value: 'DDA_EAA' },
+        { name: 'LDR', value: 'LDR' },
+        { name: 'Thanh khoan', value: 0 },
+        { name: 'LFR', value: 'LFR' },
+        { name: 'LTR', value: 'LTR' },
+        { name: 'CAR', value: 'CAR' },
+        { name: 'LAR_AR', value: 'LAR_AR' },
+        { name: 'Chat luong tin dung', value: 0 },
+        { name: 'NPLR', value: 'NPLR' },
+        { name: 'NDR', value: 'NDR' },
+        { name: 'LLP_NPL', value: 'LLP_NPL' },
+        { name: 'NPL_TR', value: 'NPL_TR' },
       ].map((item, index) => `
       select '${item.name}' as name, ${item.value} as value, cast(year as varchar) + cast(quarter as varchar) as date, ${index} as row from financialReport.dbo.calBCTCNH where code = '${stock}'
       `).join(`union all`)
-    }else{
+    } else {
       return [
-        {name: 'Chi so danh gia', value: 0},
-        {name: 'P/E', value: 'PE'},
-        {name: 'P/B', value: 'PB'},
-        {name: 'EPS', value: 'EPS'},
-        {name: 'BVPS', value: 'BVPS'},
-        {name: 'Hieu qua hoat dong', value: 0},
-        {name: 'Vong quay tai san co dinh', value: 'FAT'},
-        {name: 'Vong quay tong tai san', value: 'ATR'},
-        {name: 'Vong quay tien', value: 'CTR'},
-        {name: 'Vong quay VCSH', value: 'CT'},
-        {name: 'Kha nang thanh toan', value: 0},
-        {name: 'Chi so kha nang tra no', value: 'DSCR'},
-        {name: 'Ty le no hien tai/Tong tai san', value: 'totalDebtToTotalAssets'},
-        {name: 'Ty le no hien tai/VCSH', value: 'DE'},
-        {name: 'Ty le dam bao tra no bang tai san', value: 'ACR'},
-        {name: 'Thanh khoan', value: 0},
-        {name: 'Ty so thanh toan hien hanh', value: 'currentRatio'},
-        {name: 'Ty so thanh nhanh', value: 'quickRatio'},
-        {name: 'Ty so thanh toan tien mat', value: 'cashRatio'},
-        {name: 'Kha nang thanh toan lai vay', value: 'interestCoverageRatio'},
-        {name: 'Kha nang sinh loi', value: 0},
-        {name: 'Ty suat loi nhuan gop bien', value: 'GPM'},
-        {name: 'Ty suat loi nhuan rong', value: 'NPM'},
-        {name: 'ROE', value: 'ROE'},
-        {name: 'ROA', value: 'ROA'},
+        { name: 'Chi so danh gia', value: 0 },
+        { name: 'P/E', value: 'PE' },
+        { name: 'P/B', value: 'PB' },
+        { name: 'EPS', value: 'EPS' },
+        { name: 'BVPS', value: 'BVPS' },
+        { name: 'Hieu qua hoat dong', value: 0 },
+        { name: 'Vong quay tai san co dinh', value: 'FAT' },
+        { name: 'Vong quay tong tai san', value: 'ATR' },
+        { name: 'Vong quay tien', value: 'CTR' },
+        { name: 'Vong quay VCSH', value: 'CT' },
+        { name: 'Kha nang thanh toan', value: 0 },
+        { name: 'Chi so kha nang tra no', value: 'DSCR' },
+        { name: 'Ty le no hien tai/Tong tai san', value: 'totalDebtToTotalAssets' },
+        { name: 'Ty le no hien tai/VCSH', value: 'DE' },
+        { name: 'Ty le dam bao tra no bang tai san', value: 'ACR' },
+        { name: 'Thanh khoan', value: 0 },
+        { name: 'Ty so thanh toan hien hanh', value: 'currentRatio' },
+        { name: 'Ty so thanh nhanh', value: 'quickRatio' },
+        { name: 'Ty so thanh toan tien mat', value: 'cashRatio' },
+        { name: 'Kha nang thanh toan lai vay', value: 'interestCoverageRatio' },
+        { name: 'Kha nang sinh loi', value: 0 },
+        { name: 'Ty suat loi nhuan gop bien', value: 'GPM' },
+        { name: 'Ty suat loi nhuan rong', value: 'NPM' },
+        { name: 'ROE', value: 'ROE' },
+        { name: 'ROA', value: 'ROA' },
       ].map((item, index) => `
       select '${item.name}' as name, ${item.value} as value, yearQuarter as date, ${index} as row from financialReport.dbo.calBCTC where code = '${stock}' and RIGHT(yearQuarter, 1) <> 0
       `).join(`union all`)
     }
   }
 
-  async financialIndicatorsDetail(stock: string, order: number, is_chart: number){
+  async financialIndicatorsDetail(stock: string, order: number, is_chart: number) {
     const LV2 = await this.mssqlService.query(`select top 1 LV2 from marketInfor.dbo.info where code = '${stock}'`)
-    if(!LV2[0]?.LV2) return []
+    if (!LV2[0]?.LV2) return []
 
     const redisData = await this.redis.get(`${RedisKeys.financialIndicatorsDetail}:${order}:${stock}:${is_chart}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const temp = this.getChiTieuCSTC(LV2[0]?.LV2, stock);
-    if(!temp) return []
+    if (!temp) return []
 
     let select = ``
 
@@ -1507,26 +1510,26 @@ export class SharesService {
     date as (${select})
     select * from date order by date asc, row asc
     `
-    
+
     const data: any[] = await this.mssqlService.query<FinancialIndicatorsDetailResponse[]>(query)
     const dataMapped = FinancialIndicatorsDetailResponse.mapToList(data, is_chart)
     await this.redis.set(`${RedisKeys.financialIndicatorsDetail}:${order}:${stock}:${is_chart}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
-  async financialHealthRating(stock: string){
+  async financialHealthRating(stock: string) {
 
   }
 
-  private checkStarValuationRating(value: number){
-    if(value > 20) return 5
-    if(value < 20 && value >= 10 ) return 4
-    if(value < 10 && value > -10) return 3
-    if(value <= -10 && value >= -20) return 2
-    if(value < -20) return 1
+  private checkStarValuationRating(value: number) {
+    if (value > 20) return 5
+    if (value < 20 && value >= 10) return 4
+    if (value < 10 && value > -10) return 3
+    if (value <= -10 && value >= -20) return 2
+    if (value < -20) return 1
   }
 
-  async valuationRating(stock: string){
+  async valuationRating(stock: string) {
     const query = `
     WITH tang_truong
     AS (SELECT TOP 4
@@ -1579,21 +1582,81 @@ export class SharesService {
     let tong = 0, index_graham = 0
     const map = Object.keys(data[0]).reduce((acc, current) => {
       const index = acc.findIndex(item => item.name == 'graham')
-      
-      if(current.includes('graham') && index == -1) {
+
+      if (current.includes('graham') && index == -1) {
         tong += this.checkStarValuationRating(data[0][current])
-        return [...acc, {name: 'graham', value: 0, child: [{name: current, value: this.checkStarValuationRating(data[0][current])}]}]
+        return [...acc, { name: 'graham', value: 0, child: [{ name: current, value: this.checkStarValuationRating(data[0][current]) }] }]
       }
-      if(current.includes('graham') && index != -1) {
+      if (current.includes('graham') && index != -1) {
         index_graham = index
         tong += this.checkStarValuationRating(data[0][current])
-        acc[index].child.push({name: current, value: this.checkStarValuationRating(data[0][current])})
+        acc[index].child.push({ name: current, value: this.checkStarValuationRating(data[0][current]) })
         return acc
       }
-      return [...acc, {name: current, value: this.checkStarValuationRating(data[0][current])}]
+      return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
     }, [])
     map[index_graham].value = tong / map[index_graham].child.length
     const dataMapped = ValuationRatingResponse.mapToList(map)
     return dataMapped
+  }
+
+  private calculateEMA(price: number[], period: number) { //price: mảng closePrice, period: số phiên
+    return talib.EMA(price, period)[0] //Lấy giá trị ngày gần nhất
+  }
+
+  private calculateWilliamR(hP: number[], lP: number[], p: number[], period: number) {
+    return talib.WILLR(hP, lP, p, period)[0]
+  }
+
+  private calculateMacD(p: number[]) { //p: mảng closePrice
+    return talib.MACD(p, 12, 26, 9).macd[0]
+  }
+
+  private calculateRSI(p: number[], period: number) {
+    return talib_2.execute({
+      name: 'RSI',
+      startIdx: 0,
+      endIdx: p.length - 1,
+      inReal: p,
+      optInTimePeriod: period
+    }).result.outReal[0]
+  }
+
+  async techniqueRating(stock: string) {
+    const query = `
+    SELECT closePrice, highPrice, lowPrice
+    FROM marketTrade.dbo.historyTicker
+    WHERE code = '${stock}'
+    and date >= '2021-01-01'
+    order by date desc
+    `
+    const data: any = await this.mssqlService.query(query)
+
+    const closePrice = data.map(item => item.closePrice / 1000)
+    const highPrice = data.map(item => item.highPrice / 1000)
+    const lowPrice = data.map(item => item.lowPrice / 1000)
+
+    const ema5 = this.calculateEMA(closePrice, 5)
+    const ema10 = this.calculateEMA(closePrice, 10)
+    const ema20 = this.calculateEMA(closePrice, 20)
+    const ema50 = this.calculateEMA(closePrice, 50)
+    const ema100 = this.calculateEMA(closePrice, 100)
+    const ema200 = this.calculateEMA(closePrice, 200)
+
+    const williamR = this.calculateWilliamR(highPrice, lowPrice, closePrice, 14)
+    const macD = this.calculateMacD(closePrice)
+    const rsi = this.calculateRSI(closePrice, 14)
+    const adx = talib_2.execute({
+      name: 'ADX',
+      startIdx: 0,
+      endIdx: data.length - 1,
+      high: highPrice,
+      low: lowPrice,
+      close: closePrice,
+      optInTimePeriod: 14
+    });
+    // return {ema5: ema5[0],ema10: ema10[0], ema20: ema20[0], ema50: ema50[0], ema100: ema100[0], ema200: ema200[0], williamR, macD, adx};
+    return { ema5, ema10, ema20, ema50, ema100, ema200, williamR, macD, rsi, adx }
+
   }
 }
