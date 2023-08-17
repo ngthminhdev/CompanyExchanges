@@ -1,9 +1,7 @@
 import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
-var gauss = require('gauss');
-var talib = require('ta-lib')
-var talib_2 = require('talib')
+import * as calTech from 'technicalindicators';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { ExceptionResponse } from '../exceptions/common.exception';
@@ -1600,63 +1598,160 @@ export class SharesService {
     return dataMapped
   }
 
-  private calculateEMA(price: number[], period: number) { //price: mảng closePrice, period: số phiên
-    return talib.EMA(price, period)[0] //Lấy giá trị ngày gần nhất
-  }
-
-  private calculateWilliamR(hP: number[], lP: number[], p: number[], period: number) {
-    return talib.WILLR(hP, lP, p, period)[0]
-  }
-
-  private calculateMacD(p: number[]) { //p: mảng closePrice
-    return talib.MACD(p, 12, 26, 9).macd[0]
-  }
-
-  private calculateRSI(p: number[], period: number) {
-    return talib_2.execute({
-      name: 'RSI',
-      startIdx: 0,
-      endIdx: p.length - 1,
-      inReal: p,
-      optInTimePeriod: period
-    }).result.outReal[0]
-  }
-
   async techniqueRating(stock: string) {
     const query = `
     SELECT closePrice, highPrice, lowPrice
     FROM marketTrade.dbo.historyTicker
     WHERE code = '${stock}'
     and date >= '2021-01-01'
-    order by date desc
+    order by date
     `
     const data: any = await this.mssqlService.query(query)
 
     const closePrice = data.map(item => item.closePrice / 1000)
     const highPrice = data.map(item => item.highPrice / 1000)
     const lowPrice = data.map(item => item.lowPrice / 1000)
+    const ma5 = this.ma(closePrice, 5)
+    const ma10 = this.ma(closePrice, 10)
+    const ma20 = this.ma(closePrice, 20)
+    const ma50 = this.ma(closePrice, 50)
+    const ma100 = this.ma(closePrice, 5)
+    const ma200 = this.ma(closePrice, 200)
+    const ema5 = this.ema(closePrice, 5)
+    const ema10 = this.ema(closePrice, 10)
+    const ema20 = this.ema(closePrice, 20)
+    const ema50 = this.ema(closePrice, 50)
+    const ema100 = this.ema(closePrice, 100)
+    const ema200 = this.ema(closePrice, 200)
+    const williamR = this.williamR(closePrice, highPrice, lowPrice, 14)
+    const {macd, histogram, signal} = this.macD(closePrice)
+    const rsi = this.rsi(closePrice, 14)
+    const adx = this.adx(closePrice, highPrice, lowPrice, 14)
+    const cci = this.cci(closePrice, highPrice, lowPrice, 14)
+    const stochRSI = this.stochRSI(closePrice)
+    const {dStoch, kStoch} = this.stoch(closePrice, highPrice, lowPrice, 14)
+    return ValuationRatingResponse.mapToList(this.checkStarTechniqueRating(ma5, ma10, ma20, ma50, ma100, ma200, ema5, ema10, ema20, ema50, ema100, ema200, rsi, williamR, macd, histogram, signal, adx, cci, stochRSI, dStoch, kStoch, closePrice[closePrice.length - 1]))
+  }
 
-    const ema5 = this.calculateEMA(closePrice, 5)
-    const ema10 = this.calculateEMA(closePrice, 10)
-    const ema20 = this.calculateEMA(closePrice, 20)
-    const ema50 = this.calculateEMA(closePrice, 50)
-    const ema100 = this.calculateEMA(closePrice, 100)
-    const ema200 = this.calculateEMA(closePrice, 200)
+  private checkStarTechniqueRating(ma5: number, ma10: number, ma20: number, ma50: number, ma100: number, ma200: number, ema5: number, ema10: number, ema20: number, ema50: number, ema100: number, ema200: number, rsi: number, williamR: number, macd: number, histogram: number, signal: number, adx: number, cci: number, stochRSI: number, dStoch: number, kStoch: number, price: number){
+    let pointTech = 0, pointTrend = 0, starTech = 0, starTrend = 0
 
-    const williamR = this.calculateWilliamR(highPrice, lowPrice, closePrice, 14)
-    const macD = this.calculateMacD(closePrice)
-    const rsi = this.calculateRSI(closePrice, 14)
-    const adx = talib_2.execute({
-      name: 'ADX',
-      startIdx: 0,
-      endIdx: data.length - 1,
-      high: highPrice,
-      low: lowPrice,
-      close: closePrice,
-      optInTimePeriod: 14
-    });
-    // return {ema5: ema5[0],ema10: ema10[0], ema20: ema20[0], ema50: ema50[0], ema100: ema100[0], ema200: ema200[0], williamR, macD, adx};
-    return { ema5, ema10, ema20, ema50, ema100, ema200, williamR, macD, rsi, adx }
+    //Điền kiện kĩ thuật
+    const plusConditionTech = [
+      macd > (signal * 1.1), rsi < 30, kStoch < dStoch && kStoch > 80, stochRSI < 20, histogram > 0, adx > 25, williamR > -20, cci > 100
+    ] 
+    const subtractConditionTech = [
+      (macd * 1.1) < signal, rsi > 70, kStoch > dStoch && kStoch < 20, stochRSI > 80, histogram < 0, adx < 25, williamR < -80, cci < -100
+    ]
 
+    //Điều kiện xu hướn
+    const plusConditionTrend = [
+      price > (ma5 * 1.05), 
+      price > (ma10 * 1.05), 
+      price > (ma20 * 1.05),
+      price > (ma50 * 1.05),
+      price > (ma100 * 1.05),
+      price > (ma200 * 1.05),
+      price > (ema5 * 1.05),
+      price > (ema10 * 1.05),
+      price > (ema20 * 1.05),
+      price > (ema50 * 1.05),
+      price > (ema100 * 1.05),
+      price > (ema200 * 1.05),
+    ]
+    const subtractConditionTrend = [
+      price < ma5, 
+      price < ma10, 
+      price < ma20,
+      price < ma50,
+      price < ma100,
+      price < ma200,
+      price < ema5,
+      price < ema10,
+      price < ema20,
+      price < ema50,
+      price < ema100,
+      price < ema200,
+    ]
+
+    //Map qua các điều kiện tính số điểm
+    plusConditionTech.map(item => {
+      if(item)
+        pointTech++
+    })
+    subtractConditionTech.map(item => {
+      if(item) pointTech--
+    })
+    plusConditionTrend.map(item => {
+      if(item)
+        pointTrend++
+    })
+    subtractConditionTrend.map(item => {
+      if(item) pointTrend--
+    })
+    
+    //Tính điểm sao chỉ báo kĩ thuật
+    if(pointTech == 1 || pointTech == 2) starTech = 1
+    if(pointTech == 3 || pointTech == 4) starTech = 2
+    if(pointTech == 5) starTech = 3
+    if(pointTech == 6 || pointTech == 7) starTech = 4
+    if(pointTech == 8) starTech = 5
+
+    //Tính điểm sao xu hướng
+    if(pointTrend == 1 || pointTrend == 2) starTrend = 1
+    if(pointTrend == 3 || pointTrend == 4) starTrend = 2
+    if(pointTrend == 5 || pointTrend == 6 || pointTrend == 7) starTrend = 3
+    if(pointTrend == 8 || pointTrend == 9 || pointTrend == 10) starTrend = 4
+    if(pointTrend == 11 || pointTrend == 12) starTrend = 5
+
+    return [
+      {name: 'Chỉ báo kỹ thuật', value: starTech}, 
+      {name: 'Xu hướng', value: starTrend}, 
+    ]
+  }
+
+  private ema(closePrice: number[], period: number){
+    const ema = new calTech.EMA({period, values: closePrice}).result
+    return ema[ema.length - 1]
+  }
+
+  private rsi(closePrice: number[], period: number){
+    const rsi = new calTech.RSI({period, values: closePrice}).result
+    return rsi[rsi.length - 1]
+  }
+
+  private williamR(closePrice: number[], highPrice: number[], lowPrice: number[], period: number){
+    const williamR = new calTech.WilliamsR({close: closePrice, high: highPrice, low: lowPrice, period}).result
+    return williamR[williamR.length - 1]
+  }
+
+  private macD(closePrice: number[]){
+    const macD = new calTech.MACD({values: closePrice, SimpleMAOscillator: false, SimpleMASignal: false, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9}).result
+    return {macd: macD[macD.length - 1].MACD, histogram: macD[macD.length - 1].histogram, signal: macD[macD.length - 1].signal}
+  }
+
+  private adx(closePrice: number[], highPrice: number[], lowPrice: number[], period: number){
+    const adx = new calTech.ADX({close: closePrice, high: highPrice, low: lowPrice, period}).result
+    return adx[adx.length - 1].adx
+  }
+
+  private cci(closePrice: number[], highPrice: number[], lowPrice: number[], period: number){
+    const cci = new calTech.CCI({close: closePrice, high: highPrice, low: lowPrice, period}).result
+    return cci[cci.length - 1]
+  }
+
+  private stochRSI(closePrice: number[]){
+    const stochRSI = new calTech.StochasticRSI({rsiPeriod: 14, kPeriod: 3, dPeriod: 3, values: closePrice, stochasticPeriod: 14}).result
+    return stochRSI[stochRSI.length - 1].stochRSI
+  }
+
+  private stoch(closePrice: number[], highPrice: number[], lowPrice: number[], period: number){
+    const stoch = new calTech.Stochastic({close: closePrice, high: highPrice, low: lowPrice, period: period, signalPeriod: 3}).result
+    return {dStoch: stoch[stoch.length - 1].d, kStoch: stoch[stoch.length - 1].k}
+  }
+
+  private ma(closePrice: number[], period: number){
+    const ma = new calTech.SMA({period, values: closePrice}).result
+    return ma[ma.length - 1]
   }
 }
