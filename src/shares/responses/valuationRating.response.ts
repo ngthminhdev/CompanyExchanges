@@ -51,7 +51,7 @@ export class ValuationRatingResponse {
         }
     }
 
-    static mapToList(data?: ValuationRatingResponse[]) {
+    static mapToList(data?: any[]) {
         return data.map(item => new ValuationRatingResponse(item))
     }
 }
