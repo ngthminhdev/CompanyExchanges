@@ -1516,7 +1516,9 @@ export class SharesService {
   }
 
   async financialHealthRating(stock: string) {
-
+    const query = ``
+    const data = await this.mssqlService.query(query)
+    return data
   }
 
   private checkStarValuationRating(value: number) {
@@ -1528,6 +1530,8 @@ export class SharesService {
   }
 
   async valuationRating(stock: string) {
+    const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
+    if(redisData) return redisData
     const query = `
     WITH tang_truong
     AS (SELECT TOP 4
@@ -1537,11 +1541,14 @@ export class SharesService {
     FROM financialReport.dbo.calBCTC
     WHERE RIGHT(yearQuarter, 1) = 0
     AND code = '${stock}'
-    ORDER BY yearQuarter DESC)
+    ORDER BY yearQuarter DESC),
+    LV2 as (SELECT LV2, code
+                    FROM marketInfor.dbo.info
+                    WHERE code = '${stock}')
     SELECT
       ((r.PE * c.EPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pe,
       ((r.PB * c.BVPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pb,
-      (POWER((22.5 * c.EPS * c.BVPS), 0.5) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_3,
+      (POWER((22.5 * c.EPS * c.BVPS), 1 / 2) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_3,
       ((c.EPS * (7 + 1.5 * (SELECT
         AVG(tang) AS binh_quan
       FROM tang_truong)
@@ -1561,13 +1568,11 @@ export class SharesService {
       ON c.code = '${stock}'
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON t.code = '${stock}'
-    WHERE r.code = (SELECT
-      LV2
-    FROM marketInfor.dbo.info
-    WHERE code = '${stock}')
+      inner join LV2 l on l.code = '${stock}'  
+    WHERE r.code = l.LV2
     AND r.date = (SELECT
       MAX(date)
-    FROM RATIO.dbo.ratioInday)
+    FROM RATIO.dbo.ratioInday where code = l.LV2)
     AND c.yearQuarter = (SELECT
       MAX(yearQuarter)
     FROM financialReport.dbo.calBCTC)
@@ -1576,7 +1581,10 @@ export class SharesService {
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-    const data = await this.mssqlService.query(query)
+    
+    const data = await this.mssqlService.query<any[]>(query)
+    if(data.length == 0) return []
+
     let tong = 0, index_graham = 0
     const map = Object.keys(data[0]).reduce((acc, current) => {
       const index = acc.findIndex(item => item.name == 'graham')
@@ -1594,7 +1602,9 @@ export class SharesService {
       return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
     }, [])
     map[index_graham].value = tong / map[index_graham].child.length
+
     const dataMapped = ValuationRatingResponse.mapToList(map)
+    await this.redis.set(`${RedisKeys.valuationRating}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
   }
 

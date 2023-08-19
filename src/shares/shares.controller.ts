@@ -309,24 +309,24 @@ export class SharesController {
 
   //Rating
   
-  // @Get('rating-suc-khoe-tai-chinh')
-  // @ApiOperation({summary: 'Rating sức khoẻ tài chính'})
-  // @ApiOkResponse({type: BalanceSheetDetailResponse})
-  // async financialHealthRating(@Query() q: StockDto, @Res() res: Response) {
-  //   try {
-  //     const data = await this.sharesService.financialHealthRating(q.stock)
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
+  @Get('rating-suc-khoe-tai-chinh')
+  @ApiOperation({summary: 'Rating sức khoẻ tài chính'})
+  @ApiOkResponse({type: BalanceSheetDetailResponse})
+  async financialHealthRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.financialHealthRating(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 
   @Get('rating-dinh-gia')
   @ApiOperation({summary: 'Rating định giá'})
   @ApiOkResponse({type: ValuationRatingResponse})
   async valuationRating(@Query() q: StockDto, @Res() res: Response) {
     try {
-      const data = await this.sharesService.valuationRating(q.stock)
+      const data = await this.sharesService.valuationRating(q.stock.toUpperCase())
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
@@ -338,7 +338,7 @@ export class SharesController {
   @ApiOkResponse({type: ValuationRatingResponse})
   async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
     try {
-      const data = await this.sharesService.techniqueRating(q.stock)
+      const data = await this.sharesService.techniqueRating(q.stock.toUpperCase())
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

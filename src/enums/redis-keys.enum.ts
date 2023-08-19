@@ -186,5 +186,6 @@ export enum RedisKeys {
   businessResultDetail = 'business-result-detail',
   balanceSheetDetail = 'balance-sheet-detail',
   balanceSheetDetailCircle = 'balance-sheet-detail-circle',
-  financialIndicatorsDetail = 'financial-indicators-detail'
+  financialIndicatorsDetail = 'financial-indicators-detail',
+  valuationRating = 'valuation-rating'
 }
