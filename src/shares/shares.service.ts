@@ -11,18 +11,23 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { AverageTradingVolumeResponse } from './responses/averageTradingVolume.response';
 import { BalanceSheetDetailResponse } from './responses/balanceSheetDetail.response';
 import { BalanceSheetDetailCircleResponse } from './responses/balanceSheetDetailCircle.response';
+import { BusinessPositionRatingResponse } from './responses/businessPositionRating.response';
+import { BusinessRatingResponse } from './responses/businessRating.response';
 import { BusinessResultDetailResponse } from './responses/businessResultDetail.response';
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
 import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
+import { FinancialHealthRatingResponse } from './responses/financialHealthRating.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { FinancialIndicatorsDetailResponse } from './responses/financialIndicatorsDetail.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
+import { IndividualInvestorBenefitsRatingResponse } from './responses/individualInvestorBenefitsRating.response';
 import { NewsStockResponse } from './responses/newsStock.response';
 import { SearchStockResponse } from './responses/searchStock.response';
 import { StatisticsMonthQuarterYearResponse } from './responses/statisticsMonthQuarterYear.response';
+import { TechniqueRatingResponse } from './responses/techniqueRating.response';
 import { TradingGroupsInvestorsResponse } from './responses/tradingGroupsInvestors.response';
 import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctuations.response';
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
@@ -1516,22 +1521,186 @@ export class SharesService {
   }
 
   async financialHealthRating(stock: string) {
-    const query = ``
+    const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+    WITH stock
+    AS (SELECT TOP 1
+      currentRatio,
+      quickRatio,
+      cashRatio,
+      interestCoverageRatio,
+      ACR,
+      DSCR,
+      totalDebtToTotalAssets,
+      DE,
+      FAT,
+      ATR,
+      CTR,
+      CT,
+      GPM,
+      NPM,
+      ROA,
+      ROE,
+      code
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    ORDER BY yearQuarter DESC),
+    nganh
+    AS (SELECT TOP 1
+      currentRatio AS currentRatioIndustry,
+      quickRatio AS quickRatioIndustry,
+      cashRatio AS cashRatioIndustry,
+      interestCoverageRatio AS interestCoverageRatioIndustry,
+      ACR AS ACRIndustry,
+      DSCR AS DSCRIndustry,
+      totalDebtToTotalAssets AS totalDebtToTotalAssetsIndustry,
+      DE AS DEIndustry,
+      FAT AS FATIndustry,
+      ATR AS ATRIndustry,
+      CTR AS CTRIndustry,
+      CT AS CTIndustry,
+      GPM AS GPMIndustry,
+      NPM AS NPMIndustry,
+      ROA AS ROAIndustry,
+      ROE AS ROEIndustry,
+      '${stock}' AS code
+    FROM VISUALIZED_DATA.dbo.rating
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    ORDER BY yearQuarter DESC),
+    thi_truong
+    AS (SELECT TOP 1
+      currentRatio AS currentRatioAll,
+      quickRatio AS quickRatioAll,
+      cashRatio AS cashRatioAll,
+      interestCoverageRatio AS interestCoverageRatioAll,
+      ACR AS ACRAll,
+      DSCR AS DSCRAll,
+      totalDebtToTotalAssets AS totalDebtToTotalAssetsAll,
+      DE AS DEAll,
+      FAT AS FATAll,
+      ATR AS ATRAll,
+      CTR AS CTRAll,
+      CT AS CTAll,
+      GPM AS GPMAll,
+      NPM AS NPMAll,
+      ROA AS ROAAll,
+      ROE AS ROEAll,
+      '${stock}' AS code
+    FROM VISUALIZED_DATA.dbo.rating
+    WHERE LV2 = 'ALL'
+    ORDER BY yearQuarter DESC)
+    SELECT
+      currentRatio,
+      quickRatio,
+      cashRatio,
+      interestCoverageRatio,
+      ACR,
+      DSCR,
+      totalDebtToTotalAssets,
+      DE,
+      FAT,
+      ATR,
+      CTR,
+      CT,
+      GPM,
+      NPM,
+      ROA,
+      ROE,
+      currentRatioIndustry,
+      quickRatioIndustry,
+      cashRatioIndustry,
+      interestCoverageRatioIndustry,
+      ACRIndustry,
+      DSCRIndustry,
+      totalDebtToTotalAssetsIndustry,
+      DEIndustry,
+      FATIndustry,
+      ATRIndustry,
+      CTRIndustry,
+      CTIndustry,
+      GPMIndustry,
+      NPMIndustry,
+      ROAIndustry,
+      ROEIndustry,
+      currentRatioAll,
+      quickRatioAll,
+      cashRatioAll,
+      interestCoverageRatioAll,
+      ACRAll,
+      DSCRAll,
+      totalDebtToTotalAssetsAll,
+      DEAll,
+      FATAll,
+      ATRAll,
+      CTRAll,
+      CTAll,
+      GPMAll,
+      NPMAll,
+      ROAAll,
+      ROEAll
+    FROM stock s
+    INNER JOIN nganh n
+      ON n.code = s.code
+    INNER JOIN thi_truong t
+      ON t.code = s.code
+    `
     const data = await this.mssqlService.query(query)
-    return data
+    const star: any = this.checkStarFinancialHealthRating(data[0])
+    const dataMapped = FinancialHealthRatingResponse.mapToList(star)
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
   }
 
-  private checkStarValuationRating(value: number) {
-    if (value > 20) return 5
-    if (value < 20 && value >= 10) return 4
-    if (value < 10 && value > -10) return 3
-    if (value <= -10 && value >= -20) return 2
-    if (value < -20) return 1
+  async techniqueRating(stock: string) {
+    const redisData = await this.redis.get(`${RedisKeys.techniqueRating}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+    SELECT closePrice, highPrice, lowPrice
+    FROM marketTrade.dbo.historyTicker
+    WHERE code = '${stock}'
+    and date >= '2021-01-01'
+    order by date
+    `
+    const data: any = await this.mssqlService.query(query)
+
+    const closePrice = data.map(item => item.closePrice / 1000)
+    const highPrice = data.map(item => item.highPrice / 1000)
+    const lowPrice = data.map(item => item.lowPrice / 1000)
+    const ma5 = this.ma(closePrice, 5)
+    const ma10 = this.ma(closePrice, 10)
+    const ma20 = this.ma(closePrice, 20)
+    const ma50 = this.ma(closePrice, 50)
+    const ma100 = this.ma(closePrice, 5)
+    const ma200 = this.ma(closePrice, 200)
+    const ema5 = this.ema(closePrice, 5)
+    const ema10 = this.ema(closePrice, 10)
+    const ema20 = this.ema(closePrice, 20)
+    const ema50 = this.ema(closePrice, 50)
+    const ema100 = this.ema(closePrice, 100)
+    const ema200 = this.ema(closePrice, 200)
+    const williamR = this.williamR(closePrice, highPrice, lowPrice, 14)
+    const {macd, histogram, signal} = this.macD(closePrice)
+    const rsi = this.rsi(closePrice, 14)
+    const adx = this.adx(closePrice, highPrice, lowPrice, 14)
+    const cci = this.cci(closePrice, highPrice, lowPrice, 14)
+    const stochRSI = this.stochRSI(closePrice)
+    const {dStoch, kStoch} = this.stoch(closePrice, highPrice, lowPrice, 14)
+
+    const dataMapped = TechniqueRatingResponse.mapToList(this.checkStarTechniqueRating(ma5, ma10, ma20, ma50, ma100, ma200, ema5, ema10, ema20, ema50, ema100, ema200, rsi, williamR, macd, histogram, signal, adx, cci, stochRSI, dStoch, kStoch, closePrice[closePrice.length - 1]))
+    await this.redis.set(`${RedisKeys.techniqueRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
   }
 
   async valuationRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
     if(redisData) return redisData
+
     const query = `
     WITH tang_truong
     AS (SELECT TOP 4
@@ -1608,43 +1777,332 @@ export class SharesService {
     return dataMapped
   }
 
-  async techniqueRating(stock: string) {
-    const query = `
-    SELECT closePrice, highPrice, lowPrice
-    FROM marketTrade.dbo.historyTicker
-    WHERE code = '${stock}'
-    and date >= '2021-01-01'
-    order by date
-    `
-    const data: any = await this.mssqlService.query(query)
+  async businessRating(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.businessRating}:${stock}`)
+    if(redisData) return redisData
 
-    const closePrice = data.map(item => item.closePrice / 1000)
-    const highPrice = data.map(item => item.highPrice / 1000)
-    const lowPrice = data.map(item => item.lowPrice / 1000)
-    const ma5 = this.ma(closePrice, 5)
-    const ma10 = this.ma(closePrice, 10)
-    const ma20 = this.ma(closePrice, 20)
-    const ma50 = this.ma(closePrice, 50)
-    const ma100 = this.ma(closePrice, 5)
-    const ma200 = this.ma(closePrice, 200)
-    const ema5 = this.ema(closePrice, 5)
-    const ema10 = this.ema(closePrice, 10)
-    const ema20 = this.ema(closePrice, 20)
-    const ema50 = this.ema(closePrice, 50)
-    const ema100 = this.ema(closePrice, 100)
-    const ema200 = this.ema(closePrice, 200)
-    const williamR = this.williamR(closePrice, highPrice, lowPrice, 14)
-    const {macd, histogram, signal} = this.macD(closePrice)
-    const rsi = this.rsi(closePrice, 14)
-    const adx = this.adx(closePrice, highPrice, lowPrice, 14)
-    const cci = this.cci(closePrice, highPrice, lowPrice, 14)
-    const stochRSI = this.stochRSI(closePrice)
-    const {dStoch, kStoch} = this.stoch(closePrice, highPrice, lowPrice, 14)
-    return ValuationRatingResponse.mapToList(this.checkStarTechniqueRating(ma5, ma10, ma20, ma50, ma100, ma200, ema5, ema10, ema20, ema50, ema100, ema200, rsi, williamR, macd, histogram, signal, adx, cci, stochRSI, dStoch, kStoch, closePrice[closePrice.length - 1]))
+    const query_1 = `
+    select
+          code,
+          tang_truong_doanh_thu,
+          tang_truong_loi_nhuan_truoc_thue,
+          tang_truong_von_hoa,
+          tang_truong_tai_san
+    from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh
+    where yearQuarter = (select max(yearQuarter) from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh)
+    and LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+    `
+    const data_1: any[] = await this.mssqlService.query(query_1)
+
+    const query_2 = `
+    select
+          kd.code,
+          kd.[ty_trong_von_hoa/TTT] as ty_trong_vh,
+          kd.[ty_trong_tai_san/TTT] as ty_trong_ts,
+          gia.[Tỷ lệ giá trị giao dịch/TTT 1 tháng gần nhất] as gia_1_thang,
+                  gia.[Tỷ lệ giá trị giao dịch/TTT 3 tháng gần nhất] as gia_3_thang,
+          gia.[Tỷ lệ giá trị giao dịch/TTT 6 tháng gần nhất] as gia_6_thang,
+          gia.[Tỷ lệ giá trị giao dịch/TTT 1 năm gần nhất] as gia_1_nam
+    from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh kd
+    inner join VISUALIZED_DATA.dbo.rating_gia gia on gia.code = kd.code
+    where kd.yearQuarter = (select max(yearQuarter) from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh)
+    `
+    const data_2: any[] = await this.mssqlService.query(query_2)
+
+    const sortDoanhThu = data_1.map(item => ({value: item.tang_truong_doanh_thu, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortLoiNhuan = data_1.map(item => ({value: item.tang_truong_loi_nhuan_truoc_thue, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortVonHoa = data_1.map(item => ({value: item.tang_truong_von_hoa, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortTaiSan = data_1.map(item => ({value: item.tang_truong_tai_san, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+
+    const sortTyTrongVonHoa: [{code: string, value: number}] = data_2.map(item => ({value: item.ty_trong_vh, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortTyTrongTaiSan = data_2.map(item => ({value: item.ty_trong_ts, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortGia1Thang = data_2.map(item => ({value: item.gia_1_thang, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortGia3Thang = data_2.map(item => ({value: item.gia_3_thang, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortGia6Thang = data_2.map(item => ({value: item.gia_6_thang, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortGia1Nam = data_2.map(item => ({value: item.gia_1_nam, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    
+    const dataMapped = BusinessRatingResponse.mapToList(
+      this.checkStarBusinessRating(sortDoanhThu, stock), 
+      this.checkStarBusinessRating(sortLoiNhuan, stock), 
+      this.checkStarBusinessRating(sortVonHoa, stock), 
+      this.checkStarBusinessRating(sortTaiSan, stock), 
+      this.checkStarBusinessRating(sortTyTrongVonHoa, stock), 
+      this.checkStarBusinessRating(sortTyTrongTaiSan, stock), 
+      this.checkStarBusinessRating(sortGia1Thang, stock), 
+      this.checkStarBusinessRating(sortGia3Thang, stock), 
+      this.checkStarBusinessRating(sortGia6Thang, stock), 
+      this.checkStarBusinessRating(sortGia1Nam, stock)
+      )
+
+    await this.redis.set(`${RedisKeys.businessRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+      return dataMapped
+  }
+
+  async individualInvestorBenefitsRating(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`)
+    if(redisData) return redisData
+
+    const year = UtilCommonTemplate.getYearQuartersV2(4, TimeTypeEnum.Year)
+    
+    //Query các ngày hiện tại, 6 tháng, 1 năm, 2 năm, 4 năm
+    const date = await this.mssqlService.query(`
+    with date_ranges as (
+        select
+            'HPG' as code,
+            max(case when date <= '${moment().format('YYYY-MM-DD')}' then date else null end) as now,
+            max(case when date <= '${moment().subtract(6, 'month').format('YYYY-MM-DD')}' then date else null end) as month_6,
+            max(case when date <= '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year_1,
+            max(case when date <= '${moment().subtract(2, 'year').format('YYYY-MM-DD')}' then date else null end) as year_2,
+            max(case when date <= '${moment().subtract(4, 'year').format('YYYY-MM-DD')}' then date else null end) as year_4
+        from marketTrade.dbo.tickerTradeVND
+        where code = 'HPG'
+    )
+    select code, now, month_6, year_1, year_2, year_4
+    from date_ranges;
+    `)
+
+    const now = UtilCommonTemplate.toDate(date[0].now)
+    const month_6 = UtilCommonTemplate.toDate(date[0].month_6)
+    const year_1 = UtilCommonTemplate.toDate(date[0].year_1)
+    const year_2 = UtilCommonTemplate.toDate(date[0].year_2)
+    const year_4 = UtilCommonTemplate.toDate(date[0].year_4)
+
+    //Query tăng trưởng giá
+    const query = `
+    SELECT
+      ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang,
+      ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam,
+      ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam,
+      ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam,
+      code
+    FROM (SELECT
+      t.code,
+      t.closePrice,
+      t.date
+    FROM marketTrade.dbo.tickerTradeVND t
+    INNER JOIN marketInfor.dbo.info i
+      ON i.code = t.code
+    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
+    AND i.LV2 NOT IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bảo hiểm')) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
+    `
+    const data: any[] = await this.mssqlService.query(query)
+
+    //Query cổ tức tiền mặt ổn định
+    const query_2 = `
+    SELECT distinct top 4 
+      SUBSTRING(NoiDungSuKien, CHARINDEX('20', NoiDungSuKien), 4) AS year
+    FROM PHANTICH.dbo.LichSukien
+    WHERE LoaiSuKien = N'Trả cổ tức bằng tiền mặt'
+    AND ticker = '${stock}'
+    ORDER BY year DESC
+    `
+    const data_2: [{year: string}] = await this.mssqlService.query(query_2)
+
+    //Query tỷ lệ cổ tức tiền mặt tốt
+    const query_3 = `
+    WITH temp
+    AS (SELECT
+      c.code,
+      c.MARKETCAP,
+      c.SHAREOUT,
+      l.vnd,
+      NoiDungSuKien,
+      SUBSTRING(NoiDungSuKien, CHARINDEX('20', NoiDungSuKien), 4) AS year
+    FROM financialReport.dbo.calBCTC c
+    INNER JOIN marketInfor.dbo.info i
+      ON i.code = c.code
+    INNER JOIN PHANTICH.dbo.LichSukien l
+      ON l.ticker = c.code
+    WHERE i.LV2 NOT IN (N'Dịch vụ tài chính', N'Ngân hàng', N'Bảo hiểm')
+    AND c.yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    ORDER BY yearQuarter DESC)
+    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt'),
+    ty_le_theo_nam
+    AS (SELECT
+      AVG(SHAREOUT * vnd / MARKETCAP) AS ty_le_theo_nam,
+      year,
+      code
+    FROM temp
+    WHERE year IN (${year.map(item => `'${item.substring(0, 4)}'`).join(',')})
+    GROUP BY year,
+            code)
+    SELECT
+      SUM(ty_le_theo_nam) / 4 AS ty_le_co_tuc_tien_mat,
+      code
+    FROM ty_le_theo_nam
+    GROUP BY code
+    `
+    const redisTyLeCoTucTienMat: any[] = await this.redis.get(RedisKeys.tyLeCoTucTienMat)
+    const data_3: any[] = redisTyLeCoTucTienMat ? redisTyLeCoTucTienMat : await this.mssqlService.query(query_3) 
+    if(!redisTyLeCoTucTienMat) await this.redis.set(RedisKeys.tyLeCoTucTienMat, data_3, {ttl: TimeToLive.OneWeek})
+
+    //Tính số điểm
+    const sort6Thang = data.map(item => ({value: item.tt6thang, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sort1Nam = data.map(item => ({value: item.tt1nam, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sort2Nam = data.map(item => ({value: item.tt2nam, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sort4Nam = data.map(item => ({value: item.tt4nam, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const sortTyLeCoTuc = data_3.map(item => ({value: item.ty_le_co_tuc_tien_mat, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]  
+    const coTucTienMatOnDinh = this.checkYearConsecutive(data_2.map(item => item.year));
+
+    const dataMapped = IndividualInvestorBenefitsRatingResponse.mapToList(
+      this.checkStarBusinessRating(sort6Thang, stock),
+      this.checkStarBusinessRating(sort1Nam, stock),
+      this.checkStarBusinessRating(sort2Nam, stock),
+      this.checkStarBusinessRating(sort4Nam, stock),
+      coTucTienMatOnDinh,
+      this.checkStarBusinessRating(sortTyLeCoTuc, stock)
+    )
+    await this.redis.set(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  async businessPositionRating(stock: string){
+    const redisData = await this.redis.get(`${RedisKeys.businessPositionRating}:${stock}`)
+    if(redisData) return redisData
+
+    //query Quy mô doanh nghiệp
+    const query = `
+    WITH temp
+    AS (SELECT
+      f.code,
+      f.value,
+      f.id,
+      f.yearQuarter
+    FROM financialReport.dbo.financialReportV2 f
+    WHERE (f.id = 1
+    AND f.type = 'KQKD')
+    OR (f.id = 2
+    AND f.type = 'CDKT')
+    OR (f.id = 15
+    AND f.type = 'KQKD')),
+    marketcap
+    AS (SELECT
+      MARKETCAP,
+      code
+    FROM financialReport.dbo.calBCTC
+    WHERE yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    ORDER BY yearQuarter DESC))
+    SELECT
+      chuyen.code,
+      [1] as doanh_thu,
+      [2] as tong_tai_san,
+      [15] as loi_nhuan_truoc_thue,
+      m.MARKETCAP as von_hoa
+    FROM (SELECT
+      t.code,
+      t.value,
+      t.id,
+      i.LV2
+    FROM temp t
+    INNER JOIN marketInfor.dbo.info i
+      ON i.code = t.code
+    WHERE i.LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    AND yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM temp
+    ORDER BY yearQuarter DESC)) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
+    INNER JOIN marketcap m
+      ON m.code = chuyen.code
+    `
+    const promise = this.mssqlService.query(query)
+
+    //Query Thị trường quan tâm
+    const query_4 = `
+    select
+        [Giá trị giao dich CP 5 phiên] as phien_5,
+        [Giá trị giao dich CP 10 phiên] as phien_10,
+        [Giá trị giao dich CP 20 phiên] as phien_20,
+        [Giá trị giao dich CP 50 phiên] as phien_50,
+        code
+    from VISUALIZED_DATA.dbo.rating_gia
+    `
+    const promise_4 = this.mssqlService.query(query_4)  
+
+    //Query Giá trị sở hữu khối ngoại
+    const now = UtilCommonTemplate.toDate((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.[foreign] order by date desc`))[0].date)
+    const quarter_4 = UtilCommonTemplate.toDate((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.[foreign] where date <= '${moment(now, 'YYYY/MM/DD').subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date)
+
+    const query_2 = `
+    SELECT
+      CASE
+        WHEN [${quarter_4}] = 0 THEN 0
+        ELSE ([${now}] - [${quarter_4}]) / [${quarter_4}] * 100
+      END AS value,
+      code
+    FROM (SELECT
+      f.code,
+      (f.totalRoom - f.currentRoom) / s.share_out * 100 AS ty_le_so_huu_khoi_ngoai,
+      date
+    FROM marketTrade.dbo.[foreign] f
+    INNER JOIN VISUALIZED_DATA.dbo.share_out s
+      ON s.code = f.code
+      INNER JOIN marketInfor.dbo.info i 
+      ON i.code = f.code
+    WHERE f.date IN ('${now}', '${quarter_4}') and i.LV2 not in (N'Dịch vụ tài chính', N'Ngân hàng', N'Bảo hiểm')) AS source
+    PIVOT (SUM(ty_le_so_huu_khoi_ngoai) FOR date IN ([${now}], [${quarter_4}])) AS chuyen
+    `
+    const promise_2 = this.mssqlService.query(query_2)
+
+    //Query Giá trị tăng trưởng VCSH
+    const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter as date from financialReport.dbo.calBCTC order by yearQuarter desc`))[0].date
+    const year_1 = moment(now_quarter, 'YYYYQ').subtract(1, 'year').format('YYYYQ')
+
+    const query_3 = `
+    SELECT
+      ([${now_quarter}] - [${year_1}]) / [${year_1}] * 100 as value,
+      code
+    FROM (SELECT
+      [Vốn chủ sở hữu] AS value,
+      c.code,
+      c.yearQuarter
+    FROM financialReport.dbo.calBCTC c
+    INNER JOIN marketInfor.dbo.info i
+      ON i.code = c.code
+    WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
+    AND i.LV2 NOT IN (N'Dịch vụ tài chính', N'Ngân hàng', N'Bảo hiểm')) AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen
+    `
+    const promise_3 = this.mssqlService.query(query_3)
+
+    // Select
+    const [data, data_2, data_3, data_4]: any[] = await Promise.all([promise, promise_2, promise_3, promise_4])
+
+    //Tính điểm
+    const quy_mo_doanh_thu = data.map(item => ({value: item.doanh_thu, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const quy_mo_von_hoa = data.map(item => ({value: item.von_hoa, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const quy_mo_tai_san = data.map(item => ({value: item.tong_tai_san, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const quy_mo_loi_nhuan = data.map(item => ({value: item.loi_nhuan_truoc_thue, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gd_5_phien = data_4.map(item => ({value: item.phien_5, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gd_10_phien = data_4.map(item => ({value: item.phien_10, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gd_20_phien = data_4.map(item => ({value: item.phien_20, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gd_50_phien = data_4.map(item => ({value: item.phien_50, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gia_tri_so_huu_khoi_ngoai = data_2 as [{code: string, value: number}]
+    const gia_tri_tang_truong_VCSH = data_3 as [{code: string, value: number}]
+
+    const dataMapped = BusinessPositionRatingResponse.mapToList(
+      this.checkStarBusinessRating(quy_mo_doanh_thu, stock),
+      this.checkStarBusinessRating(quy_mo_von_hoa, stock),
+      this.checkStarBusinessRating(quy_mo_tai_san, stock),
+      this.checkStarBusinessRating(quy_mo_loi_nhuan, stock),
+      this.checkStarBusinessRating(gd_5_phien, stock),
+      this.checkStarBusinessRating(gd_10_phien, stock),
+      this.checkStarBusinessRating(gd_20_phien, stock),
+      this.checkStarBusinessRating(gd_50_phien, stock),
+      this.checkStarBusinessRating(gia_tri_so_huu_khoi_ngoai, stock),
+      this.checkStarBusinessRating(gia_tri_tang_truong_VCSH, stock),
+    )
+    await this.redis.set(`${RedisKeys.businessPositionRating}:${stock}`, dataMapped, {ttl: TimeToLive.OneDay})  
+    return dataMapped
   }
 
   private checkStarTechniqueRating(ma5: number, ma10: number, ma20: number, ma50: number, ma100: number, ma200: number, ema5: number, ema10: number, ema20: number, ema50: number, ema100: number, ema200: number, rsi: number, williamR: number, macd: number, histogram: number, signal: number, adx: number, cci: number, stochRSI: number, dStoch: number, kStoch: number, price: number){
-    let pointTech = 0, pointTrend = 0, starTech = 0, starTrend = 0
+    let pointTech = 1, pointTrend = 1, starTech = 1, starTrend = 1
 
     //Điền kiện kĩ thuật
     const plusConditionTech = [
@@ -1654,7 +2112,7 @@ export class SharesService {
       (macd * 1.1) < signal, rsi > 70, kStoch > dStoch && kStoch < 20, stochRSI > 80, histogram < 0, adx < 25, williamR < -80, cci < -100
     ]
 
-    //Điều kiện xu hướn
+    //Điều kiện xu hướng
     const plusConditionTrend = [
       price > (ma5 * 1.05), 
       price > (ma10 * 1.05), 
@@ -1699,7 +2157,7 @@ export class SharesService {
     subtractConditionTrend.map(item => {
       if(item) pointTrend--
     })
-    
+
     //Tính điểm sao chỉ báo kĩ thuật
     if(pointTech == 1 || pointTech == 2) starTech = 1
     if(pointTech == 3 || pointTech == 4) starTech = 2
@@ -1763,5 +2221,79 @@ export class SharesService {
   private ma(closePrice: number[], period: number){
     const ma = new calTech.SMA({period, values: closePrice}).result
     return ma[ma.length - 1]
+  }
+
+  private checkStarValuationRating(value: number) {
+    if (value > 20) return 5
+    if (value < 20 && value >= 10) return 4
+    if (value < 10 && value > -10) return 3
+    if (value <= -10 && value >= -20) return 2
+    if (value < -20) return 1
+  }
+
+  private checkStarBusinessRating(arr: [{code: string, value: number}], stock: string){
+    const length = arr.length
+    const indx = arr.findIndex(item => item.code == stock)
+
+    const per = indx / length * 100
+
+    if(per > 80) return 1
+    if(per <= 80 && per > 60) return 2
+    if(per <= 60 && per > 40) return 3
+    if(per <= 40 && per > 20) return 4
+    return 5
+  }
+
+  private checkYearConsecutive(years: string[]) {
+    let consecutiveCount = 1;
+    for (let i = 0; i < years.length - 1; i++) {
+      const currentYear = parseInt(years[i]);
+      const nextYear = parseInt(years[i + 1]);
+
+      if (currentYear - nextYear === 1) {
+        consecutiveCount++;
+      }
+    }
+    if(consecutiveCount == 4) return 5 
+    if(consecutiveCount == 3) return 4 
+    if(consecutiveCount == 2) return 3 
+    if(consecutiveCount == 3) return 2 
+    if(consecutiveCount == 1) return 1 
+  }
+
+  private checkStarFinancialHealthRating(obj: any){
+    const data = Object.entries(obj).reduce((result: any, [key, value]) => {
+      if(key.includes('All')){
+          if(!result?.all) result.all = {}
+          result.all[key.replace('All', '')] = value
+          return result
+      }
+      if(key.includes('Industry')){
+          if(!result?.industry) result.industry = {}
+          result.industry[key.replace('Industry', '')] = value
+          return result
+      }
+      if(!result?.stock) result.stock = {}
+          result.stock[key] = value
+          return result
+    }, {});
+    
+  const properties = Object.keys(data.stock);
+  
+  let star = {}
+  
+  for (let property of properties) {
+    const stockValue = data.stock[property];
+    const industryValue = data.industry[property];
+    const allValue = data.all[property];
+  
+    if(stockValue > industryValue > allValue) star[property] = 5
+    else if(stockValue > allValue > industryValue) star[property] = 4
+    else if(industryValue > stockValue > allValue) star[property] = 3
+    else if(allValue > stockValue > industryValue) star[property] = 2
+    else star[property] = 1
+  }
+  
+  return star
   }
 }

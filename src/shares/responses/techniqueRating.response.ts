@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { UtilCommonTemplate } from "../../utils/utils.common"
 
-export class ValuationRatingResponse {
+export class TechniqueRatingResponse {
     @ApiProperty({
         type: String,
         example: 'Định giá'
@@ -15,32 +15,20 @@ export class ValuationRatingResponse {
     value: number
 
     @ApiProperty({
-        type: [ValuationRatingResponse],
+        type: [TechniqueRatingResponse],
         example: [{
             name: 'Định giá',
             value: 2,
         }],
         isArray: true
     })
-    child: ValuationRatingResponse[]
+    child: TechniqueRatingResponse[]
 
-    constructor(data?: ValuationRatingResponse) {
+    constructor(data?: TechniqueRatingResponse) {
         this.name = data?.name || ''
         this.value = data?.value || 0
-        this.child = data?.child || []
+        this.child = data?.child ? TechniqueRatingResponse.mapToList(data.child) : []
         switch (data?.name) {
-            case 'graham':
-                this.name = 'Định giá Graham'
-                break;
-            case 'graham_1':
-                this.name = 'Định giá Graham 1'
-                break;
-            case 'graham_2':
-                this.name = 'Định giá Graham 2'
-                break;
-            case 'graham_3':
-                this.name = 'Định giá Graham 3'
-                break;
             case 'dinh_gia_pe':
                 this.name = 'Định giá trên cổ tức'
                 break
@@ -53,8 +41,8 @@ export class ValuationRatingResponse {
     }
 
     static mapToList(data?: any[]): any {
-        const dataMapped = data.map(item => new ValuationRatingResponse(item))
-        const totalStar = UtilCommonTemplate.checkStarCommon(dataMapped.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
+        const dataMapped = data.map(item => new TechniqueRatingResponse(item))
+        const totalStar = UtilCommonTemplate.checkStarCommon(dataMapped.reduce((acc, currentValue) => acc + currentValue.value, 0), 2)
         return {
             totalStar, data: dataMapped
         }
