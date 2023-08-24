@@ -500,6 +500,33 @@ export class UtilCommonTemplate {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd')
       .replace(/Đ/g, 'D')
-      // .replace(/\s/g, '');
+    // .replace(/\s/g, '');
   }
+
+  static checkStarCommon(sum_point: number, quantity: number) {
+    switch (quantity) {
+      case 4:
+        if (sum_point >= 18) return 5
+        if (sum_point >= 15 && sum_point <= 17) return 4
+        if (sum_point >= 12 && sum_point <= 14) return 3
+        if (sum_point >= 8 && sum_point <= 11) return 2
+        return 1
+      case 3:
+        if (sum_point >= 14) return 5
+        if (sum_point >= 11 && sum_point <= 13) return 4
+        if (sum_point >= 7 && sum_point <= 10) return 3
+        if (sum_point >= 4 && sum_point <= 6) return 2
+        return 1
+      case 2:
+        if (sum_point >= 9) return 5
+        if (sum_point >= 7 && sum_point <= 8) return 4
+        if (sum_point >= 5 && sum_point <= 6) return 3
+        if (sum_point >= 3 && sum_point <= 4) return 2
+        return 1
+      default:
+        break;
+    }
+
+  }
+  
 }

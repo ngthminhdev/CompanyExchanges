@@ -321,6 +321,18 @@ export class SharesController {
     }
   }
 
+  @Get('rating-ky-thuat')
+  @ApiOperation({summary: 'Rating kỹ thuật'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.techniqueRating(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   @Get('rating-dinh-gia')
   @ApiOperation({summary: 'Rating định giá'})
   @ApiOkResponse({type: ValuationRatingResponse})
@@ -333,12 +345,36 @@ export class SharesController {
     }
   }
 
-  @Get('rating-ky-thuat')
-  @ApiOperation({summary: 'Rating kỹ thuật'})
+  @Get('rating-nganh-nghe-kinh-doanh')
+  @ApiOperation({summary: 'Rating ngành nghề kinh doanh'})
   @ApiOkResponse({type: ValuationRatingResponse})
-  async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
+  async businessRating(@Query() q: StockDto, @Res() res: Response) {
     try {
-      const data = await this.sharesService.techniqueRating(q.stock.toUpperCase())
+      const data = await this.sharesService.businessRating(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('rating-quyen-loi-ndt-ca-nhan')
+  @ApiOperation({summary: 'Rating quyền lợi NDT cá nhân'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async individualInvestorBenefitsRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.individualInvestorBenefitsRating(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('rating-vi-the-doanh-nghiep')
+  @ApiOperation({summary: 'Rating vị thế doanh nghiệp'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async businessPositionRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.businessPositionRating(q.stock.toUpperCase())
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)
