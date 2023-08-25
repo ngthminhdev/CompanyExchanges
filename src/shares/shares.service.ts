@@ -1770,7 +1770,7 @@ export class SharesService {
       }
       return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
     }, [])
-    map[index_graham].value = tong / map[index_graham].child.length
+    map[index_graham].value = UtilCommonTemplate.checkStarCommon(tong, 3)
 
     const dataMapped = ValuationRatingResponse.mapToList(map)
     await this.redis.set(`${RedisKeys.valuationRating}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
