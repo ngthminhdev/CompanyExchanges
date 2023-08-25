@@ -13,7 +13,7 @@ export class MssqlService {
   private async initializeDatabase(): Promise<void> {
     try {
       this.database = await sql.connect(
-        'Server=192.168.13.22,1433;Database=marketTrade;User Id=THANHMINH;Password=123beta456;Encrypt=false',
+        'Server=192.168.13.22,1433;Database=marketTrade;User Id=THANHMINH;Password=123beta456;Encrypt=false;Request Timeout=30000',
       );
     } catch (e) {
       throw new CatchException(e);
@@ -21,7 +21,11 @@ export class MssqlService {
   }
 
   async query<T>(query: string): Promise<T> {
-    return (await this.database.query(query)).recordset;
+    try {
+      return (await this.database.query(query)).recordset;
+    } catch (error) {
+      throw new CatchException(error)
+    }
   }
 
   async getDate<T>(query: string): Promise<T> {
