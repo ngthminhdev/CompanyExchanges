@@ -532,7 +532,7 @@ export class MacroController {
   @ApiOkResponse({type: ExchangeRateAndInterestRateResponse})
   async exchangeRateAndInterestRate (@Query() query: ExchangeRateAndInterestRateDto,@Res() res: Response){
     try {
-      const data = await this.macrosService.exchangeRateAndInterestRate(+query.type)
+      const data = await this.macrosService.exchangeRateAndInterestRate(+query.type, +query.category)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

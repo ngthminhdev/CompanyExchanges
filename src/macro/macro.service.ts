@@ -1461,74 +1461,58 @@ export class MacroService {
     return dataMapped
   }
 
-  async exchangeRateAndInterestRate(type: number) {
+  async exchangeRateAndInterestRate(type: number, category: number) {
     const redisData = await this.redis.get(`${RedisKeys.exchangeRateAndInterestRate}:${type}`)
     if(redisData) return redisData
+
     const query = `
-    WITH ty_gia
+    WITH temp
     AS (SELECT
-      'Ty gia' AS name,
+      '${category ? 'Lai suat' : 'Ty gia'}' AS name,
       CASE
         WHEN LEAD(giaTri) OVER (ORDER BY thoiDiem DESC) = 0 THEN NULL
-        ELSE (giaTri - LEAD(giaTri) OVER (ORDER BY thoiDiem DESC)) / LEAD(giaTri) OVER (ORDER BY thoiDiem DESC) * 100
+        ELSE (giaTri - LEAD(giaTri) OVER (ORDER BY thoiDiem DESC)) /
+          LEAD(giaTri) OVER (ORDER BY thoiDiem DESC) * 100
       END AS value,
       thoiDiem AS date
     FROM macroEconomic.dbo.DuLieuViMo
-    WHERE phanBang = N'TỶ GIÁ'
-    AND nhomDulieu = N'CHỈ SỐ TỶ GIÁ'),
-    lai_suat
+    WHERE phanBang = N'${category ? 'LÃI SUẤT' : 'TỶ GIÁ'}'
+    AND nhomDulieu = N'${category ? 'CHỈ SỐ LÃI SUẤT' : 'CHỈ SỐ TỶ GIÁ'}'
+    ${category ? `AND chiTieu = N'Lãi suất % (Qua đêm)'`: ``}
+    ),
+    vnindex
     AS (SELECT
-      'Lai suat' AS name,
-      giaTri AS value,
-      thoiDiem AS date
-    FROM macroEconomic.dbo.DuLieuViMo
-    WHERE phanBang = N'LÃI SUẤT'
-    AND nhomDulieu = N'CHỈ SỐ LÃI SUẤT'
-    AND chiTieu = N'Lãi suất % (Qua đêm)'),
-    union_ls_tg
-    AS (SELECT
-      *
-    FROM ty_gia
-    UNION ALL
-    SELECT
-      *
-    FROM lai_suat),
-    vn
-    AS (SELECT
-      code AS name,
-      date,
-      closePrice AS value
-    FROM marketTrade.dbo.indexTradeVND
-    WHERE code = 'VNINDEX'
-    AND date IN (SELECT
-      date
-    FROM union_ls_tg
-    GROUP BY date
-    HAVING COUNT(date) >= 2)),
-    join_with_vnindex
+      m.date,
+      ${type ? `(closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY m.date DESC)) /
+      LEAD(closePrice) OVER (PARTITION BY code ORDER BY m.date DESC) * 100`: `value`} AS value,
+      'VNINDEX' AS name
+    FROM marketTrade.dbo.indexTradeVND m
+    INNER JOIN temp t
+      ON t.date = m.date
+    WHERE code = 'VNINDEX'),
+    uni
     AS (SELECT
       name,
       date,
       value
-    FROM union_ls_tg
+    FROM vnindex
+    UNION ALL
+    SELECT
+      name,
+      date,
+      value
+    FROM temp)
+    SELECT TOP 60
+      *
+    FROM uni
     WHERE date IN (SELECT
       date
-    FROM union_ls_tg
+    FROM uni
     GROUP BY date
-    HAVING COUNT(date) >= 2)
-    UNION ALL
-    SELECT
-      name,
-      date,
-      value
-    FROM vn)
-    SELECT TOP 90
-      name, date,
-      ${type ? `case when name = 'VNINDEX' then (value - lead(value) over (partition by name order by date desc))/lead(value) over (partition by name order by date desc) * 100 else value end
-      as value` : `value`}
-    FROM join_with_vnindex
+    HAVING COUNT(date) = 2)
     ORDER BY date DESC
     `
+    
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
     const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}`, dataMapped, { ttl: TimeToLive.OneWeek })
