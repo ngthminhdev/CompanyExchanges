@@ -150,6 +150,8 @@ export class SharesService {
     INNER JOIN pe e
       ON e.code = t.code
     `
+    console.log(query);
+    
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
     await this.redis.set(`${RedisKeys.headerStock}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.Minute })
@@ -1760,12 +1762,12 @@ export class SharesService {
 
       if (current.includes('graham') && index == -1) {
         tong += this.checkStarValuationRating(data[0][current])
-        return [...acc, { name: 'graham', value: 0, child: [{ name: current, value: this.checkStarValuationRating(data[0][current]) }] }]
+        return [...acc, { name: 'graham', value: 0, child: [{ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) }] }]
       }
       if (current.includes('graham') && index != -1) {
         index_graham = index
         tong += this.checkStarValuationRating(data[0][current])
-        acc[index].child.push({ name: current, value: this.checkStarValuationRating(data[0][current]) })
+        acc[index].child.push({ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) })
         return acc
       }
       return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
