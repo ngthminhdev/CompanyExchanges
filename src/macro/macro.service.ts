@@ -1484,7 +1484,7 @@ export class MacroService {
     AS (SELECT
       m.date,
       ${type ? `(closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY m.date DESC)) /
-      LEAD(closePrice) OVER (PARTITION BY code ORDER BY m.date DESC) * 100`: `value`} AS value,
+      LEAD(closePrice) OVER (PARTITION BY code ORDER BY m.date DESC) * 100`: `closePrice`} AS value,
       'VNINDEX' AS name
     FROM marketTrade.dbo.indexTradeVND m
     INNER JOIN temp t
@@ -1512,7 +1512,6 @@ export class MacroService {
     HAVING COUNT(date) = 2)
     ORDER BY date DESC
     `
-    
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
     const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`, dataMapped, { ttl: TimeToLive.OneWeek })
