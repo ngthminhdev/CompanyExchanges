@@ -150,7 +150,6 @@ export class SharesService {
     INNER JOIN pe e
       ON e.code = t.code
     `
-    console.log(query);
     
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
