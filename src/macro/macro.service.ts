@@ -1462,7 +1462,7 @@ export class MacroService {
   }
 
   async exchangeRateAndInterestRate(type: number, category: number) {
-    const redisData = await this.redis.get(`${RedisKeys.exchangeRateAndInterestRate}:${type}`)
+    const redisData = await this.redis.get(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`)
     if(redisData) return redisData
 
     const query = `
@@ -1515,7 +1515,7 @@ export class MacroService {
     
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
     const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
-    await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
   }
 
