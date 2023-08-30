@@ -33,6 +33,7 @@ import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctu
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
 import { ValuationRatingResponse } from './responses/valuationRating.response';
+import { log } from 'console';
 
 @Injectable()
 export class SharesService {
@@ -54,7 +55,7 @@ export class SharesService {
     const redisData = await this.redis.get(`${RedisKeys.headerStock}:${stock}:${type}`)
     if (redisData) return redisData
 
-    const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' order by date desc`))[0]?.date
+    const date = (await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where code = '${stock}' and ratioCode = 'PRICE_TO_BOOK' order by date desc`))[0]?.date
     if (!date) return {}
 
     const dateTickerTrade = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where code = '${stock}' order by date desc`))[0]?.date
@@ -62,7 +63,7 @@ export class SharesService {
     const isStock = (await this.mssqlService.query(`select top 1 case when LV2 = N'Ngân hàng' then 'NH' when LV2 = N'Dịch vụ tài chính' then 'CK' when LV2 = N'Bảo hiểm' then 'BH' else 'CTCP' end as LV2 from marketInfor.dbo.info where code = '${stock}'`))[0]?.LV2
     if (!isStock || isStock != type.toUpperCase()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'stock not found')
 
-    const now = moment(date, 'YYYY-MM-DD').format('YYYY-MM-DD')
+    const now = moment(date).format('YYYY-MM-DD')
 
     const week = moment(now).subtract(7, 'day').format('YYYY-MM-DD')
     const month = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.indexTradeVND where date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
@@ -1523,7 +1524,7 @@ export class SharesService {
 
   async financialHealthRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    if(redisData) return redisData
+    // if(redisData) return redisData
 
     const query = `
     WITH stock
@@ -1566,6 +1567,30 @@ export class SharesService {
       NPM AS NPMIndustry,
       ROA AS ROAIndustry,
       ROE AS ROEIndustry,
+      '${stock}' AS code
+    FROM VISUALIZED_DATA.dbo.rating
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    ORDER BY yearQuarter DESC),
+    nganh_4_quy AS (SELECT TOP 1
+      currentRatio4Quarter,
+      quickRatio4Quarter,
+      cashRatio4Quarter,
+      interestCoverageRatio4Quarter,
+      ACR4Quarter,
+      DSCR4Quarter,
+      totalDebtToTotalAssets4Quarter,
+      DE4Quarter,
+      FAT4Quarter,
+      ATR4Quarter,
+      CTR4Quarter,
+      CT4Quarter,
+      GPM4Quarter,
+      NPM4Quarter,
+      ROA4Quarter,
+      ROE4Quarter,
       '${stock}' AS code
     FROM VISUALIZED_DATA.dbo.rating
     WHERE LV2 = (SELECT
@@ -1643,14 +1668,34 @@ export class SharesService {
       GPMAll,
       NPMAll,
       ROAAll,
-      ROEAll
+      ROEAll,
+      currentRatio4Quarter,
+      quickRatio4Quarter,
+      cashRatio4Quarter,
+      interestCoverageRatio4Quarter,
+      ACR4Quarter,
+      DSCR4Quarter,
+      totalDebtToTotalAssets4Quarter,
+      DE4Quarter,
+      FAT4Quarter,
+      ATR4Quarter,
+      CTR4Quarter,
+      CT4Quarter,
+      GPM4Quarter,
+      NPM4Quarter,
+      ROA4Quarter,
+      ROE4Quarter
     FROM stock s
     INNER JOIN nganh n
       ON n.code = s.code
     INNER JOIN thi_truong t
       ON t.code = s.code
+    INNER JOIN nganh_4_quy q
+      ON q.code = s.code  
     `
+    
     const data = await this.mssqlService.query(query)
+    console.log(query);
     const star: any = this.checkStarFinancialHealthRating(data[0])
     const dataMapped = FinancialHealthRatingResponse.mapToList(star)
     await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
@@ -1700,7 +1745,7 @@ export class SharesService {
 
   async valuationRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
-    if(redisData) return redisData
+    // if(redisData) return redisData
 
     const query = `
     WITH tang_truong
@@ -1718,7 +1763,7 @@ export class SharesService {
     SELECT
       ((r.PE * c.EPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pe,
       ((r.PB * c.BVPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pb,
-      (POWER((22.5 * c.EPS * c.BVPS), 1 / 2) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_3,
+      case when 22.5 * c.EPS * c.BVPS < 0 then 0 else (POWER((22.5 * c.EPS * c.BVPS), 0.5) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 end AS graham_3,
       ((c.EPS * (7 + 1.5 * (SELECT
         AVG(tang) AS binh_quan
       FROM tang_truong)
@@ -1745,13 +1790,12 @@ export class SharesService {
     FROM RATIO.dbo.ratioInday where code = l.LV2)
     AND c.yearQuarter = (SELECT
       MAX(yearQuarter)
-    FROM financialReport.dbo.calBCTC)
+    FROM financialReport.dbo.calBCTC WHERE code = '${stock}')
     AND t.date = (SELECT
       MAX(date)
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-    
     const data = await this.mssqlService.query<any[]>(query)
     if(data.length == 0) return []
 
@@ -2274,24 +2318,47 @@ export class SharesService {
           result.industry[key.replace('Industry', '')] = value
           return result
       }
+      if(key.includes('4Quarter')){
+        if(!result?.quarter) result.quarter = {}
+        result.quarter[key.replace('4Quarter', '')] = value
+        return result
+    }
       if(!result?.stock) result.stock = {}
           result.stock[key] = value
           return result
     }, {});
-    
+
   const properties = Object.keys(data.stock);
   
   let star = {}
+  let starIndustry = {}
+  let starAll = {}
   
   for (let property of properties) {
     const stockValue = data.stock[property];
     const industryValue = data.industry[property];
     const allValue = data.all[property];
   
-    if(stockValue > industryValue > allValue) star[property] = 5
-    else if(stockValue > allValue > industryValue) star[property] = 4
-    else if(industryValue > stockValue > allValue) star[property] = 3
-    else if(allValue > stockValue > industryValue) star[property] = 2
+    if(stockValue > industryValue > allValue) {
+      star[property] = 5
+      starIndustry[property] = 4
+      starAll[property] = 3
+    }
+    else if(stockValue > allValue > industryValue) {
+      star[property] = 4
+      starIndustry[property] = 2
+      starAll[property] = 3
+    }
+    else if(industryValue > stockValue > allValue) {
+      star[property] = 3
+      starIndustry[property] = 4
+      starAll[property] = 2
+    }
+    else if(allValue > stockValue > industryValue) {
+      star[property] = 2
+      starIndustry[property] = 1
+      starAll[property] = 3
+    }
     else star[property] = 1
   }
   
