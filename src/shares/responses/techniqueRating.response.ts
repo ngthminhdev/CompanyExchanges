@@ -40,11 +40,11 @@ export class TechniqueRatingResponse {
         }
     }
 
-    static mapToList(data?: any[]): any {
+    static mapToList(data: any[], starIndustry?: number, starAll?: number): any {
         const dataMapped = data.map(item => new TechniqueRatingResponse(item))
         const totalStar = UtilCommonTemplate.checkStarCommon(dataMapped.reduce((acc, currentValue) => acc + currentValue.value, 0), 2)
         return {
-            totalStar, data: dataMapped
+            totalStarIndustry: starIndustry, totalStarAll: starAll, totalStar, data: dataMapped
         }
     }
 }

@@ -52,11 +52,13 @@ export class ValuationRatingResponse {
         }
     }
 
-    static mapToList(data?: any[]): any {
+    static mapToList(data: any[], data_2: any[], data_3: any[]): any {
         const dataMapped = data.map(item => new ValuationRatingResponse(item))
         const totalStar = UtilCommonTemplate.checkStarCommon(dataMapped.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
+        const totalStarIndustry = UtilCommonTemplate.checkStarCommon(data_2.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
+        const totalStarAll = UtilCommonTemplate.checkStarCommon(data_3.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
         return {
-            totalStar, data: dataMapped
+            totalStar, totalStarIndustry, totalStarAll, data: dataMapped
         }
     }
 }

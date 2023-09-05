@@ -33,7 +33,6 @@ import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctu
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
 import { ValuationRatingResponse } from './responses/valuationRating.response';
-import { log } from 'console';
 
 @Injectable()
 export class SharesService {
@@ -1524,7 +1523,7 @@ export class SharesService {
 
   async financialHealthRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    // if(redisData) return redisData
+    if(redisData) return redisData
 
     const query = `
     WITH stock
@@ -1695,7 +1694,6 @@ export class SharesService {
     `
     
     const data = await this.mssqlService.query(query)
-    console.log(query);
     const star: any = this.checkStarFinancialHealthRating(data[0])
     const dataMapped = FinancialHealthRatingResponse.mapToList(star)
     await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
@@ -1706,6 +1704,7 @@ export class SharesService {
     const redisData = await this.redis.get(`${RedisKeys.techniqueRating}:${stock}`)
     if(redisData) return redisData
 
+    //Cổ phiếu
     const query = `
     SELECT closePrice, highPrice, lowPrice
     FROM marketTrade.dbo.historyTicker
@@ -1713,8 +1712,46 @@ export class SharesService {
     and date >= '2021-01-01'
     order by date
     `
-    const data: any = await this.mssqlService.query(query)
+    const promise = this.mssqlService.query(query)
 
+    //Ngành
+    const query_2 = `
+    SELECT
+      AVG(closePrice) AS closePrice,
+      AVG(highPrice) AS highPrice,
+      AVG(lowPrice) AS lowPrice
+    FROM marketTrade.dbo.historyTicker
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'))
+    AND date >= '2021-01-01'
+    GROUP BY date
+    ORDER BY date
+    `
+    const promise_2 = this.mssqlService.query(query_2)
+    //Thị trường
+    const query_3 = `
+    SELECT
+      AVG(closePrice) AS closePrice,
+      AVG(highPrice) AS highPrice,
+      AVG(lowPrice) AS lowPrice
+    FROM marketTrade.dbo.historyTicker
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Dịch vụ ngân hàng', N'Tài chính', N'Bảo hiểm'))
+    AND date >= '2021-01-01'
+    GROUP BY date
+    ORDER BY date ASC
+    `
+    const promise_3 = this.mssqlService.query(query_3)
+    const [data, data_2, data_3] = await Promise.all([promise, promise_2, promise_3]) as any
+
+    //Tính toán cổ phiếu
     const closePrice = data.map(item => item.closePrice / 1000)
     const highPrice = data.map(item => item.highPrice / 1000)
     const lowPrice = data.map(item => item.lowPrice / 1000)
@@ -1738,7 +1775,70 @@ export class SharesService {
     const stochRSI = this.stochRSI(closePrice)
     const {dStoch, kStoch} = this.stoch(closePrice, highPrice, lowPrice, 14)
 
-    const dataMapped = TechniqueRatingResponse.mapToList(this.checkStarTechniqueRating(ma5, ma10, ma20, ma50, ma100, ma200, ema5, ema10, ema20, ema50, ema100, ema200, rsi, williamR, macd, histogram, signal, adx, cci, stochRSI, dStoch, kStoch, closePrice[closePrice.length - 1]))
+    //Tính toán ngành
+    const closePriceIndustry = data_2.map(item => item.closePrice / 1000)
+    const highPriceIndustry = data_2.map(item => item.highPrice / 1000)
+    const lowPriceIndustry = data_2.map(item => item.lowPrice / 1000)
+    const ma5Industry = this.ma(closePriceIndustry, 5)
+    const ma10Industry = this.ma(closePriceIndustry, 10)
+    const ma20Industry = this.ma(closePriceIndustry, 20)
+    const ma50Industry = this.ma(closePriceIndustry, 50)
+    const ma100Industry = this.ma(closePriceIndustry, 5)
+    const ma200Industry = this.ma(closePriceIndustry, 200)
+    const ema5Industry = this.ema(closePriceIndustry, 5)
+    const ema10Industry = this.ema(closePriceIndustry, 10)
+    const ema20Industry = this.ema(closePriceIndustry, 20)
+    const ema50Industry = this.ema(closePriceIndustry, 50)
+    const ema100Industry = this.ema(closePriceIndustry, 100)
+    const ema200Industry = this.ema(closePriceIndustry, 200)
+    const williamRIndustry = this.williamR(closePriceIndustry, highPriceIndustry, lowPriceIndustry, 14)
+    const macIndustry = this.macD(closePriceIndustry)
+    const macdIndustry = macIndustry.macd
+    const histogramIndustry = macIndustry.histogram
+    const signalIndustry = macIndustry.signal
+    const rsiIndustry = this.rsi(closePriceIndustry, 14)
+    const adxIndustry = this.adx(closePriceIndustry, highPriceIndustry, lowPriceIndustry, 14)
+    const cciIndustry = this.cci(closePriceIndustry, highPriceIndustry, lowPriceIndustry, 14)
+    const stochRSIIndustry = this.stochRSI(closePriceIndustry)
+    const stochIndustry = this.stoch(closePriceIndustry, highPriceIndustry, lowPriceIndustry, 14)
+    const dStochIndustry = stochIndustry.dStoch  
+    const kStochIndustry = stochIndustry.kStoch  
+
+    //Tính toán thị trường
+    const closePriceAll = data_3.map(item => item.closePrice / 1000)
+    const highPriceAll = data_3.map(item => item.highPrice / 1000)
+    const lowPriceAll = data_3.map(item => item.lowPrice / 1000)
+    const ma5All = this.ma(closePriceAll, 5)
+    const ma10All = this.ma(closePriceAll, 10)
+    const ma20All = this.ma(closePriceAll, 20)
+    const ma50All = this.ma(closePriceAll, 50)
+    const ma100All = this.ma(closePriceAll, 5)
+    const ma200All = this.ma(closePriceAll, 200)
+    const ema5All = this.ema(closePriceAll, 5)
+    const ema10All = this.ema(closePriceAll, 10)
+    const ema20All = this.ema(closePriceAll, 20)
+    const ema50All = this.ema(closePriceAll, 50)
+    const ema100All = this.ema(closePriceAll, 100)
+    const ema200All = this.ema(closePriceAll, 200)
+    const williamRAll = this.williamR(closePriceAll, highPriceAll, lowPriceAll, 14)
+    const macAll = this.macD(closePriceAll)
+    const macdAll = macAll.macd
+    const histogramAll = macAll.histogram
+    const signalAll = macAll.signal
+    const rsiAll = this.rsi(closePriceAll, 14)
+    const adxAll = this.adx(closePriceAll, highPriceAll, lowPriceAll, 14)
+    const cciAll = this.cci(closePriceAll, highPriceAll, lowPriceAll, 14)
+    const stochRSIAll = this.stochRSI(closePriceAll)
+    const stochAll = this.stoch(closePriceAll, highPriceAll, lowPriceAll, 14)
+    const dStochAll = stochAll.dStoch  
+    const kStochAll = stochAll.kStoch   
+
+    const industry = this.checkStarTechniqueRating(ma5Industry, ma10Industry, ma20Industry, ma50Industry, ma100Industry, ma200Industry, ema5Industry, ema10Industry, ema20Industry, ema50Industry, ema100Industry, ema200Industry, rsiIndustry, williamRIndustry, macdIndustry, histogramIndustry, signalIndustry, adxIndustry, cciIndustry, stochRSIIndustry, dStochIndustry, kStochIndustry, closePriceIndustry[closePriceIndustry.length - 1])
+    const all = this.checkStarTechniqueRating(ma5All, ma10All, ma20All, ma50All, ma100All, ma200All, ema5All, ema10All, ema20All, ema50All, ema100All, ema200All, rsiAll, williamRAll, macdAll, histogramAll, signalAll, adxAll, cciAll, stochRSIAll, dStochAll, kStochAll, closePriceAll[closePriceAll.length - 1])
+    const starIndustry = UtilCommonTemplate.checkStarCommon(industry.reduce((acc, current) => acc + current.value, 0), 2)
+    const starAll = UtilCommonTemplate.checkStarCommon(all.reduce((acc, current) => acc + current.value, 0), 2)
+    
+    const dataMapped = TechniqueRatingResponse.mapToList(this.checkStarTechniqueRating(ma5, ma10, ma20, ma50, ma100, ma200, ema5, ema10, ema20, ema50, ema100, ema200, rsi, williamR, macd, histogram, signal, adx, cci, stochRSI, dStoch, kStoch, closePrice[closePrice.length - 1]), starIndustry, starAll)
     await this.redis.set(`${RedisKeys.techniqueRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -1747,6 +1847,7 @@ export class SharesService {
     const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
     // if(redisData) return redisData
 
+    //Cổ phiếu
     const query = `
     WITH tang_truong
     AS (SELECT TOP 4
@@ -1796,35 +1897,199 @@ export class SharesService {
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-    const data = await this.mssqlService.query<any[]>(query)
+    //Ngành  
+    const query_2 = `
+    WITH temp
+    AS (SELECT TOP 1
+      PE,
+      EPS,
+      PB,
+      BVPS,
+      '${stock}' AS code,
+      shareout
+    FROM RATIO.dbo.ratioInday
+    WHERE code = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    ORDER BY date DESC),
+    loi_nhuan
+    AS (SELECT
+      AVG([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
+      AVG([Vốn chủ sở hữu]) AS vcsh,
+      '${stock}' AS code
+    FROM financialReport.dbo.calBCTC
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'))
+    AND yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    ORDER BY yearQuarter DESC)),
+    ty_gia
+    AS (SELECT
+      AVG(closePrice) AS closePrice,
+      '${stock}' AS code
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'))
+    AND date = (SELECT TOP 1
+      date
+    FROM marketTrade.dbo.tickerTradeVND
+    ORDER BY date DESC)),
+    tang_truong
+    AS (SELECT TOP 4
+      AVG(EPS) AS trung_binh,
+      yearQuarter,
+      (AVG(EPS) - LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC)) / LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
+    FROM financialReport.dbo.calBCTC
+    WHERE RIGHT(yearQuarter, 1) = 0
+    AND code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'))
+    GROUP BY yearQuarter
+    ORDER BY yearQuarter DESC)
+    SELECT
+      ((PE * (loi_nhuan / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pe,
+      ((PB * (vcsh / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pb,
+      ((loi_nhuan / shareout) * (8.5 + 2 * (SELECT
+        AVG(tang)
+      FROM tang_truong)
+      ) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_1,
+      ((EPS * (7 + 1.5 * (SELECT
+        AVG(tang)
+      FROM tang_truong)
+      ) * 4.4) / (SELECT TOP 1
+        laiSuatPhatHanh
+      FROM [marketBonds].[dbo].[BondsInfor]
+      WHERE kyHan = N'15 Năm'
+      AND code = 'VCB'
+      ORDER BY ngayPhatHanh DESC)
+      - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_2,
+      (POWER(22.5 * EPS * BVPS, 1 / 2) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_3
+    FROM loi_nhuan l
+    INNER JOIN temp t
+      ON t.code = l.code
+    INNER JOIN ty_gia g
+      ON g.code = l.code
+    `
+
+    //Thị trường
+    const query_3 = `
+    WITH temp
+    AS (SELECT
+      AVG(PE) AS PE,
+      AVG(EPS) AS EPS,
+      AVG(PB) AS PB,
+      AVG(BVPS) AS BVPS,
+      '${stock}' AS code,
+      AVG(shareout) AS shareout
+    FROM RATIO.dbo.ratioInday
+    WHERE code IN (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính'))
+    AND date = (SELECT TOP 1
+      date
+    FROM RATIO.dbo.ratioInday
+    ORDER BY date DESC)),
+    loi_nhuan
+    AS (SELECT
+      AVG([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
+      AVG([Vốn chủ sở hữu]) AS vcsh,
+      '${stock}' AS code
+    FROM financialReport.dbo.calBCTC
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính'))
+    AND yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    ORDER BY yearQuarter DESC)),
+    ty_gia
+    AS (SELECT
+      AVG(closePrice) AS closePrice,
+      '${stock}' AS code
+    FROM marketTrade.dbo.tickerTradeVND
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính'))
+    AND date = (SELECT TOP 1
+      date
+    FROM marketTrade.dbo.tickerTradeVND
+    ORDER BY date DESC)),
+    tang_truong
+    AS (SELECT TOP 4
+      AVG(EPS) AS trung_binh,
+      yearQuarter,
+      (AVG(EPS) - LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC)) / LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
+    FROM financialReport.dbo.calBCTC
+    WHERE RIGHT(yearQuarter, 1) = 0
+    AND code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính'))
+    GROUP BY yearQuarter
+    ORDER BY yearQuarter DESC)
+    SELECT
+      ((PE * (loi_nhuan / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pe,
+      ((PB * (vcsh / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pb,
+      ((loi_nhuan / shareout) * (8.5 + 2 * (SELECT
+        AVG(tang)
+      FROM tang_truong)
+      ) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_1,
+      ((EPS * (7 + 1.5 * (SELECT
+        AVG(tang)
+      FROM tang_truong)
+      ) * 4.4) / (SELECT TOP 1
+        laiSuatPhatHanh
+      FROM [marketBonds].[dbo].[BondsInfor]
+      WHERE kyHan = N'15 Năm'
+      AND code = 'VCB'
+      ORDER BY ngayPhatHanh DESC)
+      - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_2,
+      (POWER(22.5 * EPS * BVPS, 1 / 2) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_3
+    FROM loi_nhuan l
+    INNER JOIN temp t
+      ON t.code = l.code
+    INNER JOIN ty_gia g
+      ON g.code = l.code
+    `
+    const promise = this.mssqlService.query<any[]>(query)
+    const promise_2 = this.mssqlService.query<any[]>(query_2)
+    const promise_3 = this.mssqlService.query<any[]>(query_3)
+
+    const [data, data_2, data_3] = await Promise.all([promise, promise_2, promise_3])
     if(data.length == 0) return []
 
-    let tong = 0, index_graham = 0
-    const map = Object.keys(data[0]).reduce((acc, current) => {
-      const index = acc.findIndex(item => item.name == 'graham')
+    const result = this.genStarValuation(data)
+    const resultIndustry = this.genStarValuation(data_2)    
+    const resultAll = this.genStarValuation(data_3)
 
-      if (current.includes('graham') && index == -1) {
-        tong += this.checkStarValuationRating(data[0][current])
-        return [...acc, { name: 'graham', value: 0, child: [{ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) }] }]
-      }
-      if (current.includes('graham') && index != -1) {
-        index_graham = index
-        tong += this.checkStarValuationRating(data[0][current])
-        acc[index].child.push({ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) })
-        return acc
-      }
-      return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
-    }, [])
-    map[index_graham].value = UtilCommonTemplate.checkStarCommon(tong, 3)
-
-    const dataMapped = ValuationRatingResponse.mapToList(map)
-    await this.redis.set(`${RedisKeys.valuationRating}:${stock}`, dataMapped, { ttl: TimeToLive.HaftHour })
+    const dataMapped = ValuationRatingResponse.mapToList(result, resultIndustry, resultAll)
+    await this.redis.set(`${RedisKeys.valuationRating}:${stock}`, dataMapped, { ttl: TimeToLive.FiveMinutes })
     return dataMapped
   }
 
   async businessRating(stock: string){
     const redisData = await this.redis.get(`${RedisKeys.businessRating}:${stock}`)
-    if(redisData) return redisData
+    // if(redisData) return redisData
 
     const query_1 = `
     select
@@ -2123,7 +2388,7 @@ export class SharesService {
     const quy_mo_von_hoa = data.map(item => ({value: item.von_hoa, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
     const quy_mo_tai_san = data.map(item => ({value: item.tong_tai_san, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
     const quy_mo_loi_nhuan = data.map(item => ({value: item.loi_nhuan_truoc_thue, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
-    const gd_5_phien = data_4.map(item => ({value: item.phien_5, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
+    const gd_5_phien = data_4.filter(item => item.phien_5 > 0).map(item => ({value: item.phien_5, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
     const gd_10_phien = data_4.map(item => ({value: item.phien_10, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
     const gd_20_phien = data_4.map(item => ({value: item.phien_20, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
     const gd_50_phien = data_4.map(item => ({value: item.phien_50, code: item.code})).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{code: string, value: number}]
@@ -2363,5 +2628,26 @@ export class SharesService {
   }
   
   return star
+  }
+
+  private genStarValuation(data: any[]){
+    let tong = 0, index_graham = 0
+    const map = Object.keys(data[0]).reduce((acc, current) => {
+      const index = acc.findIndex(item => item.name == 'graham')
+
+      if (current.includes('graham') && index == -1) {
+        tong += this.checkStarValuationRating(data[0][current])
+        return [...acc, { name: 'graham', value: 0, child: [{ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) }] }]
+      }
+      if (current.includes('graham') && index != -1) {
+        index_graham = index
+        tong += this.checkStarValuationRating(data[0][current])
+        acc[index].child.push({ name: 'Định giá Graham ' + current.split('_')[1], value: this.checkStarValuationRating(data[0][current]) })
+        return acc
+      }
+      return [...acc, { name: current, value: this.checkStarValuationRating(data[0][current]) }]
+    }, [])
+    map[index_graham].value = UtilCommonTemplate.checkStarCommon(tong, 3)
+    return map
   }
 }
