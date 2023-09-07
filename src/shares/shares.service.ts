@@ -2317,6 +2317,7 @@ and yearQuarter = '${prevQuarter}')
     WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
     AND i.LV2 NOT IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bảo hiểm')) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
     `
+    
     const data: any[] = await this.mssqlService.query(query)
 
     //Query cổ tức tiền mặt ổn định
@@ -2366,6 +2367,7 @@ and yearQuarter = '${prevQuarter}')
     FROM ty_le_theo_nam
     GROUP BY code
     `
+
     const redisTyLeCoTucTienMat: any[] = await this.redis.get(RedisKeys.tyLeCoTucTienMat)
     const data_3: any[] = redisTyLeCoTucTienMat ? redisTyLeCoTucTienMat : await this.mssqlService.query(query_3)
     if (!redisTyLeCoTucTienMat) await this.redis.set(RedisKeys.tyLeCoTucTienMat, data_3, { ttl: TimeToLive.OneWeek })
@@ -2666,7 +2668,7 @@ and yearQuarter = '${prevQuarter}')
   private checkStarBusinessRating(arr: [{ code: string, value: number }], stock: string) {
     const length = arr.length
     const indx = arr.findIndex(item => item.code == stock)
-
+    if(indx == -1) return 1
     const per = indx / length * 100
 
     if (per > 80) return 1
