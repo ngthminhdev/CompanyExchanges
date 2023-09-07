@@ -4,7 +4,10 @@ export class BusinessRatingResponse {
 
     constructor(data?: BusinessRatingResponse) { }
 
-    static mapToList(sortDoanhThu: number, sortLoiNhuan: number, sortVonHoa: number, sortTaiSan: number, sortTyTrongVonHoa: number, sortTyTrongTaiSan: number, sortGia1Thang: number, sortGia3Thang: number, sortGia6Thang: number, sortGia1Nam: number) {
+    static mapToList(
+        sortDoanhThu: number, sortLoiNhuan: number, sortVonHoa: number, sortTaiSan: number, sortTyTrongVonHoa: number, sortTyTrongTaiSan: number, sortGia1Thang: number, sortGia3Thang: number, sortGia6Thang: number, sortGia1Nam: number,
+        sortDoanhThuIndustry: number, sortLoiNhuanIndustry: number, sortVonHoaIndustry: number, sortTaiSanIndustry: number, sortTyTrongVonHoaIndustry: number, sortTyTrongTaiSanIndustry: number, sortGia1ThangIndustry: number, sortGia3ThangIndustry: number, sortGia6ThangIndustry: number, sortGia1NamIndustry: number
+        ) {
         const data = [
             {
                 name: 'Tăng trưởng ngành',
@@ -66,8 +69,14 @@ export class BusinessRatingResponse {
             }
         ]
         const totalStar = UtilCommonTemplate.checkStarCommon(data.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
+        const totalStarIndustry = UtilCommonTemplate.checkStarCommon(
+            UtilCommonTemplate.checkStarCommon(sortDoanhThuIndustry + sortLoiNhuanIndustry + sortVonHoaIndustry + sortTaiSanIndustry, 4) +
+            UtilCommonTemplate.checkStarCommon(sortGia1ThangIndustry + sortGia3ThangIndustry + sortGia6ThangIndustry + sortGia1NamIndustry, 4) +
+            UtilCommonTemplate.checkStarCommon(sortTyTrongVonHoaIndustry + sortTyTrongTaiSanIndustry, 2), 3
+        )
         return {
             totalStar,
+            totalStarIndustry,
             data
         }
     }

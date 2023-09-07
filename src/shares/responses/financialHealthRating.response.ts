@@ -10,7 +10,7 @@ export class FinancialHealthRatingResponse {
         this.child = data.child || []
     }
 
-    static mapToList(data?: any) {
+    static mapToList(data: any, dataIndustry: any, dataAll: any) {
         const gen: FinancialHealthRatingResponse[] = [
             {
               name: 'Yếu tố thanh khoản',
@@ -101,6 +101,65 @@ export class FinancialHealthRatingResponse {
               ]
             }
           ]
-        return {totalStar: UtilCommonTemplate.checkStarCommon(gen.reduce((acc, currentValue) => acc + currentValue.value, 0), 4), data: gen.map((item: FinancialHealthRatingResponse) => new FinancialHealthRatingResponse(item))}
+        return {
+          totalStarIndustry: 
+          UtilCommonTemplate.checkStarCommon(
+            UtilCommonTemplate.checkStarCommon(
+              dataIndustry.currentRatio +
+              dataIndustry.quickRatio +
+              dataIndustry.cashRatio +
+              dataIndustry.interestCoverageRatio, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommon(
+              dataIndustry.ACR +
+              dataIndustry.DSCR +
+              dataIndustry.totalDebtToTotalAssets +
+              dataIndustry.DE, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommon(
+              dataIndustry.FAT +
+              dataIndustry.ATR +
+              dataIndustry.CTR +
+              dataIndustry.CT, 4
+            ) +
+            UtilCommonTemplate.checkStarCommon(
+              dataIndustry.GPM +
+              dataIndustry.NPM +
+              dataIndustry.ROA +
+              dataIndustry.ROE, 4
+            ) 
+            , 4
+          ),
+          totalStarAll:
+          UtilCommonTemplate.checkStarCommon(
+            UtilCommonTemplate.checkStarCommon(
+              dataAll.currentRatio +
+              dataAll.quickRatio +
+              dataAll.cashRatio +
+              dataAll.interestCoverageRatio, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommon(
+              dataAll.ACR +
+              dataAll.DSCR +
+              dataAll.totalDebtToTotalAssets +
+              dataAll.DE, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommon(
+              dataAll.FAT +
+              dataAll.ATR +
+              dataAll.CTR +
+              dataAll.CT, 4
+            ) +
+            UtilCommonTemplate.checkStarCommon(
+              dataAll.GPM +
+              dataAll.NPM +
+              dataAll.ROA +
+              dataAll.ROE, 4
+            ) 
+            , 4
+          ) 
+          ,
+          totalStar: UtilCommonTemplate.checkStarCommon(gen.reduce((acc, currentValue) => acc + currentValue.value, 0), 4), 
+          data: gen.map((item: FinancialHealthRatingResponse) => new FinancialHealthRatingResponse(item))}
     }
 }

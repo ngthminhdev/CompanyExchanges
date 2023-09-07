@@ -87,18 +87,18 @@ export class KafkaConsumer {
     }
   }
 
-  // @MessagePattern(Topics.PhanNganh)
-  // handleIndustry(
-  //   @Payload() payload: IndustryKafkaInterface[],
-  //   @Ctx() context: KafkaContext,
-  // ) {
-  //   try {
-  //     this.kafkaService.handleIndustry();
-  //   } catch (error) {
-  //     console.log('loi phan nganh');
-  //     this.logger.error(error);
-  //   }
-  // }
+  @MessagePattern(Topics.PhanNganh)
+  handleIndustry(
+    @Payload() payload: IndustryKafkaInterface[],
+    @Ctx() context: KafkaContext,
+  ) {
+    try {
+      this.kafkaService.handleIndustry();
+    } catch (error) {
+      console.log('loi phan nganh');
+      this.logger.error(error);
+    }
+  }
 
   @MessagePattern(Topics.ChiSoTrongNuoc)
   handleDomesticIndex(
