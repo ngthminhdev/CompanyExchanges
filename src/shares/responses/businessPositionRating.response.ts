@@ -11,7 +11,27 @@ export class BusinessPositionRatingResponse {
         gd_20_phien: number,
         gd_50_phien: number,
         gia_tri_so_huu_khoi_ngoai: number,
-        gia_tri_tang_truong_VCSH: number
+        gia_tri_tang_truong_VCSH: number,
+        quy_mo_doanh_thu_industry: number,
+        quy_mo_von_hoa_industry: number,
+        quy_mo_tai_san_industry: number,
+        quy_mo_loi_nhuan_industry: number,
+        gd_5_phien_industry: number,
+        gd_10_phien_industry: number,
+        gd_20_phien_industry: number,
+        gd_50_phien_industry: number,
+        gia_tri_so_huu_khoi_ngoai_industry: number,
+        gia_tri_tang_truong_VCSH_industry: number,
+        quy_mo_doanh_thu_all: number,
+        quy_mo_von_hoa_all: number,
+        quy_mo_tai_san_all: number,
+        quy_mo_loi_nhuan_all: number,
+        gd_5_phien_all: number,
+        gd_10_phien_all: number,
+        gd_20_phien_all: number,
+        gd_50_phien_all: number,
+        gia_tri_so_huu_khoi_ngoai_all: number,
+        gia_tri_tang_truong_VCSH_all: number
     ) {
         const data = [
             {
@@ -74,6 +94,28 @@ export class BusinessPositionRatingResponse {
             }
         ]
         const totalStar = UtilCommonTemplate.checkStarCommon(data.reduce((acc, currentValue) => acc + currentValue.value, 0), 3)
-        return {totalStar, data}
+        const totalStarIndustry = UtilCommonTemplate.checkStarCommon(
+            UtilCommonTemplate.checkStarCommonV2(
+                quy_mo_doanh_thu_industry + quy_mo_tai_san_industry + quy_mo_loi_nhuan_industry + quy_mo_von_hoa_industry, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommonV2(
+                gd_5_phien_industry + gd_10_phien_industry + gd_20_phien_industry + gd_50_phien_industry, 4
+            ) +
+            UtilCommonTemplate.checkStarCommonV2(
+                gia_tri_so_huu_khoi_ngoai_industry + gia_tri_tang_truong_VCSH_industry, 2
+            ), 3
+        )
+        const totalStarAll = UtilCommonTemplate.checkStarCommon(
+            UtilCommonTemplate.checkStarCommonV2(
+                quy_mo_doanh_thu_all + quy_mo_tai_san_all + quy_mo_loi_nhuan_all + quy_mo_von_hoa_all, 4
+            ) + 
+            UtilCommonTemplate.checkStarCommonV2(
+                gd_5_phien_all + gd_10_phien_all + gd_20_phien_all + gd_50_phien_all, 4
+            ) +
+            UtilCommonTemplate.checkStarCommonV2(
+                gia_tri_so_huu_khoi_ngoai_all + gia_tri_tang_truong_VCSH_all, 2
+            ), 3
+        )
+        return {totalStar, totalStarIndustry, totalStarAll, data}
     }
 }

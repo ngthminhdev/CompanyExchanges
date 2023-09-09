@@ -6,7 +6,7 @@ export class IndividualInvestorBenefitsRatingResponse {
         const data = [
             {
                 name: 'Tăng trưởng thị giá cổ phiếu',
-                value: UtilCommonTemplate.checkStarCommon(month_6 + year_1 + year_2 + year_4, 4),
+                value: UtilCommonTemplate.checkStarCommonV2(month_6 + year_1 + year_2 + year_4, 4),
                 child: [
                     {
                         name: 'Tăng trưởng giá qua 6 tháng',

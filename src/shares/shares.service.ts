@@ -144,7 +144,7 @@ export class SharesService {
     INNER JOIN vh v
       ON v.code = t.code  
     `
-    
+
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
     const dataMapped = new HeaderStockResponse(data[0])
     await this.redis.set(`${RedisKeys.headerStock}:${stock}:${type}`, dataMapped, { ttl: TimeToLive.Minute })
@@ -205,7 +205,7 @@ export class SharesService {
     LEFT JOIN fo f
       ON f.date = t.date
     `
-    
+
     const data = await this.mssqlService.query<TransactionStatisticsResponse[]>(query)
     const dataMapped = TransactionStatisticsResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.transactionStatistics}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
@@ -1517,7 +1517,7 @@ export class SharesService {
 
   async financialHealthRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const prevQuarter = moment().subtract(1, 'quarter').format('YYYYQ')
 
@@ -1768,7 +1768,7 @@ and yearQuarter = '${prevQuarter}')
     INNER JOIN thi_truong_quy_truoc p on p.code = s.code 
     `
     const data = await this.mssqlService.query(query)
-    const {star, starIndustry, starAll}: any = this.checkStarFinancialHealthRating(data[0])
+    const { star, starIndustry, starAll }: any = this.checkStarFinancialHealthRating(data[0])
 
     const dataMapped = FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
     await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
@@ -1920,7 +1920,7 @@ and yearQuarter = '${prevQuarter}')
 
   async valuationRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     //Cổ phiếu
     const query = `
@@ -2164,7 +2164,13 @@ and yearQuarter = '${prevQuarter}')
 
   async businessRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.businessRating}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
+
+    const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh order by yearQuarter desc`))[0].yearQuarter
+    const prev_quarter = moment(now_quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
+    const prev_2_quarter = moment(now_quarter, 'YYYYQ').subtract(2, 'quarter').format('YYYYQ')
+    const prev_4_quarter = moment(now_quarter, 'YYYYQ').subtract(4, 'quarter').format('YYYYQ')
+    const prev_8_quarter = moment(now_quarter, 'YYYYQ').subtract(8, 'quarter').format('YYYYQ')
 
     const industry_promise = this.mssqlService.query(`select LV2 from marketInfor.dbo.info where code = '${stock}'`)
 
@@ -2177,10 +2183,10 @@ and yearQuarter = '${prevQuarter}')
           tang_truong_tai_san
     from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh
     where yearQuarter = (select max(yearQuarter) from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh)
-    and LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+    and code = '${stock}'
     `
     const promise_1 = this.mssqlService.query(query_1)
-    
+
     const query_2 = `
     select
           kd.code,
@@ -2193,9 +2199,11 @@ and yearQuarter = '${prevQuarter}')
     from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh kd
     inner join VISUALIZED_DATA.dbo.rating_gia gia on gia.code = kd.code
     where kd.yearQuarter = (select max(yearQuarter) from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh)
+    and gia.code = '${stock}'
     `
     const promise_2 = this.mssqlService.query(query_2)
 
+    //Ngành
     const query_3 = `
     select
          avg(kd.[ty_trong_von_hoa/TTT]) as ty_trong_vh,
@@ -2216,25 +2224,34 @@ and yearQuarter = '${prevQuarter}')
     `
     const promise_3 = this.mssqlService.query(query_3)
 
-    const [data_1, data_2, data_3, LV2] = await Promise.all([promise_1, promise_2, promise_3, industry_promise]) as any
+    //Toàn thị trường
+    const query_4 = `
+    select
+         avg(kd.[ty_trong_von_hoa/TTT]) as ty_trong_vh,
+          avg(kd.[ty_trong_tai_san/TTT]) as ty_trong_ts,
+          avg(gia.[Tỷ lệ giá trị giao dịch/TTT 1 tháng gần nhất]) as gia_1_thang,
+                  avg(gia.[Tỷ lệ giá trị giao dịch/TTT 3 tháng gần nhất]) as gia_3_thang,
+          avg(gia.[Tỷ lệ giá trị giao dịch/TTT 6 tháng gần nhất]) as gia_6_thang,
+          avg(gia.[Tỷ lệ giá trị giao dịch/TTT 1 năm gần nhất]) as gia_1_nam,
+          avg(tang_truong_doanh_thu) as tang_truong_doanh_thu,
+          avg(tang_truong_loi_nhuan_truoc_thue) as tang_truong_loi_nhuan_truoc_thue,
+          avg(tang_truong_von_hoa) as tang_truong_von_hoa,
+          avg(tang_truong_tai_san) as tang_truong_tai_san,
+          yearQuarter
+    from VISUALIZED_DATA.dbo.rating_nganh_nghe_kinh_doanh kd
+    inner join VISUALIZED_DATA.dbo.rating_gia gia on gia.code = kd.code
+    where yearQuarter in ('${now_quarter}', '${prev_quarter}', '${prev_2_quarter}', '${prev_4_quarter}', '${prev_8_quarter}')
+    group by yearQuarter
+    order by yearQuarter desc
+    `
+    const promise_4 = this.mssqlService.query(query_4)
 
-    const sortDoanhThu = data_1.map(item => ({ value: item.tang_truong_doanh_thu, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortLoiNhuan = data_1.map(item => ({ value: item.tang_truong_loi_nhuan_truoc_thue, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortVonHoa = data_1.map(item => ({ value: item.tang_truong_von_hoa, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortTaiSan = data_1.map(item => ({ value: item.tang_truong_tai_san, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-
-    const sortTyTrongVonHoa: [{ code: string, value: number }] = data_2.map(item => ({ value: item.ty_trong_vh, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortTyTrongTaiSan = data_2.map(item => ({ value: item.ty_trong_ts, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortGia1Thang = data_2.map(item => ({ value: item.gia_1_thang, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortGia3Thang = data_2.map(item => ({ value: item.gia_3_thang, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortGia6Thang = data_2.map(item => ({ value: item.gia_6_thang, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortGia1Nam = data_2.map(item => ({ value: item.gia_1_nam, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const [data_1, data_2, data_3, LV2, data_4] = await Promise.all([promise_1, promise_2, promise_3, industry_promise, promise_4]) as any
 
     const sortDoanhThuIndustry = data_3.map(item => ({ value: item.tang_truong_doanh_thu, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortLoiNhuanIndustry = data_3.map(item => ({ value: item.tang_truong_loi_nhuan_truoc_thue, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortVonHoaIndustry = data_3.map(item => ({ value: item.tang_truong_von_hoa, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortTaiSanIndustry = data_3.map(item => ({ value: item.tang_truong_tai_san, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-
     const sortTyTrongVonHoaIndustry: [{ code: string, value: number }] = data_3.map(item => ({ value: item.ty_trong_vh, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortTyTrongTaiSanIndustry = data_3.map(item => ({ value: item.ty_trong_ts, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortGia1ThangIndustry = data_3.map(item => ({ value: item.gia_1_thang, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
@@ -2242,17 +2259,28 @@ and yearQuarter = '${prevQuarter}')
     const sortGia6ThangIndustry = data_3.map(item => ({ value: item.gia_6_thang, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const sortGia1NamIndustry = data_3.map(item => ({ value: item.gia_1_nam, code: item.LV2 })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
 
+    const sortDoanhThuAll = data_4.map(item => ({ value: item.tang_truong_doanh_thu, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortLoiNhuanAll = data_4.map(item => ({ value: item.tang_truong_loi_nhuan_truoc_thue, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortVonHoaAll = data_4.map(item => ({ value: item.tang_truong_von_hoa, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortTaiSanAll = data_4.map(item => ({ value: item.tang_truong_tai_san, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortTyTrongVonHoaAll: [{ code: string, value: number }] = data_4.map(item => ({ value: item.ty_trong_vh, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortTyTrongTaiSanAll = data_4.map(item => ({ value: item.ty_trong_ts, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortGia1ThangAll = data_4.map(item => ({ value: item.gia_1_thang, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortGia3ThangAll = data_4.map(item => ({ value: item.gia_3_thang, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortGia6ThangAll = data_4.map(item => ({ value: item.gia_6_thang, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+    const sortGia1NamAll = data_4.map(item => ({ value: item.gia_1_nam, code: item.yearQuarter })).sort((a, b) => (a.value > b.value) ? 1 : -1) as [{ code: string, value: number }]
+
     const dataMapped = BusinessRatingResponse.mapToList(
-      this.checkStarBusinessRating(sortDoanhThu, stock),
-      this.checkStarBusinessRating(sortLoiNhuan, stock),
-      this.checkStarBusinessRating(sortVonHoa, stock),
-      this.checkStarBusinessRating(sortTaiSan, stock),
-      this.checkStarBusinessRating(sortTyTrongVonHoa, stock),
-      this.checkStarBusinessRating(sortTyTrongTaiSan, stock),
-      this.checkStarBusinessRating(sortGia1Thang, stock),
-      this.checkStarBusinessRating(sortGia3Thang, stock),
-      this.checkStarBusinessRating(sortGia6Thang, stock),
-      this.checkStarBusinessRating(sortGia1Nam, stock),
+      this.checkStarBusinessRatingV2(data_1[0]?.tang_truong_doanh_thu, 0),
+      this.checkStarBusinessRatingV2(data_1[0]?.tang_truong_loi_nhuan_truoc_thue, 0),
+      this.checkStarBusinessRatingV2(data_1[0]?.tang_truong_von_hoa, 0),
+      this.checkStarBusinessRatingV2(data_1[0]?.tang_truong_tai_san, 0),
+      this.checkStarBusinessRatingV2(data_2[0]?.ty_trong_vh, 2),
+      this.checkStarBusinessRatingV2(data_2[0]?.ty_trong_ts, 2),
+      this.checkStarBusinessRatingV2(data_2[0]?.gia_1_thang, 1),
+      this.checkStarBusinessRatingV2(data_2[0]?.gia_3_thang, 1),
+      this.checkStarBusinessRatingV2(data_2[0]?.gia_6_thang, 1),
+      this.checkStarBusinessRatingV2(data_2[0]?.gia_1_nam, 1),
 
       this.checkStarBusinessRating(sortDoanhThuIndustry, LV2[0].LV2),
       this.checkStarBusinessRating(sortLoiNhuanIndustry, LV2[0].LV2),
@@ -2264,7 +2292,19 @@ and yearQuarter = '${prevQuarter}')
       this.checkStarBusinessRating(sortGia3ThangIndustry, LV2[0].LV2),
       this.checkStarBusinessRating(sortGia6ThangIndustry, LV2[0].LV2),
       this.checkStarBusinessRating(sortGia1NamIndustry, LV2[0].LV2),
+
+      sortDoanhThuAll.findIndex(item => item.code == now_quarter) + 1,
+      sortLoiNhuanAll.findIndex(item => item.code == now_quarter) + 1,
+      sortVonHoaAll.findIndex(item => item.code == now_quarter) + 1,
+      sortTaiSanAll.findIndex(item => item.code == now_quarter) + 1,
+      sortTyTrongVonHoaAll.findIndex(item => item.code == now_quarter) + 1,
+      sortTyTrongTaiSanAll.findIndex(item => item.code == now_quarter) + 1,
+      sortGia1ThangAll.findIndex(item => item.code == now_quarter) + 1,
+      sortGia3ThangAll.findIndex(item => item.code == now_quarter) + 1,
+      sortGia6ThangAll.findIndex(item => item.code == now_quarter) + 1,
+      sortGia1NamAll.findIndex(item => item.code == now_quarter) + 1
     )
+
 
     await this.redis.set(`${RedisKeys.businessRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
@@ -2280,14 +2320,14 @@ and yearQuarter = '${prevQuarter}')
     const date = await this.mssqlService.query(`
     with date_ranges as (
         select
-            'HPG' as code,
+            '${stock}' as code,
             max(case when date <= '${moment().format('YYYY-MM-DD')}' then date else null end) as now,
             max(case when date <= '${moment().subtract(6, 'month').format('YYYY-MM-DD')}' then date else null end) as month_6,
             max(case when date <= '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year_1,
             max(case when date <= '${moment().subtract(2, 'year').format('YYYY-MM-DD')}' then date else null end) as year_2,
             max(case when date <= '${moment().subtract(4, 'year').format('YYYY-MM-DD')}' then date else null end) as year_4
         from marketTrade.dbo.tickerTradeVND
-        where code = 'HPG'
+        where code = '${stock}'
     )
     select code, now, month_6, year_1, year_2, year_4
     from date_ranges;
@@ -2301,7 +2341,7 @@ and yearQuarter = '${prevQuarter}')
 
     //Query tăng trưởng giá
     const query = `
-    SELECT
+    with stock as (SELECT
       ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang,
       ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam,
       ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam,
@@ -2312,10 +2352,44 @@ and yearQuarter = '${prevQuarter}')
       t.closePrice,
       t.date
     FROM marketTrade.dbo.tickerTradeVND t
-    INNER JOIN marketInfor.dbo.info i
-      ON i.code = t.code
     WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
-    AND i.LV2 NOT IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bảo hiểm')) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
+    AND code = '${stock}') AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen),
+industry as (
+    SELECT
+      ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang_nganh,
+      ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam_nganh,
+      ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam_nganh,
+      ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam_nganh,
+      '${stock}' as code
+    FROM (SELECT
+      avg(t.closePrice) as closePrice,
+      t.date
+    FROM marketTrade.dbo.tickerTradeVND t
+    inner join marketInfor.dbo.info i on i.code = t.code
+    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
+    and LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+    group by date
+    ) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
+),
+tt as (
+SELECT
+      ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang_tt,
+      ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam_tt,
+      ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam_tt,
+      ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam_tt,
+      '${stock}' as code
+    FROM (SELECT
+      avg(t.closePrice) as closePrice,
+      t.date
+    FROM marketTrade.dbo.tickerTradeVND t
+    inner join marketInfor.dbo.info i on i.code = t.code
+    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
+    and i.LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')
+    group by date
+    ) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
+    )
+select * from stock s inner join industry i on i.code = s.code
+inner join tt t on t.code = s.code
     `
     
     const data: any[] = await this.mssqlService.query(query)
@@ -2351,7 +2425,9 @@ and yearQuarter = '${prevQuarter}')
       yearQuarter
     FROM financialReport.dbo.calBCTC
     ORDER BY yearQuarter DESC)
-    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt'),
+    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt'
+    AND l.ticker = '${stock}'
+    ),
     ty_le_theo_nam
     AS (SELECT
       AVG(SHAREOUT * vnd / MARKETCAP) AS ty_le_theo_nam,
@@ -2369,24 +2445,18 @@ and yearQuarter = '${prevQuarter}')
     `
 
     const redisTyLeCoTucTienMat: any[] = await this.redis.get(RedisKeys.tyLeCoTucTienMat)
-    const data_3: any[] = redisTyLeCoTucTienMat ? redisTyLeCoTucTienMat : await this.mssqlService.query(query_3)
+    const data_3: any[] = await this.mssqlService.query(query_3)
     if (!redisTyLeCoTucTienMat) await this.redis.set(RedisKeys.tyLeCoTucTienMat, data_3, { ttl: TimeToLive.OneWeek })
 
-    //Tính số điểm
-    const sort6Thang = data.map(item => ({ value: item.tt6thang, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sort1Nam = data.map(item => ({ value: item.tt1nam, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sort2Nam = data.map(item => ({ value: item.tt2nam, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sort4Nam = data.map(item => ({ value: item.tt4nam, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const sortTyLeCoTuc = data_3.map(item => ({ value: item.ty_le_co_tuc_tien_mat, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
     const coTucTienMatOnDinh = this.checkYearConsecutive(data_2.map(item => item.year));
 
     const dataMapped = IndividualInvestorBenefitsRatingResponse.mapToList(
-      this.checkStarBusinessRating(sort6Thang, stock),
-      this.checkStarBusinessRating(sort1Nam, stock),
-      this.checkStarBusinessRating(sort2Nam, stock),
-      this.checkStarBusinessRating(sort4Nam, stock),
+      this.checkStarBusinessRatingV2(data[0]?.tt6thang, 3),
+      this.checkStarBusinessRatingV2(data[0]?.tt1nam, 3),
+      this.checkStarBusinessRatingV2(data[0]?.tt2nam, 3),
+      this.checkStarBusinessRatingV2(data[0]?.tt4nam, 3),
       coTucTienMatOnDinh,
-      this.checkStarBusinessRating(sortTyLeCoTuc, stock)
+      this.checkStarBusinessRatingV2(data_3[0].ty_le_co_tuc_tien_mat, 4)
     )
     await this.redis.set(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     return dataMapped
@@ -2399,63 +2469,129 @@ and yearQuarter = '${prevQuarter}')
     //query Quy mô doanh nghiệp
     const query = `
     WITH temp
-    AS (SELECT
-      f.code,
-      f.value,
-      f.id,
-      f.yearQuarter
-    FROM financialReport.dbo.financialReportV2 f
-    WHERE (f.id = 1
-    AND f.type = 'KQKD')
-    OR (f.id = 2
-    AND f.type = 'CDKT')
-    OR (f.id = 15
-    AND f.type = 'KQKD')),
-    marketcap
-    AS (SELECT
-      MARKETCAP,
-      code
-    FROM financialReport.dbo.calBCTC
-    WHERE yearQuarter = (SELECT TOP 1
-      yearQuarter
-    FROM financialReport.dbo.calBCTC
-    ORDER BY yearQuarter DESC))
-    SELECT
-      chuyen.code,
-      [1] as doanh_thu,
-      [2] as tong_tai_san,
-      [15] as loi_nhuan_truoc_thue,
-      m.MARKETCAP as von_hoa
-    FROM (SELECT
-      t.code,
-      t.value,
-      t.id,
-      i.LV2
-    FROM temp t
-    INNER JOIN marketInfor.dbo.info i
-      ON i.code = t.code
-    WHERE i.LV2 = (SELECT
-      LV2
-    FROM marketInfor.dbo.info
-    WHERE code = '${stock}')
-    AND yearQuarter = (SELECT TOP 1
-      yearQuarter
-    FROM temp
-    ORDER BY yearQuarter DESC)) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
-    INNER JOIN marketcap m
-      ON m.code = chuyen.code
+         AS (SELECT f.code,
+                    f.value,
+                    f.id,
+                    f.yearQuarter,
+                    i.LV2
+             FROM financialReport.dbo.financialReportV2 f
+                      INNER JOIN marketInfor.dbo.info i on i.code = f.code
+             WHERE (f.id = 1
+                 AND f.type = 'KQKD')
+                OR (f.id = 2
+                 AND f.type = 'CDKT')
+                OR (f.id = 15
+                 AND f.type = 'KQKD')),
+     marketcap_stock
+         AS (SELECT MARKETCAP,
+                    code
+             FROM financialReport.dbo.calBCTC
+             WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                  FROM financialReport.dbo.calBCTC
+                                  ORDER BY yearQuarter DESC)
+               AND code = '${stock}'),
+     marketcap_industry as (SELECT avg(MARKETCAP) as marketcap_industry,
+                                   '${stock}'          as code
+                            FROM financialReport.dbo.calBCTC c
+                                     INNER JOIN marketInfor.dbo.info i on i.code = c.code
+                            WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                                 FROM financialReport.dbo.calBCTC
+                                                 ORDER BY yearQuarter DESC)
+                              AND i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')),
+     marketcap_all as (SELECT avg(MARKETCAP) as marketcap_all,
+                              '${stock}'          as code
+                       FROM financialReport.dbo.calBCTC c
+                                INNER JOIN marketInfor.dbo.info i on i.code = c.code
+                       WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                            FROM financialReport.dbo.calBCTC
+                                            ORDER BY yearQuarter DESC)
+                         AND i.LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')),
+     stock as (SELECT chuyen.code,
+                      [1]         as doanh_thu,
+                      [2]         as tong_tai_san,
+                      [15]        as loi_nhuan_truoc_thue,
+                      m.MARKETCAP as von_hoa
+               FROM (SELECT t.code,
+                            t.value,
+                            t.id
+                     FROM temp t
+                     WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                          FROM temp
+                                          ORDER BY yearQuarter DESC)
+                       AND t.code = '${stock}') AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
+                        INNER JOIN marketcap_stock m
+                                   ON m.code = chuyen.code),
+     industry as (SELECT chuyen.code,
+                         [1]                  as doanh_thu_nganh,
+                         [2]                  as tong_tai_san_nganh,
+                         [15]                 as loi_nhuan_truoc_thue_nganh,
+                         m.marketcap_industry as von_hoa_nganh
+                  FROM (SELECT '${stock}'        as code,
+                               avg(t.value) as value,
+                               t.id
+                        FROM temp t
+                        WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                             FROM temp
+                                             ORDER BY yearQuarter DESC)
+                          AND LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+                        GROUP BY id) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
+                           INNER JOIN marketcap_industry m
+                                      ON m.code = chuyen.code),
+     tt as (SELECT chuyen.code,
+                   [1]             as doanh_thu_all,
+                   [2]             as tong_tai_san_all,
+                   [15]            as loi_nhuan_truoc_thue_all,
+                   m.marketcap_all as von_hoa_all
+            FROM (SELECT '${stock}'        as code,
+                         avg(t.value) as value,
+                         t.id
+                  FROM temp t
+                  WHERE yearQuarter = (SELECT TOP 1 yearQuarter
+                                       FROM temp
+                                       ORDER BY yearQuarter DESC)
+                    AND LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')
+                  GROUP BY id) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
+                     INNER JOIN marketcap_all m
+                                ON m.code = chuyen.code)
+select *
+from stock s
+         inner join industry i on i.code = s.code
+         inner join tt a on a.code = s.code
     `
     const promise = this.mssqlService.query(query)
 
     //Query Thị trường quan tâm
     const query_4 = `
-    select
-        [Giá trị giao dich CP 5 phiên] as phien_5,
-        [Giá trị giao dich CP 10 phiên] as phien_10,
-        [Giá trị giao dich CP 20 phiên] as phien_20,
-        [Giá trị giao dich CP 50 phiên] as phien_50,
-        code
-    from VISUALIZED_DATA.dbo.rating_gia
+    with stock as (select
+      [Giá trị giao dich CP 5 phiên] as phien_5,
+      [Giá trị giao dich CP 10 phiên] as phien_10,
+      [Giá trị giao dich CP 20 phiên] as phien_20,
+      [Giá trị giao dich CP 50 phiên] as phien_50,
+      code
+  from VISUALIZED_DATA.dbo.rating_gia
+  where code = '${stock}'),
+  industry as (
+      select
+      avg([Giá trị giao dich CP 5 phiên]) as phien_5_industry,
+      avg([Giá trị giao dich CP 10 phiên]) as phien_10_industry,
+      avg([Giá trị giao dich CP 20 phiên]) as phien_20_industry,
+      avg([Giá trị giao dich CP 50 phiên]) as phien_50_industry,
+      '${stock}' as code
+  from VISUALIZED_DATA.dbo.rating_gia g
+  inner join marketInfor.dbo.info i on i.code = g.code
+  where i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+  ),
+  tt as (
+      select
+      avg([Giá trị giao dich CP 5 phiên]) as phien_5_all,
+      avg([Giá trị giao dich CP 10 phiên]) as phien_10_all,
+      avg([Giá trị giao dich CP 20 phiên]) as phien_20_all,
+      avg([Giá trị giao dich CP 50 phiên]) as phien_50_all,
+      '${stock}' as code
+  from VISUALIZED_DATA.dbo.rating_gia g
+  )
+select * from stock s inner join industry i on i.code = s.code
+inner join tt t on t.code = s.code
     `
     const promise_4 = this.mssqlService.query(query_4)
 
@@ -2464,11 +2600,11 @@ and yearQuarter = '${prevQuarter}')
     const quarter_4 = UtilCommonTemplate.toDate((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.[foreign] where date <= '${moment(now, 'YYYY/MM/DD').subtract(1, 'year').format('YYYY-MM-DD')}'`))[0].date)
 
     const query_2 = `
-    SELECT
+    with stock as (SELECT
       CASE
         WHEN [${quarter_4}] = 0 THEN 0
         ELSE ([${now}] - [${quarter_4}]) / [${quarter_4}] * 100
-      END AS value,
+      END AS stock,
       code
     FROM (SELECT
       f.code,
@@ -2477,11 +2613,48 @@ and yearQuarter = '${prevQuarter}')
     FROM marketTrade.dbo.[foreign] f
     INNER JOIN VISUALIZED_DATA.dbo.share_out s
       ON s.code = f.code
-      INNER JOIN marketInfor.dbo.info i 
-      ON i.code = f.code
-    WHERE f.date IN ('${now}', '${quarter_4}') and i.LV2 not in (N'Dịch vụ tài chính', N'Ngân hàng', N'Bảo hiểm')) AS source
-    PIVOT (SUM(ty_le_so_huu_khoi_ngoai) FOR date IN ([${now}], [${quarter_4}])) AS chuyen
+    WHERE f.date IN ('${now}', '${quarter_4}') and f.code = '${stock}') AS source
+    PIVOT (SUM(ty_le_so_huu_khoi_ngoai) FOR date IN ([${now}], [${quarter_4}])) AS chuyen),
+    industry as (
+      SELECT
+        CASE
+          WHEN [${quarter_4}] = 0 THEN 0
+          ELSE ([${now}] - [${quarter_4}]) / [${quarter_4}] * 100
+        END AS industry,
+        '${stock}' as code
+      FROM (SELECT
+        (sum(f.totalRoom) - sum(f.currentRoom)) / sum(s.share_out) * 100 AS ty_le_so_huu_khoi_ngoai,
+        date
+      FROM marketTrade.dbo.[foreign] f
+      INNER JOIN VISUALIZED_DATA.dbo.share_out s
+        ON s.code = f.code
+      INNER JOIN marketInfor.dbo.info i on i.code = f.code
+      WHERE f.date IN ('${now}', '${quarter_4}') and i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}') group by date
+      ) AS source
+      PIVOT (SUM(ty_le_so_huu_khoi_ngoai) FOR date IN ([${now}], [${quarter_4}])) AS chuyen
+      ),
+  tt as (
+      SELECT
+        CASE
+          WHEN [${quarter_4}] = 0 THEN 0
+          ELSE ([${now}] - [${quarter_4}]) / [${quarter_4}] * 100
+        END AS tt,
+        '${stock}' as code
+      FROM (SELECT
+        (sum(f.totalRoom) - sum(f.currentRoom)) / sum(s.share_out) * 100 AS ty_le_so_huu_khoi_ngoai,
+        date
+      FROM marketTrade.dbo.[foreign] f
+      INNER JOIN VISUALIZED_DATA.dbo.share_out s
+        ON s.code = f.code
+      INNER JOIN marketInfor.dbo.info i on i.code = f.code
+      WHERE f.date IN ('${now}', '${quarter_4}') and LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính') group by date
+      ) AS source
+      PIVOT (SUM(ty_le_so_huu_khoi_ngoai) FOR date IN ([${now}], [${quarter_4}])) AS chuyen
+      )
+  select * from stock s inner join industry i on i.code = s.code
+  inner join tt t on t.code = s.code
     `
+
     const promise_2 = this.mssqlService.query(query_2)
 
     //Query Giá trị tăng trưởng VCSH
@@ -2489,48 +2662,83 @@ and yearQuarter = '${prevQuarter}')
     const year_1 = moment(now_quarter, 'YYYYQ').subtract(1, 'year').format('YYYYQ')
 
     const query_3 = `
-    SELECT
-      ([${now_quarter}] - [${year_1}]) / [${year_1}] * 100 as value,
+    with stock as (SELECT
+      ([${now_quarter}] - [${year_1}]) / [${year_1}] * 100 as stock,
       code
     FROM (SELECT
       [Vốn chủ sở hữu] AS value,
       c.code,
       c.yearQuarter
     FROM financialReport.dbo.calBCTC c
-    INNER JOIN marketInfor.dbo.info i
-      ON i.code = c.code
     WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
-    AND i.LV2 NOT IN (N'Dịch vụ tài chính', N'Ngân hàng', N'Bảo hiểm')) AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen
+    AND code = '${stock}') AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen),
+    industry as (
+        SELECT
+      ([${now_quarter}] - [${year_1}]) / [${year_1}] * 100 as industry,
+      '${stock}' as code
+    FROM (SELECT
+      avg([Vốn chủ sở hữu]) AS value,
+      c.yearQuarter
+    FROM financialReport.dbo.calBCTC c
+    INNER JOIN marketInfor.dbo.info i on i.code = c.code
+    WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
+    AND LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}') group by yearQuarter) AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen
+    ),
+tt as (
+        SELECT
+      ([${now_quarter}] - [${year_1}]) / [${year_1}] * 100 as tt,
+      '${stock}' as code
+    FROM (SELECT
+      avg([Vốn chủ sở hữu]) AS value,
+      c.yearQuarter
+    FROM financialReport.dbo.calBCTC c
+    INNER JOIN marketInfor.dbo.info i on i.code = c.code
+    WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
+    AND LV2 not in (N'Ngân hàng', N'Bảo hiểm', N'Dịch vụ tài chính') group by yearQuarter) AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen
+    )
+select * from stock s inner join industry i on i.code = s.code
+inner join tt t on t.code = s.code
     `
     const promise_3 = this.mssqlService.query(query_3)
 
     // Select
     const [data, data_2, data_3, data_4]: any[] = await Promise.all([promise, promise_2, promise_3, promise_4])
 
-    //Tính điểm
-    const quy_mo_doanh_thu = data.map(item => ({ value: item.doanh_thu, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const quy_mo_von_hoa = data.map(item => ({ value: item.von_hoa, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const quy_mo_tai_san = data.map(item => ({ value: item.tong_tai_san, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const quy_mo_loi_nhuan = data.map(item => ({ value: item.loi_nhuan_truoc_thue, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const gd_5_phien = data_4.filter(item => item.phien_5 > 0).map(item => ({ value: item.phien_5, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const gd_10_phien = data_4.map(item => ({ value: item.phien_10, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const gd_20_phien = data_4.map(item => ({ value: item.phien_20, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const gd_50_phien = data_4.map(item => ({ value: item.phien_50, code: item.code })).sort((a, b) => (a.value < b.value) ? 1 : -1) as [{ code: string, value: number }]
-    const gia_tri_so_huu_khoi_ngoai = data_2 as [{ code: string, value: number }]
-    const gia_tri_tang_truong_VCSH = data_3 as [{ code: string, value: number }]
-
     const dataMapped = BusinessPositionRatingResponse.mapToList(
-      this.checkStarBusinessRating(quy_mo_doanh_thu, stock),
-      this.checkStarBusinessRating(quy_mo_von_hoa, stock),
-      this.checkStarBusinessRating(quy_mo_tai_san, stock),
-      this.checkStarBusinessRating(quy_mo_loi_nhuan, stock),
-      this.checkStarBusinessRating(gd_5_phien, stock),
-      this.checkStarBusinessRating(gd_10_phien, stock),
-      this.checkStarBusinessRating(gd_20_phien, stock),
-      this.checkStarBusinessRating(gd_50_phien, stock),
-      this.checkStarBusinessRating(gia_tri_so_huu_khoi_ngoai, stock),
-      this.checkStarBusinessRating(gia_tri_tang_truong_VCSH, stock),
+      this.checkStarBusinessRatingV2(data[0].doanh_thu, 5),
+      this.checkStarBusinessRatingV2(data[0].von_hoa, 5),
+      this.checkStarBusinessRatingV2(data[0].tong_tai_san, 5),
+      this.checkStarBusinessRatingV2(data[0].loi_nhuan_truoc_thue, 5),
+      this.checkStarBusinessRatingV2(data_4[0].phien_5, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_10, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_20, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_50, 6),
+      this.checkStarBusinessRatingV2(data_2[0].stock, 7),
+      this.checkStarBusinessRatingV2(data_3[0].stock, 8),
+      
+      this.checkStarBusinessRatingV2(data[0].doanh_thu_nganh, 5),
+      this.checkStarBusinessRatingV2(data[0].von_hoa_nganh, 5),
+      this.checkStarBusinessRatingV2(data[0].tong_tai_san_nganh, 5),
+      this.checkStarBusinessRatingV2(data[0].loi_nhuan_truoc_thue_nganh, 5),
+      this.checkStarBusinessRatingV2(data_4[0].phien_5_industry, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_10_industry, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_20_industry, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_50_industry, 6),
+      this.checkStarBusinessRatingV2(data_2[0].industry, 7),
+      this.checkStarBusinessRatingV2(data_3[0].industry, 8),
+
+      this.checkStarBusinessRatingV2(data[0].doanh_thu_all, 5),
+      this.checkStarBusinessRatingV2(data[0].von_hoa_all, 5),
+      this.checkStarBusinessRatingV2(data[0].tong_tai_san_all, 5),
+      this.checkStarBusinessRatingV2(data[0].loi_nhuan_truoc_thue_all, 5),
+      this.checkStarBusinessRatingV2(data_4[0].phien_5_all, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_10_all, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_20_all, 6),
+      this.checkStarBusinessRatingV2(data_4[0].phien_50_all, 6),
+      this.checkStarBusinessRatingV2(data_2[0].tt, 7),
+      this.checkStarBusinessRatingV2(data_3[0].tt, 8)
     )
+    
     await this.redis.set(`${RedisKeys.businessPositionRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -2668,7 +2876,7 @@ and yearQuarter = '${prevQuarter}')
   private checkStarBusinessRating(arr: [{ code: string, value: number }], stock: string) {
     const length = arr.length
     const indx = arr.findIndex(item => item.code == stock)
-    if(indx == -1) return 1
+    if (indx == -1) return 1
     const per = indx / length * 100
 
     if (per > 80) return 1
@@ -2676,6 +2884,95 @@ and yearQuarter = '${prevQuarter}')
     if (per <= 60 && per > 40) return 3
     if (per <= 40 && per > 20) return 4
     return 5
+  }
+
+  private checkStarBusinessRatingV2(value: number, type: number) {
+    /**
+     * type: 0 - tăng trưởng ngành
+     * 1 - thị trường quan tâm
+     * 2 - quy mô ngành
+     * 3 - Tăng trưởng giá cổ phiếu
+     * 4 - Tỷ lệ cổ tức tiền mặt tốt
+     * 5 - Quy mô doanh nghiệp
+     * 6 - Thị trường quan tâm
+     * 7 - Giá trị sở hữu khối ngoại
+     * 8 = Giá trị tăng trưởng VCSH
+     */
+    switch (type) {
+      case 0:
+        if (value >= 100) return 5
+        if (50 <= value && value < 100) return 4
+        if (10 <= value && value < 50) return 3
+        if (1 <= value && value < 10) return 2
+        if (0 <= value && value < 1) return 1
+        return 0
+        break;
+      case 1:
+        if (value >= 0.001) return 5
+        if (0.0001 <= value && value < 0.001) return 4
+        if (0.00001 <= value && value < 0.0001) return 3
+        if (0 < value && value < 0.00001) return 2
+        if (value <= 0 || !value) return 0
+        return 1
+        break
+      case 2:
+        if (value >= 0.5) return 5
+        if (0.1 <= value && value < 0.5) return 4
+        if (0.01 <= value && value < 0.1) return 3
+        if (0.001 <= value && value < 0.01) return 2
+        if (0 < value && value < 0.001) return 1
+        return 0
+        break
+      case 3:
+        if (value >= 0.5) return 5
+        if (0.1 <= value && value < 0.5) return 4
+        if (value == 0) return 2
+        if (value < 0) return 1
+        if (!value) return 0
+        return 3
+        break
+      case 4:
+        if (value >= 0.1) return 5
+        if (0.05 <= value && value < 0.1) return 4
+        if (0.03 <= value && value < 0.05) return 3
+        if (0 <= value && value < 0.03) return 2
+        return 1
+        break;
+      case 5:
+        if (value >= 10000000000000) return 5 
+        if (1000000000000 <= value && value < 10000000000000) return 4
+        if (100000000000 <= value && value < 1000000000000) return 3
+        if (10000000000 <= value && value < 100000000000) return 2
+        if (!value || value <= 0) return 0
+        return 1
+        break;
+      case 6:
+        if (value >= 1) return 5
+        if (0.1 < value && value < 1) return 4
+        if (0.01 < value && value <= 0.1) return 3
+        if (0.001 < value && value <= 0.01) return 2
+        if (0 < value && value <= 0.001) return 1
+        return 0
+        break;
+      case 7:
+        if (value > 100) return 5
+        if (10 < value && value <= 100) return 4
+        if (0 < value && value <= 10) return 3
+        if (value == 0) return 2
+        if (value < 0) return 1
+        return 0
+        break;
+      case 8:
+        if (value >= 0.5) return 5
+        if (0.2 <= value && value < 0.5) return 4
+        if (0.1 <= value && value < 0.2) return 3
+        if (0 <= value && value < 0.1) return 2
+        if (value < 0) return 1
+        return 0
+        break;
+      default:
+        break;
+    }
   }
 
   private checkYearConsecutive(years: string[]) {
@@ -2790,7 +3087,7 @@ and yearQuarter = '${prevQuarter}')
       }
     }
 
-    return {star, starIndustry, starAll}
+    return { star, starIndustry, starAll }
   }
 
   private genStarValuation(data: any[]) {
@@ -2813,4 +3110,6 @@ and yearQuarter = '${prevQuarter}')
     map[index_graham].value = UtilCommonTemplate.checkStarCommon(tong, 3)
     return map
   }
+
+  private checkStart
 }
