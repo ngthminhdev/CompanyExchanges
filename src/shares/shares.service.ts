@@ -1517,7 +1517,7 @@ export class SharesService {
 
   async financialHealthRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    if (redisData) return redisData
+    // if (redisData) return redisData
 
     const prevQuarter = moment().subtract(1, 'quarter').format('YYYYQ')
 
@@ -1656,7 +1656,7 @@ export class SharesService {
   NPM AS NPMPrev,
   ROA AS ROAPrev,
   ROE AS ROEPrev,
-  'VIC' AS code
+  '${stock}' AS code
 FROM VISUALIZED_DATA.dbo.rating
 WHERE LV2 = 'ALL'
 and yearQuarter = '${prevQuarter}')
@@ -1767,6 +1767,8 @@ and yearQuarter = '${prevQuarter}')
     INNER JOIN thi_truong_4_quy y on t.code = s.code 
     INNER JOIN thi_truong_quy_truoc p on p.code = s.code 
     `
+    console.log(query);
+    
     const data = await this.mssqlService.query(query)
     const { star, starIndustry, starAll }: any = this.checkStarFinancialHealthRating(data[0])
 
