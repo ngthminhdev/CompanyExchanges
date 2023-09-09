@@ -1767,8 +1767,6 @@ and yearQuarter = '${prevQuarter}')
     INNER JOIN thi_truong_4_quy y on t.code = s.code 
     INNER JOIN thi_truong_quy_truoc p on p.code = s.code 
     `
-    console.log(query);
-    
     const data = await this.mssqlService.query(query)
     const { star, starIndustry, starAll }: any = this.checkStarFinancialHealthRating(data[0])
 
