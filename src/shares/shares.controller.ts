@@ -380,4 +380,29 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
+
+  @Get('rating-header')
+  @ApiOperation({summary: 'Rating header'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async headerRating(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.headerRating(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  @Get('chuan-loc-canslim')
+  @ApiOperation({summary: 'Chuẩn lọc Canslim'})
+  @ApiOkResponse({type: ValuationRatingResponse})
+  async canslimPrefilter(@Query() q: StockDto, @Res() res: Response) {
+    try {
+      const data = await this.sharesService.canslimPrefilter(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
 }

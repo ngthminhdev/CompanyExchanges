@@ -193,5 +193,6 @@ export enum RedisKeys {
   businessPositionRating = 'business-position-rating',
   techniqueRating = 'technique-rating',
   businessRating = 'business-rating',
-  individualInvestorBenefitsRating = 'individual-investor-benefits-rating'
+  individualInvestorBenefitsRating = 'individual-investor-benefits-rating',
+  headerRating = 'header-rating'
 }
