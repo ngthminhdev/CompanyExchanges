@@ -194,5 +194,6 @@ export enum RedisKeys {
   techniqueRating = 'technique-rating',
   businessRating = 'business-rating',
   individualInvestorBenefitsRating = 'individual-investor-benefits-rating',
-  headerRating = 'header-rating'
+  headerRating = 'header-rating',
+  canslimPrefilter = 'canslim-prefilter'
 }

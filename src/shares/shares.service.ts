@@ -35,6 +35,7 @@ import { TransactionDataResponse } from './responses/transactionData.response';
 import { ValuationRatingResponse } from './responses/valuationRating.response';
 import * as lodash from 'lodash'
 import { HeaderRatingResponse } from './responses/headerRating.response';
+import { CanslimResponse } from './responses/chuanLocCanslim.response';
 
 @Injectable()
 export class SharesService {
@@ -2308,14 +2309,13 @@ and yearQuarter = '${prevQuarter}')
       sortGia1NamAll.findIndex(item => item.code == now_quarter) + 1
     )
 
-
     await this.redis.set(`${RedisKeys.businessRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
   async individualInvestorBenefitsRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
 
     const year = UtilCommonTemplate.getYearQuartersV2(4, TimeTypeEnum.Year)
 
@@ -2344,57 +2344,72 @@ and yearQuarter = '${prevQuarter}')
 
     //Query tăng trưởng giá
     const query = `
-    with stock as (SELECT
+    WITH price
+    AS (SELECT
+      t.code,
+      t.closePrice,
+      t.date
+    FROM marketTrade.dbo.tickerTradeVND t),
+    pivotted
+    AS (SELECT
+      [${now}],
+      [${month_6}],
+      [${year_1}],
+      [${year_2}],
+      [${year_4}],
+      code
+    FROM (SELECT
+      *
+    FROM price
+    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}],
+    [${month_6}],
+    [${year_1}],
+    [${year_2}],
+    [${year_4}])) AS chuyen),
+    stock
+    AS (SELECT
       ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang,
       ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam,
       ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam,
       ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam,
       code
-    FROM (SELECT
-      t.code,
-      t.closePrice,
-      t.date
-    FROM marketTrade.dbo.tickerTradeVND t
-    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
-    AND code = '${stock}') AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen),
-industry as (
+    FROM pivotted
+    WHERE code = '${stock}'),
+    industry
+    AS (SELECT
+      (AVG([${now}]) - AVG([${month_6}])) / AVG([${month_6}]) * 100 AS tt6thang_nganh,
+      (AVG([${now}]) - AVG([${year_1}])) / AVG([${year_1}]) * 100 AS tt1nam_nganh,
+      (AVG([${now}]) - AVG([${year_2}])) / AVG([${year_2}]) * 100 AS tt2nam_nganh,
+      (AVG([${now}]) - AVG([${year_4}])) / AVG([${year_4}]) * 100 AS tt4nam_nganh,
+      '${stock}' AS code
+    FROM pivotted
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}'))),
+    tt
+    AS (SELECT
+      (AVG([${now}]) - AVG([${month_6}])) / AVG([${month_6}]) * 100 AS tt6thang_tt,
+      (AVG([${now}]) - AVG([${year_1}])) / AVG([${year_1}]) * 100 AS tt1nam_tt,
+      (AVG([${now}]) - AVG([${year_2}])) / AVG([${year_2}]) * 100 AS tt2nam_tt,
+      (AVG([${now}]) - AVG([${year_4}])) / AVG([${year_4}]) * 100 AS tt4nam_tt,
+      '${stock}' AS code
+    FROM pivotted
+    WHERE code IN (SELECT
+      code
+    FROM marketInfor.dbo.info
+    WHERE LV2 NOT IN (N'Ngân hàng', N'Bảo hiểm', N'Dịch vụ tài chính')))
     SELECT
-      ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang_nganh,
-      ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam_nganh,
-      ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam_nganh,
-      ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam_nganh,
-      '${stock}' as code
-    FROM (SELECT
-      avg(t.closePrice) as closePrice,
-      t.date
-    FROM marketTrade.dbo.tickerTradeVND t
-    inner join marketInfor.dbo.info i on i.code = t.code
-    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
-    and LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
-    group by date
-    ) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
-),
-tt as (
-SELECT
-      ([${now}] - [${month_6}]) / [${month_6}] * 100 AS tt6thang_tt,
-      ([${now}] - [${year_1}]) / [${year_1}] * 100 AS tt1nam_tt,
-      ([${now}] - [${year_2}]) / [${year_2}] * 100 AS tt2nam_tt,
-      ([${now}] - [${year_4}]) / [${year_4}] * 100 AS tt4nam_tt,
-      '${stock}' as code
-    FROM (SELECT
-      avg(t.closePrice) as closePrice,
-      t.date
-    FROM marketTrade.dbo.tickerTradeVND t
-    inner join marketInfor.dbo.info i on i.code = t.code
-    WHERE date IN ('${now}', '${month_6}', '${year_1}', '${year_2}', '${year_4}')
-    and i.LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')
-    group by date
-    ) AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${month_6}], [${year_1}], [${year_2}], [${year_4}])) AS chuyen
-    )
-select * from stock s inner join industry i on i.code = s.code
-inner join tt t on t.code = s.code
+      *
+    FROM stock s
+    INNER JOIN industry i
+      ON i.code = s.code
+    INNER JOIN tt t
+      ON t.code = s.code
     `
-
     const promise = this.mssqlService.query(query)
 
     //Query cổ tức tiền mặt ổn định
@@ -2517,7 +2532,7 @@ inner join tt t on t.code = s.code
       this.checkMostStar(coTucTienMatOnDinhAll),
       this.checkStarBusinessRatingV2(data_3[0].ty_le_co_tuc_tien_mat_all, 4)
     )
-    await this.redis.set(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.individualInvestorBenefitsRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -3018,93 +3033,148 @@ inner join tt t on t.code = s.code
   }
 
   async canslimPrefilter(stock: string) {
+    const redisData = await this.redis.get(`${RedisKeys.canslimPrefilter}:${stock}`)
+    if(redisData) return redisData
+
+    const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter from financialReport.dbo.calBCTC where code = '${stock}' order by yearQuarter desc`))[0].yearQuarter
+    const prev_quarter = moment(now_quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
+    const prev_year = moment(now_quarter, 'YYYYQ').subtract(1, 'year').format('YYYYQ')
+
+    const query_EPS_co_phieu = `
+    WITH temp
+    AS (SELECT
+      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_quy,
+      (EPS - LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_nam,
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    WHERE code = '${stock}'
+    AND RIGHT(yearQuarter, 1) <> 0)
+    SELECT
+      *
+    FROM temp
+    WHERE yearQuarter IN ('${now_quarter}', '${prev_quarter}', '${prev_year}')
+    ORDER BY yearQuarter DESC
+    `
+    const promise = this.mssqlService.query(query_EPS_co_phieu)
+
     const query_EPS_nganh = `
-    SELECT TOP 1
-      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang_truong,
+    WITH temp
+    AS (SELECT
+      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_quy,
+      (EPS - LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_nam,
       yearQuarter
     FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = (SELECT
       LV2
     FROM marketInfor.dbo.info
     WHERE code = '${stock}')
-    ORDER BY date DESC
-    `
-    const promise = this.mssqlService.query(query_EPS_nganh)
-
-    const query_EPS = `
-    SELECT TOP 2
-      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang_truong,
-      yearQuarter
-    FROM financialReport.dbo.calBCTC
-    WHERE code = '${stock}'
+    AND RIGHT(yearQuarter, 1) <> 0)
+    SELECT
+      *
+    FROM temp
+    WHERE yearQuarter = '${now_quarter}'
     ORDER BY yearQuarter DESC
     `
-    const promise_2 = this.mssqlService.query(query_EPS)
+    const promise_2 = this.mssqlService.query(query_EPS_nganh)
 
-    const [data, data_2] = await Promise.all([promise, promise_2])
-    const tang_truong = data_2[0].tang_truong
-    const tang_truong_quy_truoc = data_2[1].tang_truong
-    const tang_truong_nganh = data[0].tang_truong
+    const promise_co_dong_lon = this.mssqlService.query(`select top 1 value from RATIO.dbo.ratio where ratioCode = 'TOTAL_INTERNAL_OWNERSHIP' and code = '${stock}' order by date desc`)
 
-    return { tang_truong, tang_truong_quy_truoc, tang_truong_nganh };
+    const [data, data_2, chenh_lech, doanh_nghiep, dinh_hinh, co_dong_lon] = await Promise.all([promise, promise_2, this.individualInvestorBenefitsRating(stock), this.businessPositionRating(stock), this.businessRating(stock), promise_co_dong_lon]) as any
 
+    const tang_truong_quy = data[0].tt_eps_quy
+    const tang_truong_quy_truoc = data[1].tt_eps_quy
+    const tang_truong_quy_nganh = data_2[0].tt_eps_quy
+
+    const tang_truong_nam = data[0].tt_eps_nam
+    const tang_truong_nam_truoc = data[2].tt_eps_nam
+    const tang_truong_nam_nganh = data_2[0].tt_eps_nam
+
+    const dataMapped = CanslimResponse.mapToList(
+      this.checkStatusEPSHeaderRating([tang_truong_quy, tang_truong_quy_truoc, tang_truong_quy_nganh], tang_truong_quy),
+      this.checkStatusEPSHeaderRating([tang_truong_nam, tang_truong_nam_truoc, tang_truong_nam_nganh], tang_truong_nam),
+      this.checkStatusStarHeaderRating(chenh_lech.data[0].value),
+      this.checkStatusStarHeaderRating(doanh_nghiep.totalStar),
+      this.checkStatusCoDongLon(co_dong_lon[0].value),
+      this.checkStatusStarHeaderRating(dinh_hinh.totalStar)
+    )
+    
+    await this.redis.set(`${RedisKeys.canslimPrefilter}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    return dataMapped
+  }
+
+  private checkStatusEPSHeaderRating(arr: number[], indx: number) {
+    const sort = arr.sort((a, b) => a - b);
+    const index = sort.findIndex(item => item == indx)
+    if (index == 2) return 'Đạt'
+    if (index == 1) return 'Bình thường'
+    if (index == 0) return 'Không đạt'
+  }
+
+  private checkStatusStarHeaderRating(num: number) {
+    if (num == 4 || num == 5) return 'Đạt'
+    if (num == 3) return 'Bình thường'
+    if (num == 0 || num == 1 || num == 2) return 'Không đạt'
+  }
+
+  private checkStatusCoDongLon(val: number) {
+    if (val >= 0.65) return 'Đạt'
+    if (val > 0.5 && val < 0.65) return 'Bình thường'
+    return 'Không đạt'
   }
 
   private getLevels(data) {
-      // Tính giá trị s bằng lodash
-      const highPrice = lodash.get(data, 'highPrice');
-      const lowPrice = lodash.get(data, 'lowPrice');
-      const s = lodash.mean(lodash.map(lodash.zip(highPrice, lowPrice), ([high, low]) => (high - low) / 3));
+    // Tính giá trị s bằng lodash
+    const highPrice = lodash.get(data, 'highPrice');
+    const lowPrice = lodash.get(data, 'lowPrice');
+    const s = lodash.mean(lodash.map(lodash.zip(highPrice, lowPrice), ([high, low]) => (high - low) / 3));
 
-      const isFarFromLevel = (l) => {
-        return lodash.filter(levels, (x) => Math.abs(l - x[1]) < s).length === 0;
-      };
+    const isFarFromLevel = (l) => {
+      return lodash.filter(levels, (x) => Math.abs(l - x[1]) < s).length === 0;
+    };
 
-      const isSupport = (data, i) => {
-        if (
-          lowPrice[i] < lowPrice[i - 1] &&
-          lowPrice[i] < lowPrice[i + 1] &&
-          lowPrice[i] < lowPrice[i - 2] &&
-          lowPrice[i] < lowPrice[i + 2]
-        ) {
-          return true;
+    const isSupport = (data, i) => {
+      if (
+        lowPrice[i] < lowPrice[i - 1] &&
+        lowPrice[i] < lowPrice[i + 1] &&
+        lowPrice[i] < lowPrice[i - 2] &&
+        lowPrice[i] < lowPrice[i + 2]
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const isResistance = (data, i) => {
+      if (
+        highPrice[i] > highPrice[i - 1] &&
+        highPrice[i] > highPrice[i + 1] &&
+        highPrice[i] > highPrice[i - 2] &&
+        highPrice[i] > highPrice[i + 2]
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const levels = [];
+    for (let i = 2; i < data.highPrice.length - 2; i++) {
+      if (isSupport(data, i)) {
+        const l = lowPrice[i];
+        if (isFarFromLevel(l)) {
+          levels.push([data.date[i], l, 'Hỗ Trợ']);
         }
-        return false;
-      };
-
-      const isResistance = (data, i) => {
-        if (
-          highPrice[i] > highPrice[i - 1] &&
-          highPrice[i] > highPrice[i + 1] &&
-          highPrice[i] > highPrice[i - 2] &&
-          highPrice[i] > highPrice[i + 2]
-        ) {
-          return true;
-        }
-        return false;
-      };
-
-      const levels = [];
-      for (let i = 2; i < data.highPrice.length - 2; i++) {
-        if (isSupport(data, i)) {
-          const l = lowPrice[i];
-          if (isFarFromLevel(l)) {
-            levels.push([data.date[i], l, 'Hỗ Trợ']);
-          }
-        } else if (isResistance(data, i)) {
-          const l = highPrice[i];
-          if (isFarFromLevel(l)) {
-            levels.push([data.date[i], l, 'Kháng Cự']);
-          }
+      } else if (isResistance(data, i)) {
+        const l = highPrice[i];
+        if (isFarFromLevel(l)) {
+          levels.push([data.date[i], l, 'Kháng Cự']);
         }
       }
+    }
 
-      const resistance_levels = lodash.filter(levels, (level) => level[2] === 'Kháng Cự');
-      const support_levels = lodash.filter(levels, (level) => level[2] === 'Hỗ Trợ');
+    const resistance_levels = lodash.filter(levels, (level) => level[2] === 'Kháng Cự');
+    const support_levels = lodash.filter(levels, (level) => level[2] === 'Hỗ Trợ');
 
-      return [resistance_levels, support_levels];
-
-
+    return [resistance_levels, support_levels];
   }
 
   private checkStarTechniqueRating(ma5: number, ma10: number, ma20: number, ma50: number, ma100: number, ma200: number, ema5: number, ema10: number, ema20: number, ema50: number, ema100: number, ema200: number, rsi: number, williamR: number, macd: number, histogram: number, signal: number, adx: number, cci: number, stochRSI: number, dStoch: number, kStoch: number, price: number) {
