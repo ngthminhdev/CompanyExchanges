@@ -391,7 +391,7 @@ export class StockService {
       INNER JOIN marketInfor.dbo.info i
         ON t.code = i.code
       WHERE t.date = '${date}'
-    ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange}'`)}
+    ${exchange == 'ALL' ? `` : (exchange == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange}'`)}
             `;
       // const marketCapQuery: string = `
       //           SELECT c.LV2 AS industry, p.date_time, SUM(p.mkt_cap) AS total_market_cap
@@ -422,13 +422,13 @@ export class StockService {
       '${UtilCommonTemplate.toDate(weekDate)}', 
       '${UtilCommonTemplate.toDate(monthDate)}', 
       '${UtilCommonTemplate.toDate(
-      firstDateYear,
+        firstDateYear,
       )}')
-      ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange}'`)}
+      ${exchange == 'ALL' ? `` : (exchange == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange}'`)}
       GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, i.floor`} 
       ORDER BY i.date DESC
       `
-      
+
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',
       );
@@ -441,7 +441,7 @@ export class StockService {
           if (code !== 0) reject(e);
         });
       })) as any;
-      
+
       const industryDataChild: ChildProcess = fork(
         __dirname + '/processes/industry-data-child.js',
       );
@@ -513,7 +513,7 @@ export class StockService {
       await this.redis.set(`${RedisKeys.Industry}:${exchange}`, {
         data: mappedData,
         buySellData: buySellData?.[0],
-      }, {ttl: TimeToLive.Minute});
+      }, { ttl: TimeToLive.Minute });
 
       return { data: mappedData, buySellData: buySellData?.[0] };
     } catch (error) {
@@ -903,22 +903,30 @@ export class StockService {
       );
       if (redisData) return redisData;
 
-      const { latestDate }: SessionDatesInterface = await this.getSessionDate(
-        `[macroEconomic].[dbo].[HangHoa]`,
-        'lastUpdated',
-        this.dbServer,
-      );
-
       const query: string = `
-                SELECT name, price, unit, change1D AS Day,
-                changeMTD AS MTD, changeYTD AS YTD
-                FROM [macroEconomic].[dbo].[HangHoa]
-                WHERE lastUpdated >= @0 and unit ${+type ? '=' : '!='} ''
+      WITH temp
+      AS (SELECT
+        name,
+        MAX(lastUpdated) AS lastUpdated
+      FROM [macroEconomic].[dbo].[HangHoa]
+      WHERE unit = ''
+      GROUP BY name)
+      SELECT
+        h.name,
+        h.price,
+        h.unit,
+        h.change1D AS Day,
+        h.changeMTD AS MTD,
+        h.changeYTD AS YTD
+      FROM [macroEconomic].[dbo].[HangHoa] h
+      INNER JOIN temp t
+        ON t.lastUpdated = h.lastUpdated
+        AND t.name = h.name
+      WHERE unit ${+type ? '=' : '!='} ''
             `;
-
+        
       const data: MerchandisePriceInterface[] = await this.dbServer.query(
-        query,
-        [latestDate],
+        query
       );
       const mappedData: MerchandisePriceResponse[] =
         new MerchandisePriceResponse().mapToList(data);
@@ -1066,9 +1074,9 @@ export class StockService {
       const redisData = await this.redis.get(
         `${RedisKeys.MarketMap}:${ex}:${order}`,
       );
-      if (redisData) {
-        return redisData;
-      }
+      // if (redisData) {
+      //   return redisData;
+      // }
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
@@ -1131,13 +1139,7 @@ export class StockService {
         const floor =
           ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 
-        date = (
-          await this.getSessionDate(
-            '[RATIO].[dbo].[ratio]',
-            'date',
-            this.dbServer,
-          )
-        ).latestDate;
+        date = UtilCommonTemplate.toDate((await this.mssqlService.query(`select top 1 date from RATIO.dbo.ratio where ratioCode = 'MARKETCAP'`))[0].date)
 
         const query: string = `
           WITH top15 AS (
@@ -1168,6 +1170,7 @@ export class StockService {
           ) AS result
           ORDER BY industry, CASE WHEN ticker = 'khác' THEN 1 ELSE 0 END, value DESC;
         `;
+
         const mappedData = new MarketMapResponse().mapToList(
           await this.dbServer.query(query, [date]),
         );
