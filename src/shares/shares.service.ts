@@ -51,7 +51,7 @@ export class SharesService {
     where code like N'%${UtilCommonTemplate.normalizedString(key_search)}%' or lower(dbo.fn_RemoveVietNamese5(companyName)) like '%${UtilCommonTemplate.normalizedString(key_search)}%')
     select * from temp where status = 'listed'
     `
-    
+
     const data = await this.mssqlService.query<SearchStockResponse[]>(query)
     const dataMapped = SearchStockResponse.mapToList(data)
     return dataMapped
@@ -1524,9 +1524,13 @@ export class SharesService {
 
   async financialHealthRating(stock: string) {
     const LV2 = (await this.mssqlService.query(`select LV2 from marketInfor.dbo.info where code = '${stock}'`))[0].LV2
-    if(LV2 == 'Ngân hàng'){
+    if (LV2 == 'Ngân hàng') {
       const data = await this.financialHealthRatingNH(stock)
       return data
+    }
+    if (LV2 == 'Dịch vụ tài chính' || LV2 == 'Bảo hiểm') {
+      const data = await this.financialHealthRatingCKBH(stock, LV2)
+      return data 
     }
 
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
@@ -1781,7 +1785,7 @@ and yearQuarter = '${prevQuarter}')
     INNER JOIN thi_truong_4_quy y on t.code = s.code 
     INNER JOIN thi_truong_quy_truoc p on p.code = s.code 
     `
-    
+
     const data = await this.mssqlService.query(query)
     const { star, starIndustry, starAll }: any = this.checkStarFinancialHealthRating(data[0])
 
@@ -1792,9 +1796,9 @@ and yearQuarter = '${prevQuarter}')
     return dataMapped
   }
 
-  async financialHealthRatingNH(stock: string){
+  async financialHealthRatingNH(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const query = `
     SELECT
@@ -1853,21 +1857,21 @@ and yearQuarter = '${prevQuarter}')
     ORDER BY yearQuarter DESC)
     GROUP BY code
     `
-    
+
     const promise = this.mssqlService.query(query)
     const promise_2 = this.mssqlService.query(query_2)
 
     const [data, data_2] = await Promise.all([promise, promise_2]) as any
-    
+
     const stock_data = data.find(item => item.code == stock)
     const industry_data = data.find(item => item.code == 'Ngân hàng')
     const compv_data = data.find(item => item.code == `${stock}compoV`)
     const industry_data_4_quarter = data_2[0]
-    const industry_compv_data= data.find(item => item.code == 'NHcompoV')
+    const industry_compv_data = data.find(item => item.code == 'NHcompoV')
 
-    const star = this.checkRatingFinanceHealthNH(stock_data, industry_data, compv_data) as any 
+    const star = this.checkRatingFinanceHealthNH(stock_data, industry_data, compv_data) as any
 
-    const star_industry = this.checkRatingFinanceHealthNH(industry_data, industry_data_4_quarter, industry_compv_data) as any 
+    const star_industry = this.checkRatingFinanceHealthNH(industry_data, industry_data_4_quarter, industry_compv_data) as any
 
     const quarter = (await this.mssqlService.query(`select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating order by yearQuarter desc`))[0].yearQuarter
     const prevQuarter = moment(quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
@@ -1995,7 +1999,7 @@ and yearQuarter = '${prevQuarter}')
     `
     let starAll: any = {}
     const rd = await this.redis.get(`${RedisKeys.financialHealthRatingAll}`) as any
-    if(rd) {starAll = rd}
+    if (rd) { starAll = rd }
     else {
       const data_3 = await this.mssqlService.query(query_3)
       const result: any = this.checkStarFinancialHealthRating(data_3[0])
@@ -2006,28 +2010,144 @@ and yearQuarter = '${prevQuarter}')
     return dataMapped
   }
 
-  private checkRatingFinanceHealthNH(stock: any, industry: any, compv: any){
-    const key = Object.keys(stock).slice(0, Object.keys(stock).length - 1);
+  async financialHealthRatingCKBH(stock: string, LV2: string){
+    const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
+    if(redisData) return redisData
+
+    const query = `
+    select c.currentRatio, c.cashRatio, c.quickRatio, c.interestCoverageRatio,
+          c.ACR, c.DSCR, c.totalDebtToTotalAssets, c.DE,
+          c.FAT, c.ATR, c.CTR, c.CT,
+          c.GPM, c.NPM, c.ROA, c.ROE,
+          c.code
+    from financialReport.dbo.calBCTC c
+    where code IN ('${stock}', N'${LV2}')
+    and yearQuarter = (select top 1 yearQuarter from financialReport.dbo.calBCTC order by yearQuarter desc)
+    and right(yearQuarter, 1) <> 0
+
+    union all
+
+    select currentRatio, cashRatio, quickRatio, interestCoverageRatio,
+          ACR, DSCR, totalDebtToTotalAssets, DE,
+          FAT, ATR, CTR, CT,
+          GPM, NPM, ROA, ROE,
+          'ALL' as code
+    from VISUALIZED_DATA.dbo.rating
+    where LV2 = 'ALL'
+    and yearQuarter = (select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating order by yearQuarter desc)
+
+    union all
+
+    select currentRatio4Quarter, cashRatio4Quarter, quickRatio4Quarter, interestCoverageRatio4Quarter,
+          ACR4Quarter, DSCR4Quarter, totalDebtToTotalAssets4Quarter, DE4Quarter,
+          FAT4Quarter, ATR4Quarter, CTR4Quarter, CT4Quarter,
+          GPM4Quarter, NPM4Quarter, ROA4Quarter, ROE4Quarter,
+          'ALL4Quarter' as code
+    from VISUALIZED_DATA.dbo.rating
+    where LV2 = 'ALL'
+    and yearQuarter = (select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating order by yearQuarter desc)
+
+    union all
+
+    select currentRatio, cashRatio, quickRatio, interestCoverageRatio,
+          ACR, DSCR, totalDebtToTotalAssets, DE,
+          FAT, ATR, CTR, CT,
+          GPM, NPM, ROA, ROE,
+          'ALLPrev' as code
+    from VISUALIZED_DATA.dbo.rating
+    where LV2 = 'ALL'
+    and yearQuarter = '20231'
+
+    union all
+
+    select avg(c.currentRatio) as currentRatio, avg(c.cashRatio) as cashRatio, avg(c.quickRatio) as quickRatio, avg(c.interestCoverageRatio) as interestCoverageRatio,
+    avg(c.ACR) as ACR, avg(c.DSCR) as DSCR, avg(c.totalDebtToTotalAssets) as totalDebtToTotalAssets, avg(c.DE) as DE,
+    avg(c.FAT) as FAT, avg(c.ATR) as ATR, avg(c.CTR) as CTR, avg(c.CT) as CT,
+    avg(c.GPM) as GPM, avg(c.NPM) as NPM, avg(c.ROA) as ROA, avg(c.ROE) as ROE,
+          'Industry4Quarter'
+    from financialReport.dbo.calBCTC c
+    where code IN (N'${LV2}')
+    and yearQuarter = (select top 1 yearQuarter from financialReport.dbo.calBCTC order by yearQuarter desc)
+    and yearQuarter IN ('20232', '20231', '20224', '20223')
+    `
+    const data = await this.mssqlService.query(query) as any
+
+    const stock_data = data.find(item => item.code == stock)
+    const industry_data = data.find(item => item.code == LV2)
+    const all_data = data.find(item => item.code == 'ALL')
+    const industry_4_data = data.find(item => item.code == 'Industry4Quarter')
+    const all_4_data = data.find(item => item.code == 'ALL4Quarter')
+    const all_prev_data = data.find(item => item.code == 'ALLPrev')
     
+    const {star, starAll, starIndustry} = this.checkRatingFinanceHealthCK(stock_data, industry_data, all_data, industry_4_data, all_4_data, all_prev_data)
+
+    const dataMapped = await FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    return dataMapped
+  }
+
+  private checkRatingFinanceHealthCK(stock: any, industry: any, all: any, industry_4_quarter: any, all_4_quarter: any, all_prev: any){
+    const key = Object.keys(stock).slice(0, Object.keys(stock).length - 1);
+
     const star = {}
-    for (const item of key){
+    const starIndustry = {}
+    const starAll = {}
+
+    for (const item of key) {
+      const data_stock = stock[item]
+      const data_industry = industry[item]
+      const data_all = all[item]
+      const data_industry_4 = industry_4_quarter[item]
+      const data_all_4 = all_4_quarter[item]
+      const data_all_prev = all_prev[item]
+
+      //Cổ phiếu
+      if(data_stock > data_industry > data_all) star[item] = 5
+      else if(data_stock > data_all > data_industry) star[item] = 4
+      else if(data_industry > data_stock > data_all) star[item] = 3
+      else if(data_all > data_stock > data_industry) star[item] = 2
+      else star[item] = 1
+
+      //Ngành
+      if(data_industry > data_industry_4 > data_all) starIndustry[item] = 5 
+      else if(data_industry > data_all > data_industry_4) starIndustry[item] = 4
+      else if(data_industry_4 > data_industry > data_all) starIndustry[item] = 3 
+      else if(data_all > data_industry > data_industry_4) starIndustry[item] = 2
+      else starIndustry[item] = 1 
+
+      //Thị trường
+      if(data_all > data_all_prev > data_all_4) starAll[item] = 5 
+      else if(data_all > data_all_4 > data_all_prev) starAll[item] = 4
+      else if(data_all_prev > data_all > data_all_4) starAll[item] = 3 
+      else if(data_all_4 > data_all > data_all_prev) starAll[item] = 2
+      else starAll[item] = 1 
+    }
+
+    return {star, starIndustry, starAll}
+  }
+
+  private checkRatingFinanceHealthNH(stock: any, industry: any, compv: any) {
+    const key = Object.keys(stock).slice(0, Object.keys(stock).length - 1);
+
+    const star = {}
+    for (const item of key) {
       const data_stock = stock[item]
       const data_industry = industry[item]
       const data_compv = compv[item]
 
-      if(item == 'LFR' || item == 'LTR' || item == 'NPLR' || item == 'NPL_TR' || item == 'COF') {
+      if (item == 'LFR' || item == 'LTR' || item == 'NPLR' || item == 'NPL_TR' || item == 'COF') {
 
-        if(data_stock < data_compv && data_compv < data_industry) star[item] = 5
-        else if(data_stock < data_industry && data_industry < data_compv) star[item] = 4
-        else if(data_compv < data_stock && data_stock < data_industry) star[item] = 3
-        else if(data_industry < data_industry && data_industry < data_compv) star[item] = 2
+        if (data_stock < data_compv && data_compv < data_industry) star[item] = 5
+        else if (data_stock < data_industry && data_industry < data_compv) star[item] = 4
+        else if (data_compv < data_stock && data_stock < data_industry) star[item] = 3
+        else if (data_industry < data_industry && data_industry < data_compv) star[item] = 2
         else star[item] = 1
 
-      }else{
-        if(data_stock > data_compv && data_compv > data_industry) star[item] = 5
-        else if(data_stock > data_industry && data_industry > data_compv) star[item] = 4
-        else if(data_compv > data_stock && data_stock > data_industry) star[item] = 3
-        else if(data_industry > data_stock && data_stock > data_compv) star[item] = 2
+      } else {
+        if (data_stock > data_compv && data_compv > data_industry) star[item] = 5
+        else if (data_stock > data_industry && data_industry > data_compv) star[item] = 4
+        else if (data_compv > data_stock && data_stock > data_industry) star[item] = 3
+        else if (data_industry > data_stock && data_stock > data_compv) star[item] = 2
         else star[item] = 1
 
       }
@@ -2232,7 +2352,7 @@ and yearQuarter = '${prevQuarter}')
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-      
+
     //Ngành  
     const query_2 = `
     WITH temp
@@ -2798,7 +2918,7 @@ and yearQuarter = '${prevQuarter}')
     if (redisData) return redisData
 
     const LV2 = (await this.mssqlService.query(`select LV2 from marketInfor.dbo.info where code = '${stock}'`))[0].LV2
-    const table = LV2 == 'Ngân hàng' ? 'financialReport.dbo.calBCTCNH' : 'financialReport.dbo.calBCTC' 
+    const table = LV2 == 'Ngân hàng' ? 'financialReport.dbo.calBCTCNH' : 'financialReport.dbo.calBCTC'
     //query Quy mô doanh nghiệp
     const query = `
     WITH temp
@@ -2891,9 +3011,9 @@ from stock s
          inner join industry i on i.code = s.code
          inner join tt a on a.code = s.code
     `
-    
+
     const promise = this.mssqlService.query(query)
-  
+
     //Query Thị trường quan tâm
     const query_4 = `
     with stock as (select
@@ -3033,7 +3153,7 @@ tt as (
 select * from stock s inner join industry i on i.code = s.code
 inner join tt t on t.code = s.code
     `
-    
+
     const promise_3 = this.mssqlService.query(query_3)
 
     // Select
@@ -3295,7 +3415,7 @@ inner join tt t on t.code = s.code
 
   async canslimPrefilter(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.canslimPrefilter}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter from financialReport.dbo.calBCTC where code = '${stock}' order by yearQuarter desc`))[0].yearQuarter
     const prev_quarter = moment(now_quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
@@ -3358,7 +3478,7 @@ inner join tt t on t.code = s.code
       this.checkStatusCoDongLon(co_dong_lon[0].value),
       this.checkStatusStarHeaderRating(dinh_hinh.totalStar)
     )
-    
+
     await this.redis.set(`${RedisKeys.canslimPrefilter}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -3782,7 +3902,7 @@ inner join tt t on t.code = s.code
     }, {});
 
     const properties = Object.keys(data.all);
-    
+
     let star = {}
     let starIndustry = {}
     let starAll = {}
