@@ -2585,7 +2585,7 @@ and yearQuarter = '${prevQuarter}')
             max(case when date <= '${moment().subtract(6, 'month').format('YYYY-MM-DD')}' then date else null end) as month_6,
             max(case when date <= '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year_1,
             max(case when date <= '${moment().subtract(2, 'year').format('YYYY-MM-DD')}' then date else null end) as year_2,
-            max(case when date <= '${moment().subtract(4, 'year').format('YYYY-MM-DD')}' then date else null end) as year_4
+            COALESCE(max(case when date <= '${moment().subtract(4, 'year').format('YYYY-MM-DD')}' then date else null end), (select min(date) from marketTrade.dbo.tickerTradeVND where code = 'NAB')) as year_4
         from marketTrade.dbo.tickerTradeVND
         where code = '${stock}'
     )
