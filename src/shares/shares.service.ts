@@ -1530,7 +1530,7 @@ export class SharesService {
     }
 
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
 
     const quarter = (await this.mssqlService.query(`select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating order by yearQuarter desc`))[0].yearQuarter
     const prevQuarter = moment(quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
@@ -1787,7 +1787,7 @@ and yearQuarter = '${prevQuarter}')
 
 
     const dataMapped = FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
-    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
     await this.redis.set(`${RedisKeys.financialHealthRatingAll}`, starAll, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -1863,9 +1863,10 @@ and yearQuarter = '${prevQuarter}')
     const industry_data = data.find(item => item.code == 'Ngân hàng')
     const compv_data = data.find(item => item.code == `${stock}compoV`)
     const industry_data_4_quarter = data_2[0]
-    const industry_compv_data= data.find(item => item.code = 'NHcompoV')
+    const industry_compv_data= data.find(item => item.code == 'NHcompoV')
 
     const star = this.checkRatingFinanceHealthNH(stock_data, industry_data, compv_data) as any 
+
     const star_industry = this.checkRatingFinanceHealthNH(industry_data, industry_data_4_quarter, industry_compv_data) as any 
 
     const quarter = (await this.mssqlService.query(`select top 1 yearQuarter from VISUALIZED_DATA.dbo.rating order by yearQuarter desc`))[0].yearQuarter
@@ -2014,11 +2015,22 @@ and yearQuarter = '${prevQuarter}')
       const data_industry = industry[item]
       const data_compv = compv[item]
 
-      if(data_stock < data_compv < data_industry) star[item] = 5
-      else if(data_stock < data_industry < data_compv) star[item] = 4
-      else if(data_compv < data_stock < data_industry) star[item] = 3
-      else if(data_industry < data_industry < data_compv) star[item] = 2
-      else star[item] = 1
+      if(item == 'LFR' || item == 'LTR' || item == 'NPLR' || item == 'NPL_TR' || item == 'COF') {
+
+        if(data_stock < data_compv && data_compv < data_industry) star[item] = 5
+        else if(data_stock < data_industry && data_industry < data_compv) star[item] = 4
+        else if(data_compv < data_stock && data_stock < data_industry) star[item] = 3
+        else if(data_industry < data_industry && data_industry < data_compv) star[item] = 2
+        else star[item] = 1
+
+      }else{
+        if(data_stock > data_compv && data_compv > data_industry) star[item] = 5
+        else if(data_stock > data_industry && data_industry > data_compv) star[item] = 4
+        else if(data_compv > data_stock && data_stock > data_industry) star[item] = 3
+        else if(data_industry > data_stock && data_stock > data_compv) star[item] = 2
+        else star[item] = 1
+
+      }
     }
     return star
   }
@@ -3783,48 +3795,48 @@ inner join tt t on t.code = s.code
       const quarterAllValue = data.ttt4quy && data.ttt4quy[property];
       const prevValue = data.prev && data.prev[property];
       //Cổ phiếu
-      if (stockValue > industryValue > allValue) {
+      if (stockValue > industryValue && industryValue > allValue) {
         star[property] = 5
       }
-      else if (stockValue > allValue > industryValue) {
+      else if (stockValue > allValue && allValue > industryValue) {
         star[property] = 4
       }
-      else if (industryValue > stockValue > allValue) {
+      else if (industryValue > stockValue && stockValue > allValue) {
         star[property] = 3
       }
-      else if (allValue > stockValue > industryValue) {
+      else if (allValue > stockValue && stockValue > industryValue) {
         star[property] = 2
       }
       else {
         star[property] = 1
       }
       //Ngành
-      if (industryValue > quarterValue > allValue) {
+      if (industryValue > quarterValue && quarterValue > allValue) {
         starIndustry[property] = 5
       }
-      else if (industryValue > allValue > quarterValue) {
+      else if (industryValue > allValue && allValue > quarterValue) {
         starIndustry[property] = 4
       }
-      else if (quarterValue > industryValue > allValue) {
+      else if (quarterValue > industryValue && industryValue > allValue) {
         starIndustry[property] = 3
       }
-      else if (allValue > industryValue > quarterValue) {
+      else if (allValue > industryValue && industryValue > quarterValue) {
         starIndustry[property] = 2
       }
       else {
         starIndustry[property] = 1
       }
       //Thị trường
-      if (allValue > prevValue > quarterAllValue) {
+      if (allValue > prevValue && prevValue > quarterAllValue) {
         starAll[property] = 5
       }
-      else if (allValue > quarterAllValue > prevValue) {
+      else if (allValue > quarterAllValue && quarterValue > prevValue) {
         starAll[property] = 4
       }
-      else if (prevValue > allValue > quarterAllValue) {
+      else if (prevValue > allValue && allValue > quarterAllValue) {
         starAll[property] = 3
       }
-      else if (quarterAllValue > allValue > prevValue) {
+      else if (quarterAllValue > allValue && allValue > prevValue) {
         starAll[property] = 2
       }
       else {
