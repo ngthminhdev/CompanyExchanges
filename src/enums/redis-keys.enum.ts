@@ -189,6 +189,7 @@ export enum RedisKeys {
   financialIndicatorsDetail = 'financial-indicators-detail',
   valuationRating = 'valuation-rating',
   financialHealthRating = 'financial-health-rating',
+  financialHealthRatingAll = 'financial-health-rating-all',
   tyLeCoTucTienMat = 'ty-le-co-tuc-tien-mat',
   businessPositionRating = 'business-position-rating',
   techniqueRating = 'technique-rating',
