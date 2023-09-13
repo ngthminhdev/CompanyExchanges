@@ -1923,7 +1923,7 @@ and yearQuarter = '${prevQuarter}')
 
   async valuationRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.valuationRating}:${stock}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
 
     //Cổ phiếu
     const query = `
@@ -1932,7 +1932,7 @@ and yearQuarter = '${prevQuarter}')
       EPS,
       yearQuarter,
       (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE RIGHT(yearQuarter, 1) = 0
     AND code = '${stock}'
     ORDER BY yearQuarter DESC),
@@ -1958,7 +1958,7 @@ and yearQuarter = '${prevQuarter}')
       FROM tang_truong)
       ) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_1
     FROM RATIO.dbo.ratioInday r
-    INNER JOIN financialReport.dbo.calBCTC c
+    INNER JOIN RATIO.dbo.ratioInYearQuarter c
       ON c.code = '${stock}'
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON t.code = '${stock}'
@@ -1969,13 +1969,13 @@ and yearQuarter = '${prevQuarter}')
     FROM RATIO.dbo.ratioInday where code = l.LV2)
     AND c.yearQuarter = (SELECT
       MAX(yearQuarter)
-    FROM financialReport.dbo.calBCTC WHERE code = '${stock}')
+    FROM RATIO.dbo.ratioInYearQuarter WHERE code = '${stock}')
     AND t.date = (SELECT
       MAX(date)
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-
+      
     //Ngành  
     const query_2 = `
     WITH temp
@@ -1997,7 +1997,7 @@ and yearQuarter = '${prevQuarter}')
       AVG([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
       AVG([Vốn chủ sở hữu]) AS vcsh,
       '${stock}' AS code
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE code IN (SELECT
       code
     FROM marketInfor.dbo.info
@@ -2007,7 +2007,7 @@ and yearQuarter = '${prevQuarter}')
     WHERE code = '${stock}'))
     AND yearQuarter = (SELECT TOP 1
       yearQuarter
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = '${stock}'
     ORDER BY yearQuarter DESC)),
     ty_gia
@@ -2031,7 +2031,7 @@ and yearQuarter = '${prevQuarter}')
       AVG(EPS) AS trung_binh,
       yearQuarter,
       (AVG(EPS) - LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC)) / LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE RIGHT(yearQuarter, 1) = 0
     AND code IN (SELECT
       code
@@ -2540,6 +2540,8 @@ and yearQuarter = '${prevQuarter}')
     const redisData = await this.redis.get(`${RedisKeys.businessPositionRating}:${stock}`)
     if (redisData) return redisData
 
+    const LV2 = (await this.mssqlService.query(`select LV2 from marketInfor.dbo.info where code = '${stock}'`))[0].LV2
+    const table = LV2 == 'Ngân hàng' ? 'financialReport.dbo.calBCTCNH' : 'financialReport.dbo.calBCTC' 
     //query Quy mô doanh nghiệp
     const query = `
     WITH temp
@@ -2559,17 +2561,17 @@ and yearQuarter = '${prevQuarter}')
      marketcap_stock
          AS (SELECT MARKETCAP,
                     code
-             FROM financialReport.dbo.calBCTC
+             FROM ${table}
              WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                  FROM financialReport.dbo.calBCTC
+                                  FROM ${table}
                                   ORDER BY yearQuarter DESC)
                AND code = '${stock}'),
      marketcap_industry as (SELECT avg(MARKETCAP) as marketcap_industry,
                                    '${stock}'          as code
-                            FROM financialReport.dbo.calBCTC c
+                            FROM ${table} c
                                      INNER JOIN marketInfor.dbo.info i on i.code = c.code
                             WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                                 FROM financialReport.dbo.calBCTC
+                                                 FROM ${table}
                                                  ORDER BY yearQuarter DESC)
                               AND i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')),
      marketcap_all as (SELECT avg(MARKETCAP) as marketcap_all,
@@ -2632,8 +2634,9 @@ from stock s
          inner join industry i on i.code = s.code
          inner join tt a on a.code = s.code
     `
+    
     const promise = this.mssqlService.query(query)
-
+  
     //Query Thị trường quan tâm
     const query_4 = `
     with stock as (select
@@ -2642,30 +2645,30 @@ from stock s
       [Giá trị giao dich CP 20 phiên] as phien_20,
       [Giá trị giao dich CP 50 phiên] as phien_50,
       code
-  from VISUALIZED_DATA.dbo.rating_gia
-  where code = '${stock}'),
-  industry as (
-      select
-      avg([Giá trị giao dich CP 5 phiên]) as phien_5_industry,
-      avg([Giá trị giao dich CP 10 phiên]) as phien_10_industry,
-      avg([Giá trị giao dich CP 20 phiên]) as phien_20_industry,
-      avg([Giá trị giao dich CP 50 phiên]) as phien_50_industry,
-      '${stock}' as code
-  from VISUALIZED_DATA.dbo.rating_gia g
-  inner join marketInfor.dbo.info i on i.code = g.code
-  where i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
-  ),
-  tt as (
-      select
-      avg([Giá trị giao dich CP 5 phiên]) as phien_5_all,
-      avg([Giá trị giao dich CP 10 phiên]) as phien_10_all,
-      avg([Giá trị giao dich CP 20 phiên]) as phien_20_all,
-      avg([Giá trị giao dich CP 50 phiên]) as phien_50_all,
-      '${stock}' as code
-  from VISUALIZED_DATA.dbo.rating_gia g
-  )
-select * from stock s inner join industry i on i.code = s.code
-inner join tt t on t.code = s.code
+    from VISUALIZED_DATA.dbo.rating_gia
+    where code = '${stock}'),
+    industry as (
+        select
+        avg([Giá trị giao dich CP 5 phiên]) as phien_5_industry,
+        avg([Giá trị giao dich CP 10 phiên]) as phien_10_industry,
+        avg([Giá trị giao dich CP 20 phiên]) as phien_20_industry,
+        avg([Giá trị giao dich CP 50 phiên]) as phien_50_industry,
+        '${stock}' as code
+    from VISUALIZED_DATA.dbo.rating_gia g
+    inner join marketInfor.dbo.info i on i.code = g.code
+    where i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
+    ),
+    tt as (
+        select
+        avg([Giá trị giao dich CP 5 phiên]) as phien_5_all,
+        avg([Giá trị giao dich CP 10 phiên]) as phien_10_all,
+        avg([Giá trị giao dich CP 20 phiên]) as phien_20_all,
+        avg([Giá trị giao dich CP 50 phiên]) as phien_50_all,
+        '${stock}' as code
+    from VISUALIZED_DATA.dbo.rating_gia g
+    )
+    select * from stock s inner join industry i on i.code = s.code
+    inner join tt t on t.code = s.code
     `
     const promise_4 = this.mssqlService.query(query_4)
 
@@ -2743,7 +2746,7 @@ inner join tt t on t.code = s.code
       [Vốn chủ sở hữu] AS value,
       c.code,
       c.yearQuarter
-    FROM financialReport.dbo.calBCTC c
+    FROM ${table} c
     WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
     AND code = '${stock}') AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen),
     industry as (
@@ -2753,7 +2756,7 @@ inner join tt t on t.code = s.code
     FROM (SELECT
       avg([Vốn chủ sở hữu]) AS value,
       c.yearQuarter
-    FROM financialReport.dbo.calBCTC c
+    FROM ${table} c
     INNER JOIN marketInfor.dbo.info i on i.code = c.code
     WHERE yearQuarter IN ('${now_quarter}', '${year_1}')
     AND LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}') group by yearQuarter) AS source PIVOT (SUM(value) FOR yearQuarter IN ([${now_quarter}], [${year_1}])) AS chuyen
@@ -2773,6 +2776,7 @@ tt as (
 select * from stock s inner join industry i on i.code = s.code
 inner join tt t on t.code = s.code
     `
+    
     const promise_3 = this.mssqlService.query(query_3)
 
     // Select
@@ -2827,7 +2831,7 @@ inner join tt t on t.code = s.code
       EPS,
       yearQuarter,
       (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE RIGHT(yearQuarter, 1) = 0
     AND code = '${stock}'
     ORDER BY yearQuarter DESC),
@@ -2853,7 +2857,7 @@ inner join tt t on t.code = s.code
       FROM tang_truong)
       ) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_1
     FROM RATIO.dbo.ratioInday r
-    INNER JOIN financialReport.dbo.calBCTC c
+    INNER JOIN RATIO.dbo.ratioInYearQuarter c
       ON c.code = '${stock}'
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON t.code = '${stock}'
@@ -2864,13 +2868,12 @@ inner join tt t on t.code = s.code
     FROM RATIO.dbo.ratioInday where code = l.LV2)
     AND c.yearQuarter = (SELECT
       MAX(yearQuarter)
-    FROM financialReport.dbo.calBCTC WHERE code = '${stock}')
+    FROM RATIO.dbo.ratioInYearQuarter WHERE code = '${stock}' and RIGHT(c.yearQuarter, 1) <> 0)
     AND t.date = (SELECT
       MAX(date)
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-
     //Ngành  
     const query_2 = `
     WITH temp
@@ -2892,7 +2895,7 @@ inner join tt t on t.code = s.code
       AVG([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
       AVG([Vốn chủ sở hữu]) AS vcsh,
       '${stock}' AS code
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE code IN (SELECT
       code
     FROM marketInfor.dbo.info
@@ -2902,8 +2905,9 @@ inner join tt t on t.code = s.code
     WHERE code = '${stock}'))
     AND yearQuarter = (SELECT TOP 1
       yearQuarter
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = '${stock}'
+    AND RIGHT(yearQuarter, 1) <> 0
     ORDER BY yearQuarter DESC)),
     ty_gia
     AS (SELECT
@@ -2926,7 +2930,7 @@ inner join tt t on t.code = s.code
       AVG(EPS) AS trung_binh,
       yearQuarter,
       (AVG(EPS) - LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC)) / LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE RIGHT(yearQuarter, 1) = 0
     AND code IN (SELECT
       code
@@ -3046,7 +3050,7 @@ inner join tt t on t.code = s.code
       (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_quy,
       (EPS - LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS, 4) OVER (ORDER BY yearQuarter DESC) * 100 AS tt_eps_nam,
       yearQuarter
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = '${stock}'
     AND RIGHT(yearQuarter, 1) <> 0)
     SELECT
