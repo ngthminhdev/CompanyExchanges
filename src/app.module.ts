@@ -27,6 +27,7 @@ import { NewsModule } from './news/news.module';
 import { ReportModule } from './report/report.module';
 import { MinioModule } from 'nestjs-minio-client';
 import { SharesModule } from './shares/shares.module';
+import { InvestmentModule } from './investment/investment.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { SharesModule } from './shares/shares.module';
     NewsModule,
     ReportModule,
     SharesModule,
+    InvestmentModule,
   ],
 })
 export class AppModule implements NestModule {
