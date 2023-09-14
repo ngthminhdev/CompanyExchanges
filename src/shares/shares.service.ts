@@ -2822,14 +2822,15 @@ and yearQuarter = '${prevQuarter}')
       l.vnd,
       NoiDungSuKien,
       SUBSTRING(NoiDungSuKien, CHARINDEX('20', NoiDungSuKien), 4) AS year
-    FROM financialReport.dbo.calBCTC c
+    FROM RATIO.dbo.ratioInYearQuarter c 
     INNER JOIN PHANTICH.dbo.LichSukien l
       ON l.ticker = c.code
     WHERE c.yearQuarter = (SELECT TOP 1
       yearQuarter
-    FROM financialReport.dbo.calBCTC
+    FROM RATIO.dbo.ratioInYearQuarter c WHERE RIGHT(yearQuarter, 1) <> 0
     ORDER BY yearQuarter DESC)
-    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt'),
+    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt' 
+    ),
     ty_le_theo_nam_stock
     AS (SELECT
       AVG(SHAREOUT * vnd / MARKETCAP) AS ty_le_theo_nam,
@@ -3011,7 +3012,6 @@ from stock s
          inner join industry i on i.code = s.code
          inner join tt a on a.code = s.code
     `
-
     const promise = this.mssqlService.query(query)
 
     //Query Thị trường quan tâm
@@ -3819,21 +3819,6 @@ inner join tt t on t.code = s.code
           consecutiveYears[currentStock.ticker].push(currentStock.year);
         }
       }
-      // const currentStock = arr[i];
-      // const nextStock = arr[i + 1];
-
-      // if (currentStock.ticker == nextStock.ticker) {
-      //   const currentYear = parseInt(currentStock.year);
-      //   const nextYear = parseInt(nextStock.year);
-
-      //   // Kiểm tra xem năm kế tiếp có phải năm liên tiếp hay không
-      //   if (nextYear - currentYear === 1) {
-      //     if (!consecutiveYears[currentStock.ticker]) {
-      //       consecutiveYears[currentStock.ticker] = [currentYear];
-      //     }
-      //     consecutiveYears[currentStock.ticker].push(nextYear);
-      //   }
-      // }
     }
     for (const item of Object.keys(consecutiveYears)) {
       const start = this.checkYearConsecutive(consecutiveYears[item])

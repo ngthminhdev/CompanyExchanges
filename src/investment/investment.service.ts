@@ -15,7 +15,8 @@ export class InvestmentService {
     const query = `
     SELECT
       code,
-      closePrice
+      closePrice,
+      ${b.filter.map(item => item.key).join(',')}
     FROM RATIO.dbo.ratioInday
     WHERE ${result}
     AND date = (SELECT TOP 1
@@ -27,6 +28,8 @@ export class InvestmentService {
     OFFSET ${(b.page - 1) * b.limit} ROWS
     FETCH NEXT ${b.limit} ROWS ONLY;
     `
+    console.log(query);
+    
     const data = await this.mssqlService.query(query)
     return data
     

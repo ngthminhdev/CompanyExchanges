@@ -909,7 +909,7 @@ export class StockService {
         name,
         MAX(lastUpdated) AS lastUpdated
       FROM [macroEconomic].[dbo].[HangHoa]
-      WHERE unit = ''
+      WHERE unit ${+type ? '=' : '!='} ''
       GROUP BY name)
       SELECT
         h.name,
