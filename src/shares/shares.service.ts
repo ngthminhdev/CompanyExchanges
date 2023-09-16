@@ -3417,7 +3417,7 @@ inner join tt t on t.code = s.code
     const redisData = await this.redis.get(`${RedisKeys.canslimPrefilter}:${stock}`)
     if (redisData) return redisData
 
-    const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter from financialReport.dbo.calBCTC where code = '${stock}' order by yearQuarter desc`))[0].yearQuarter
+    const now_quarter = (await this.mssqlService.query(`select top 1 yearQuarter from RATIO.dbo.ratioInYearQuarter where code = '${stock}' order by yearQuarter desc`))[0].yearQuarter
     const prev_quarter = moment(now_quarter, 'YYYYQ').subtract(1, 'quarter').format('YYYYQ')
     const prev_year = moment(now_quarter, 'YYYYQ').subtract(1, 'year').format('YYYYQ')
 
