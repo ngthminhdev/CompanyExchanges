@@ -1791,7 +1791,7 @@ and yearQuarter = '${prevQuarter}')
 
 
     const dataMapped = FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
-    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     await this.redis.set(`${RedisKeys.financialHealthRatingAll}`, starAll, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
@@ -2006,7 +2006,7 @@ and yearQuarter = '${prevQuarter}')
       starAll = result.starAll
     }
     const dataMapped = FinancialHealthRatingNHResponse.mapToList(star, star_industry, starAll)
-    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -2067,7 +2067,6 @@ and yearQuarter = '${prevQuarter}')
           'Industry4Quarter'
     from financialReport.dbo.calBCTC c
     where code IN (N'${LV2}')
-    and yearQuarter = (select top 1 yearQuarter from financialReport.dbo.calBCTC order by yearQuarter desc)
     and yearQuarter IN ('20232', '20231', '20224', '20223')
     `
     const data = await this.mssqlService.query(query) as any
@@ -2082,7 +2081,7 @@ and yearQuarter = '${prevQuarter}')
     const {star, starAll, starIndustry} = this.checkRatingFinanceHealthCK(stock_data, industry_data, all_data, industry_4_data, all_4_data, all_prev_data)
 
     const dataMapped = await FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
-    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -3012,6 +3011,7 @@ from stock s
          inner join industry i on i.code = s.code
          inner join tt a on a.code = s.code
     `
+    
     const promise = this.mssqlService.query(query)
 
     //Query Thị trường quan tâm

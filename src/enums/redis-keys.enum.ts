@@ -196,5 +196,8 @@ export enum RedisKeys {
   businessRating = 'business-rating',
   individualInvestorBenefitsRating = 'individual-investor-benefits-rating',
   headerRating = 'header-rating',
-  canslimPrefilter = 'canslim-prefilter'
+  canslimPrefilter = 'canslim-prefilter',
+
+  //Công cụ đầu tư
+  minMaxFilter = 'min-max-filter'
 }
