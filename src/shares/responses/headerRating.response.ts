@@ -31,8 +31,8 @@ export class HeaderRatingResponse {
             },
             {
                 name: 'Định giá theo P/B',
-                value: dg_co_phieu.dinh_gia_pe,
-                value_industry: dg_nganh.dinh_gia_pe
+                value: dg_co_phieu.dinh_gia_pb,
+                value_industry: dg_nganh.dinh_gia_pb
             },
             {
                 name: 'Định giá Graham 1',

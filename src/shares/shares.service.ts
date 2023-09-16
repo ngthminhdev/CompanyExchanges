@@ -2922,98 +2922,93 @@ and yearQuarter = '${prevQuarter}')
     //query Quy mô doanh nghiệp
     const query = `
     WITH temp
-         AS (SELECT f.code,
-                    f.value,
-                    f.id,
-                    f.yearQuarter,
-                    i.LV2
-             FROM financialReport.dbo.financialReportV2 f
-                      INNER JOIN marketInfor.dbo.info i on i.code = f.code
-             WHERE (f.id = 1
-                 AND f.type = 'KQKD')
-                OR (f.id = 2
-                 AND f.type = 'CDKT')
-                OR (f.id = 15
-                 AND f.type = 'KQKD')),
-     marketcap_stock
-         AS (SELECT MARKETCAP,
-                    code
-             FROM ${table}
-             WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                  FROM ${table}
-                                  ORDER BY yearQuarter DESC)
-               AND code = '${stock}'),
-     marketcap_industry as (SELECT avg(MARKETCAP) as marketcap_industry,
-                                   '${stock}'          as code
-                            FROM ${table} c
-                                     INNER JOIN marketInfor.dbo.info i on i.code = c.code
-                            WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                                 FROM ${table}
-                                                 ORDER BY yearQuarter DESC)
-                              AND i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')),
-     marketcap_all as (SELECT avg(MARKETCAP) as marketcap_all,
-                              '${stock}'          as code
-                       FROM financialReport.dbo.calBCTC c
-                                INNER JOIN marketInfor.dbo.info i on i.code = c.code
-                       WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                            FROM financialReport.dbo.calBCTC
-                                            ORDER BY yearQuarter DESC)
-                         AND i.LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')),
-     stock as (SELECT chuyen.code,
-                      [1]         as doanh_thu,
-                      [2]         as tong_tai_san,
-                      [15]        as loi_nhuan_truoc_thue,
-                      m.MARKETCAP as von_hoa
-               FROM (SELECT t.code,
-                            t.value,
-                            t.id
-                     FROM temp t
-                     WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                          FROM temp
-                                          ORDER BY yearQuarter DESC)
-                       AND t.code = '${stock}') AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
-                        INNER JOIN marketcap_stock m
-                                   ON m.code = chuyen.code),
-     industry as (SELECT chuyen.code,
-                         [1]                  as doanh_thu_nganh,
-                         [2]                  as tong_tai_san_nganh,
-                         [15]                 as loi_nhuan_truoc_thue_nganh,
-                         m.marketcap_industry as von_hoa_nganh
-                  FROM (SELECT '${stock}'        as code,
-                               avg(t.value) as value,
-                               t.id
-                        FROM temp t
-                        WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                             FROM temp
-                                             ORDER BY yearQuarter DESC)
-                          AND LV2 = (select LV2 from marketInfor.dbo.info where code = '${stock}')
-                        GROUP BY id) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
-                           INNER JOIN marketcap_industry m
-                                      ON m.code = chuyen.code),
-     tt as (SELECT chuyen.code,
-                   [1]             as doanh_thu_all,
-                   [2]             as tong_tai_san_all,
-                   [15]            as loi_nhuan_truoc_thue_all,
-                   m.marketcap_all as von_hoa_all
-            FROM (SELECT '${stock}'        as code,
-                         avg(t.value) as value,
-                         t.id
-                  FROM temp t
-                  WHERE yearQuarter = (SELECT TOP 1 yearQuarter
-                                       FROM temp
-                                       ORDER BY yearQuarter DESC)
-                    AND LV2 not in (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')
-                  GROUP BY id) AS source PIVOT (SUM(value) FOR id IN ([1], [2], [15])) AS chuyen
-                     INNER JOIN marketcap_all m
-                                ON m.code = chuyen.code)
-select *
-from stock s
-         inner join industry i on i.code = s.code
-         inner join tt a on a.code = s.code
+    AS (SELECT
+      code,
+      loi_nhuan_truoc_thue,
+      tong_tai_san,
+      doanh_thu,
+      LV2
+    FROM VISUALIZED_DATA.dbo.rating_vi_the_doanh_nghiep
+    WHERE yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM VISUALIZED_DATA.dbo.rating_vi_the_doanh_nghiep
+    ORDER BY yearQuarter DESC)),
+    marketcap_stock
+    AS (SELECT
+      MARKETCAP AS von_hoa,
+      code
+    FROM RATIO.dbo.ratioInYearQuarter
+    WHERE yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM RATIO.dbo.ratioInYearQuarter
+    WHERE RIGHT(yearQuarter, 1) <> 0
+    ORDER BY yearQuarter DESC)
+    AND code = '${stock}'),
+    marketcap_industry
+    AS (SELECT TOP 1
+      MARKETCAP AS von_hoa_nganh,
+      '${stock}' AS code
+    FROM RATIO.dbo.ratioInYearQuarter
+    WHERE RIGHT(yearQuarter, 1) <> 0
+    AND code = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')
+    ORDER BY yearQuarter DESC),
+    marketcap_all
+    AS (SELECT
+      AVG(MARKETCAP) AS von_hoa_all,
+      '${stock}' AS code
+    FROM financialReport.dbo.calBCTC c
+    INNER JOIN marketInfor.dbo.info i
+      ON i.code = c.code
+    WHERE yearQuarter = (SELECT TOP 1
+      yearQuarter
+    FROM financialReport.dbo.calBCTC
+    ORDER BY yearQuarter DESC)
+    AND i.LV2 NOT IN (N'Bảo hiểm', N'Ngân hàng', N'Dịch vụ tài chính')),
+    stock
+    AS (SELECT
+      t.code,
+      doanh_thu,
+      tong_tai_san,
+      loi_nhuan_truoc_thue
+    FROM temp t
+    WHERE code = '${stock}'),
+    industry
+    AS (SELECT
+      '${stock}' AS code,
+      AVG(doanh_thu) AS doanh_thu_nganh,
+      AVG(tong_tai_san) AS tong_tai_san_nganh,
+      AVG(loi_nhuan_truoc_thue) AS loi_nhuan_truoc_thue_nganh
+    FROM temp t
+    WHERE LV2 = (SELECT
+      LV2
+    FROM marketInfor.dbo.info
+    WHERE code = '${stock}')),
+    tt
+    AS (SELECT
+      '${stock}' AS code,
+      AVG(doanh_thu) AS doanh_thu_all,
+      AVG(tong_tai_san) AS tong_tai_san_all,
+      AVG(loi_nhuan_truoc_thue) AS loi_nhuan_truoc_thue_all
+    FROM temp t)
+    SELECT
+      *
+    FROM stock s
+    INNER JOIN industry i
+      ON i.code = s.code
+    INNER JOIN tt a
+      ON a.code = s.code
+    INNER JOIN marketcap_industry mi
+      ON mi.code = s.code
+    INNER JOIN marketcap_all ma
+      ON ma.code = s.code
+    INNER JOIN marketcap_stock ms
+      ON ms.code = s.code
     `
-    
     const promise = this.mssqlService.query(query)
-
+    
     //Query Thị trường quan tâm
     const query_4 = `
     with stock as (select
@@ -3216,10 +3211,10 @@ inner join tt t on t.code = s.code
                     FROM marketInfor.dbo.info
                     WHERE code = '${stock}')
     SELECT
-      ((r.PE * c.EPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pe,
-      ((r.PB * c.BVPS) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS dinh_gia_pb,
-      case when 22.5 * c.EPS * c.BVPS < 0 then 0 else (POWER((22.5 * c.EPS * c.BVPS), 0.5) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 end AS graham_3,
-      ((c.EPS * (7 + 1.5 * (SELECT
+      (r.PE * c.EPS) AS dinh_gia_pe,
+      (r.PB * c.BVPS) AS dinh_gia_pb,
+      case when 22.5 * c.EPS * c.BVPS < 0 then 0 else POWER((22.5 * c.EPS * c.BVPS), 0.5) end AS graham_3,
+      (c.EPS * (7 + 1.5 * (SELECT
         AVG(tang) AS binh_quan
       FROM tang_truong)
       ) * 4.4) / (SELECT TOP 1
@@ -3228,11 +3223,11 @@ inner join tt t on t.code = s.code
       WHERE kyHan = N'15 Năm'
       AND code = 'VCB'
       ORDER BY ngayPhatHanh DESC)
-      - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_2,
-      ((c.EPS) * (8.5 + 2 * (SELECT
+       AS graham_2,
+      (c.EPS) * (8.5 + 2 * (SELECT
         AVG(tang) AS binh_quan
       FROM tang_truong)
-      ) - (t.closePrice * 1000)) / (t.closePrice * 1000) * 100 AS graham_1
+      ) AS graham_1
     FROM RATIO.dbo.ratioInday r
     INNER JOIN RATIO.dbo.ratioInYearQuarter c
       ON c.code = '${stock}'
@@ -3251,6 +3246,7 @@ inner join tt t on t.code = s.code
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
+    
     //Ngành  
     const query_2 = `
     WITH temp
@@ -3269,17 +3265,14 @@ inner join tt t on t.code = s.code
     ORDER BY date DESC),
     loi_nhuan
     AS (SELECT
-      AVG([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
-      AVG([Vốn chủ sở hữu]) AS vcsh,
+      [Lợi nhuận sau thuế tổng 4 quý] AS loi_nhuan,
+      [Vốn chủ sở hữu] AS vcsh,
       '${stock}' AS code
     FROM RATIO.dbo.ratioInYearQuarter
-    WHERE code IN (SELECT
-      code
-    FROM marketInfor.dbo.info
-    WHERE LV2 = (SELECT
+    WHERE code = (SELECT
       LV2
     FROM marketInfor.dbo.info
-    WHERE code = '${stock}'))
+    WHERE code = '${stock}')
     AND yearQuarter = (SELECT TOP 1
       yearQuarter
     FROM RATIO.dbo.ratioInYearQuarter
@@ -3304,28 +3297,24 @@ inner join tt t on t.code = s.code
     ORDER BY date DESC)),
     tang_truong
     AS (SELECT TOP 4
-      AVG(EPS) AS trung_binh,
+      EPS AS trung_binh,
       yearQuarter,
-      (AVG(EPS) - LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC)) / LEAD(AVG(EPS)) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
+      (EPS - LEAD(EPS) OVER (ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (ORDER BY yearQuarter DESC) * 100 AS tang
     FROM RATIO.dbo.ratioInYearQuarter
     WHERE RIGHT(yearQuarter, 1) = 0
-    AND code IN (SELECT
-      code
-    FROM marketInfor.dbo.info
-    WHERE LV2 = (SELECT
+    AND code = (SELECT
       LV2
     FROM marketInfor.dbo.info
-    WHERE code = '${stock}'))
-    GROUP BY yearQuarter
+    WHERE code = '${stock}')
     ORDER BY yearQuarter DESC)
     SELECT
-      ((PE * (loi_nhuan / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pe,
-      ((PB * (vcsh / shareout)) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS dinh_gia_pb,
-      ((loi_nhuan / shareout) * (8.5 + 2 * (SELECT
+      PE * (loi_nhuan / shareout) AS dinh_gia_pe,
+      PB * (vcsh / shareout) AS dinh_gia_pb,
+      (loi_nhuan / shareout) * (8.5 + 2 * (SELECT
         AVG(tang)
       FROM tang_truong)
-      ) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_1,
-      ((EPS * (7 + 1.5 * (SELECT
+      ) AS graham_1,
+      (EPS * (7 + 1.5 * (SELECT
         AVG(tang)
       FROM tang_truong)
       ) * 4.4) / (SELECT TOP 1
@@ -3334,8 +3323,8 @@ inner join tt t on t.code = s.code
       WHERE kyHan = N'15 Năm'
       AND code = 'VCB'
       ORDER BY ngayPhatHanh DESC)
-      - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_2,
-      (POWER(22.5 * EPS * BVPS, 1 / 2) - (closePrice * 1000)) / (closePrice * 1000) * 100 AS graham_3
+       AS graham_2,
+      POWER(22.5 * EPS * BVPS, 1 / 2) AS graham_3
     FROM loi_nhuan l
     INNER JOIN temp t
       ON t.code = l.code

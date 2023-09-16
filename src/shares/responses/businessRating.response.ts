@@ -81,9 +81,9 @@ export class BusinessRatingResponse {
             UtilCommonTemplate.checkStarCommon(sortTyTrongVonHoaAll + sortTyTrongTaiSanAll, 2), 3
         )
         return {
-            totalStar,
+            totalStar: totalStarIndustry,
             totalStarIndustry,
-            totalStarAll,
+            totalStarAll: 3,
             data
         }
     }

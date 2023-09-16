@@ -56,7 +56,7 @@ export class IndividualInvestorBenefitsRatingResponse {
             UtilCommonTemplate.checkStarCommon(co_tuc_all + ty_le_co_tuc_all, 2), 2
         )
         return {
-            totalStar, totalStarIndustry, totalStarAll, data
+            totalStar, totalStarIndustry, totalStarAll: 2, data
         }
     }
 }
