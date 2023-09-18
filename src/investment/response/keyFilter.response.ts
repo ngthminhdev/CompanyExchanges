@@ -304,7 +304,7 @@ export class KeyFilterResponse {
             },
             {
                 name: 'KLGD thấp nhất 5 phiên',
-                key: 'totalVol_MIN_10',
+                key: 'totalVol_MIN_5',
                 min: data.totalVol_MIN_5_min,
                 max: data.totalVol_MIN_5_max,
             },
