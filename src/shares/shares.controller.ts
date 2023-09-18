@@ -54,7 +54,7 @@ export class SharesController {
   @ApiOkResponse({type: HeaderStockResponse})
   async header(@Query() q: StockTypeDto, @Res() res: Response) {
     try {
-      const data = await this.sharesService.header(q.stock, q.type)
+      const data = await this.sharesService.header(q.stock.toUpperCase(), q.type)
       return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
     } catch (e) {
       throw new CatchException(e)

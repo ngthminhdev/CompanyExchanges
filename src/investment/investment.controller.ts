@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { BaseResponse } from '../utils/utils.response';
 import { InvestmentFilterDto } from './dto/investment-filter.dto';
 import { InvestmentService } from './investment.service';
-import { InvestmentFilterResponse } from './response/investmentFilter.response';
+import { InvestmentFilterResponseSwagger } from './response/investmentFilter.response';
 import { KeyFilterResponse } from './response/keyFilter.response';
 
 @Controller('investment')
@@ -14,7 +14,7 @@ export class InvestmentController {
 
   @Post('filter')
   @ApiOperation({summary: 'Lọc tiêu chí'})
-  @ApiOkResponse({type: InvestmentFilterResponse})
+  @ApiOkResponse({type: InvestmentFilterResponseSwagger})
   async filter(@Body() b: InvestmentFilterDto, @Res() res: Response) {
     const data = await this.investmentService.filter(b);
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
@@ -22,7 +22,7 @@ export class InvestmentController {
 
   @Get('key-filter')
   @ApiOperation({summary: 'Lấy max min từng tiêu chí'})
-  @ApiOkResponse({type: KeyFilterResponse})
+  @ApiOkResponse({type: KeyFilterResponse, isArray: true})
   async keyFilter(@Res() res: Response){
     const data = await this.investmentService.keyFilter()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))

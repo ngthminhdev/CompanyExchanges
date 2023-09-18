@@ -194,6 +194,12 @@ export class InvestmentFilterResponse {
 
     @ApiProperty({
         type: Number,
+        description: 'Beta'
+    })
+    Beta: number
+
+    @ApiProperty({
+        type: Number,
         description: 'Tăng trưởng doanh thu'
     })
     growthRevenue: number
@@ -284,15 +290,48 @@ export class InvestmentFilterResponse {
 
     @ApiProperty({
         type: Number,
-        description: 'Số lượng cổ phiếu',
     })
-    count: number
+    rsi: number
 
     @ApiProperty({
-        isArray: true,
-        type: InvestmentFilterResponse
+        type: Number,
     })
-    data: InvestmentFilterResponse[]
+    ma5: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    ma10: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    ema5: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    ema10: number
+
+    @ApiProperty({
+        type: Number,
+        description: 'Rating thanh khoản doanh nghiệp'
+    })
+    liquidity: number
+
+    @ApiProperty({
+        type: Number,
+        description: 'Rating khả năng thanh toán doanh nghiệp'
+    })
+    payment: number
+
+    @ApiProperty({
+        type: Number,
+        description: 'Rating hiệu quả hoạt động doanh nghiệp'
+    })
+    performance: number
+
+    count: number
 
     constructor(data?: InvestmentFilterResponse){
         this.code = data?.code || ''
@@ -328,6 +367,7 @@ export class InvestmentFilterResponse {
         this.BVPS = data?.BVPS || 0
         this.MARKETCAP = data?.MARKETCAP || 0
         this.SHAREOUT = data?.SHAREOUT || 0
+        this.Beta = data?.Beta || 0
         this.growthRevenue = data?.growthRevenue || 0
         this.growthRevenueSamePeriod = data?.growthRevenueSamePeriod || 0
         this.growthProfitBeforeRevenue = data?.growthProfitBeforeRevenue || 0
@@ -343,6 +383,15 @@ export class InvestmentFilterResponse {
         this.totalVol_MIN_5 = data?.totalVol_MIN_5 || 0
         this.totalVol_MIN_10 = data?.totalVol_MIN_10 || 0
         this.totalVol = data?.totalVol || 0
+
+        this.rsi = data?.rsi || 0
+        this.ma5 = data?.ma5 || 0
+        this.ma10 = data?.ma10 || 0
+        this.ema5 = data?.ema5 || 0
+        this.ema10 = data?.ema10 || 0
+        this.liquidity = data.liquidity || 0
+        this.performance = data.performance || 0
+        this.payment = data.payment || 0
     }
 
     static mapToList(data?: InvestmentFilterResponse[]){
@@ -352,5 +401,19 @@ export class InvestmentFilterResponse {
             data: data_map
          }
     }
+}
+
+export class InvestmentFilterResponseSwagger {
+    @ApiProperty({
+        type: Number,
+        description: 'Số lượng cổ phiếu'
+    })
+    count: number
+
+    @ApiProperty({
+        type: InvestmentFilterResponse,
+        isArray: true
+    })
+    data: InvestmentFilterResponse[]
 }
 

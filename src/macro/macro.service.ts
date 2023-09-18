@@ -1361,7 +1361,7 @@ export class MacroService {
     with temp as (select top 30 giaTri as value, thoiDiem as date from macroEconomic.dbo.DuLieuViMo
     where phanBang = N'TỶ GIÁ'
     and nhomDulieu = N'CHỈ SỐ TỶ GIÁ'
-    and chiTieu = N'Tỷ giá trung tâm (từ 04/01/2016) (VNĐ/USD)	'
+    and chiTieu = N'Tỷ giá trung tâm (từ 04/01/2016) (VNĐ/USD)'
     order by thoiDiem desc)
     select * from temp order by date asc
     `

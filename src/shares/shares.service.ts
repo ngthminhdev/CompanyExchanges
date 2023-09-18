@@ -129,7 +129,7 @@ export class SharesService {
     FROM RATIO.dbo.ratio
     WHERE code = '${stock}'
     AND ratioCode IN ('ROAA_TR_AVG5Q', 'ROAE_TR_AVG5Q')
-    ORDER BY date DESC) AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_TO_EARNINGS], [PRICE_TO_BOOK], [MARKETCAP], [ROAA_TR_AVG5Q], [ROAE_TR_AVG5Q])) AS chuyen),
+    ORDER BY date DESC) AS source PIVOT (SUM(value) FOR ratioCode IN ([ROAA_TR_AVG5Q], [ROAE_TR_AVG5Q])) AS chuyen),
     vh as (
       select top 1 code, marketCap as vh, PE as pe, PB as pb from RATIO.dbo.ratioInday where code = '${stock}' order by date desc
     )
