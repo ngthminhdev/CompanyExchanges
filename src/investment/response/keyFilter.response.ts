@@ -358,7 +358,7 @@ export class KeyFilterResponse {
             },
             {
                 name: 'Tăng trưởng EPS quý gần nhất so với kỳ liền kề',
-                key: 'growthRevenue',
+                key: 'growthEPS',
                 min: data.growthEPS_min,
                 max: data.growthEPS_max,
             },
