@@ -22,6 +22,10 @@ export class HeaderRatingResponse {
         return 'Đi ngang'
     }
 
+    static isNegativeNumber(num: number){
+        return num < 0 ? 0 : num
+    }
+
     static mapToList(dg_co_phieu: IDinhGia, dg_nganh: IDinhGia, resistance: number, support: number, rsi_14: number, rsi_200: number, bd: IBienDongGia){
          return [
             {
@@ -36,23 +40,23 @@ export class HeaderRatingResponse {
             },
             {
                 name: 'Định giá Graham 1',
-                value: dg_co_phieu.graham_1,
-                value_industry: dg_nganh.graham_1
+                value: this.isNegativeNumber(dg_co_phieu.graham_1),
+                value_industry: this.isNegativeNumber(dg_nganh.graham_1)
             },
             {
                 name: 'Định giá Graham 2',
-                value: dg_co_phieu.graham_2,
-                value_industry: dg_nganh.graham_2
+                value: this.isNegativeNumber(dg_co_phieu.graham_2),
+                value_industry: this.isNegativeNumber(dg_nganh.graham_2)
             },
             {
                 name: 'Định giá Graham 3',
-                value: dg_co_phieu.graham_3,
-                value_industry: dg_nganh.graham_3
+                value: this.isNegativeNumber(dg_co_phieu.graham_3),
+                value_industry: this.isNegativeNumber(dg_nganh.graham_3)
             },
             {
                 name: 'Tổng hợp định giá',
-                value: (dg_co_phieu.dinh_gia_pe * 0.35) + (dg_co_phieu.dinh_gia_pb * 0.35) + (dg_co_phieu.graham_1 * 0.05) + (dg_co_phieu.graham_2 * 0.05) + (dg_co_phieu.graham_3 * 0.05),
-                value_industry: (dg_nganh.dinh_gia_pe * 0.35) + (dg_nganh.dinh_gia_pb * 0.35) + (dg_nganh.graham_1 * 0.05) + (dg_nganh.graham_2 * 0.05) + (dg_nganh.graham_3 * 0.05)
+                value: (dg_co_phieu.dinh_gia_pe * 0.35) + (dg_co_phieu.dinh_gia_pb * 0.35) + (this.isNegativeNumber(dg_co_phieu.graham_1) * 0.05) + (this.isNegativeNumber(dg_co_phieu.graham_2) * 0.05) + (this.isNegativeNumber(dg_co_phieu.graham_3) * 0.05),
+                value_industry: (dg_nganh.dinh_gia_pe * 0.35) + (dg_nganh.dinh_gia_pb * 0.35) + (this.isNegativeNumber(dg_nganh.graham_1) * 0.05) + (this.isNegativeNumber(dg_nganh.graham_2) * 0.05) + (this.isNegativeNumber(dg_nganh.graham_3) * 0.05)
             },
             {
                 name: 'Kháng cự',

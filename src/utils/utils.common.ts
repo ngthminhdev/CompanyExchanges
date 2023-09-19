@@ -44,7 +44,7 @@ export class UtilCommonTemplate {
     if (!value) {
       return '';
     }
-    return moment(value).utcOffset(420).format('DD-MM-YYYY');
+    return moment(value).utcOffset(420).format('DD/MM/YYYY');
   }
 
   static getMessageValidator(errors: ValidationError[]) {

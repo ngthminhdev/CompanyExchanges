@@ -589,6 +589,8 @@ export class SharesService {
     INNER JOIN mimax m
       ON m.code = p.code
     `
+    console.log(query);
+    
     const data = await this.mssqlService.query<TradingPriceFluctuationsResponse[]>(query)
     const dataMapped = new TradingPriceFluctuationsResponse(data[0])
     await this.redis.set(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
