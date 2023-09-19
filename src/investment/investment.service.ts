@@ -31,6 +31,7 @@ export class InvestmentService {
     WHERE ${result}
     AND floor IN (${b.exchange.toUpperCase() == 'ALL' ? `'HOSE', 'HNX', 'UPCOM'` : `${b.exchange.split(',').map(item => `'${item.toUpperCase()}'`)}`})
     ${inds ? `AND LV2 IN ${inds}` : ``}
+    AND LEN(code) = 3
     ORDER BY code asc
     OFFSET ${(b.page - 1) * b.limit} ROWS
     FETCH NEXT ${b.limit} ROWS ONLY;
@@ -55,6 +56,7 @@ export class InvestmentService {
     select
       ${ex}
     from VISUALIZED_DATA.dbo.filterInvesting
+    where len(code) = 3
     `
 
     const data = await this.mssqlService.query(query)
@@ -67,6 +69,9 @@ export class InvestmentService {
   async emulatorInvestment(b: EmulatorInvestmentDto) {
     const from = moment(b.from, 'M/YYYY')
     const to = moment(b.to, 'M/YYYY')
+
+    // console.log(b);
+    
 
     const data_1 = this.getMonth(to.diff(from, 'month'), to)
 

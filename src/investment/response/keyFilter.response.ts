@@ -155,8 +155,8 @@ export class KeyFilterResponse {
             {
                 name: 'Vốn hóa (Tỷ VNĐ)',
                 key: 'MARKETCAP',
-                min: data.MARKETCAP_min,
-                max: data.MARKETCAP_max,
+                min: data.MARKETCAP_min / 1000000000,
+                max: data.MARKETCAP_max / 1000000000,
             },
             {
                 name: 'Thị giá (x1000 vnđ)',
@@ -167,8 +167,8 @@ export class KeyFilterResponse {
             {
                 name: 'Khối lượng cổ phiếu lưu hành (triệu CP)',
                 key: 'SHAREOUT',
-                min: data.SHAREOUT_min,
-                max: data.SHAREOUT_max,
+                min: data.SHAREOUT_min / 1000000,
+                max: data.SHAREOUT_max / 1000000,
             },
             {
                 name: 'Beta',
