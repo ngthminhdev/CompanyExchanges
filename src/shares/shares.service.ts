@@ -1,5 +1,6 @@
 import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import * as lodash from 'lodash';
 import * as moment from 'moment';
 import * as calTech from 'technicalindicators';
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
@@ -17,11 +18,14 @@ import { BusinessResultDetailResponse } from './responses/businessResultDetail.r
 import { BusinessResultsResponse } from './responses/businessResults.response';
 import { CandleChartResponse } from './responses/candleChart.response';
 import { CastFlowDetailResponse } from './responses/castFlowDetail.response';
+import { CanslimResponse } from './responses/chuanLocCanslim.response';
 import { EnterprisesSameIndustryResponse } from './responses/enterprisesSameIndustry.response';
 import { EventCalendarResponse } from './responses/eventCalendar.response';
 import { FinancialHealthRatingResponse } from './responses/financialHealthRating.response';
+import { FinancialHealthRatingNHResponse } from './responses/financialHealthRatingNH.response';
 import { FinancialIndicatorsResponse } from './responses/financialIndicators.response';
 import { FinancialIndicatorsDetailResponse } from './responses/financialIndicatorsDetail.response';
+import { HeaderRatingResponse } from './responses/headerRating.response';
 import { HeaderStockResponse } from './responses/headerStock.response';
 import { IndividualInvestorBenefitsRatingResponse } from './responses/individualInvestorBenefitsRating.response';
 import { NewsStockResponse } from './responses/newsStock.response';
@@ -33,11 +37,6 @@ import { TradingPriceFluctuationsResponse } from './responses/tradingPriceFluctu
 import { TransactionStatisticsResponse } from './responses/transaction-statistics.response';
 import { TransactionDataResponse } from './responses/transactionData.response';
 import { ValuationRatingResponse } from './responses/valuationRating.response';
-import * as lodash from 'lodash'
-import { HeaderRatingResponse } from './responses/headerRating.response';
-import { CanslimResponse } from './responses/chuanLocCanslim.response';
-import { AnyTxtRecord } from 'dns';
-import { FinancialHealthRatingNHResponse } from './responses/financialHealthRatingNH.response';
 
 @Injectable()
 export class SharesService {

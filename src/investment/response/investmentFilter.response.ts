@@ -397,7 +397,7 @@ export class InvestmentFilterResponse {
     static mapToList(data?: InvestmentFilterResponse[]){
          const data_map =  data.map(item => new InvestmentFilterResponse(item))
          return {
-            count: data[0].count,
+            count: data[0]?.count || 0,
             data: data_map
          }
     }

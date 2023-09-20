@@ -10,6 +10,8 @@ import { EmulatorInvestmentDto } from './dto/emulator.dto';
 import { InvestmentFilterDto } from './dto/investment-filter.dto';
 import { InvestmentFilterResponse } from './response/investmentFilter.response';
 import { KeyFilterResponse } from './response/keyFilter.response';
+import * as calTech from 'technicalindicators';
+import { EmulatorInvestmentResponse } from './response/emulatorInvestment.response';
 
 @Injectable()
 export class InvestmentService {
@@ -52,7 +54,6 @@ export class InvestmentService {
 
     const query = `
     select
-      count (*) over () as count
       ${ex}
     from VISUALIZED_DATA.dbo.filterInvesting
     where len(code) = 3
@@ -73,6 +74,7 @@ export class InvestmentService {
       if (to.month() == moment().month()) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'To không được là tháng hiện tại')
       if (to.isBefore(from)) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'From To không đúng')
 
+      //Lấy giá cổ phiếu
       const query = `
     select closePrice / 1000 as closePrice, code, date from marketTrade.dbo.historyTicker 
     where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
@@ -80,7 +82,24 @@ export class InvestmentService {
     and code in (${b.category.map(item => `'${item.code}'`).join(',')})
     order by date asc
     `
-      const data: any[] = await this.mssqlService.query(query)
+      //Lấy giá VNINDEX
+      const query_2 = `
+    select closePrice, code, date from marketTrade.dbo.indexTradeVND 
+    where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
+    and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
+    and code = 'VNINDEX'
+    order by date asc
+    `
+      //Kỳ hạn 5 năm
+      const query_3 = `
+    select top 1 laiSuatPhatHanh as value from [marketBonds].[dbo].[BondsInfor] where code ='VCB' and kyHan =N'5 năm' order by ngayPhatHanh desc
+    `
+
+      const promise = this.mssqlService.query(query)
+      const promise_2 = this.mssqlService.query(query_2)
+      const promise_3 = this.mssqlService.query(query_3)
+
+      const [data, data_2, data_3] = await Promise.all([promise, promise_2, promise_3]) as any
 
       const result = {}
 
@@ -100,13 +119,19 @@ export class InvestmentService {
         const loi_nhuan_danh_muc_2 = []
         const loi_nhuan_danh_muc_3 = []
 
-        const gia_tri_danh_muc_cao_nhat_1 = Math.max(...list_price) * gia_tri_danh_muc_1
-        const gia_tri_danh_muc_cao_nhat_2 = Math.max(...list_price) * gia_tri_danh_muc_2
-        const gia_tri_danh_muc_cao_nhat_3 = Math.max(...list_price) * gia_tri_danh_muc_3
+        //Tính giá trị danh mục
+        const danh_muc_1 = list_price.map(item => item * gia_tri_danh_muc_1)
+        const danh_muc_2 = list_price.map(item => item * gia_tri_danh_muc_2)
+        const danh_muc_3 = list_price.map(item => item * gia_tri_danh_muc_3)
+        //----------------------------
 
-        const gia_tri_danh_muc_thap_nhat_1 = Math.min(...list_price) * gia_tri_danh_muc_1
-        const gia_tri_danh_muc_thap_nhat_2 = Math.min(...list_price) * gia_tri_danh_muc_2
-        const gia_tri_danh_muc_thap_nhat_3 = Math.min(...list_price) * gia_tri_danh_muc_3
+        const gia_tri_danh_muc_cao_nhat_1 = Math.max(...danh_muc_1)
+        const gia_tri_danh_muc_cao_nhat_2 = Math.max(...danh_muc_2)
+        const gia_tri_danh_muc_cao_nhat_3 = Math.max(...danh_muc_3)
+
+        const gia_tri_danh_muc_thap_nhat_1 = Math.min(...danh_muc_1)
+        const gia_tri_danh_muc_thap_nhat_2 = Math.min(...danh_muc_2)
+        const gia_tri_danh_muc_thap_nhat_3 = Math.min(...danh_muc_3)
 
         for (let i = 1; i <= list_price.length - 1; i++) {
           //Tính số tiền thu được
@@ -120,7 +145,7 @@ export class InvestmentService {
           loi_nhuan_danh_muc_3.push(((gia_tri_danh_muc_3 / list_price[0] * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
         }
 
-        result[item.code] = { so_tien_thu_duoc_danh_muc_1, so_tien_thu_duoc_danh_muc_2, so_tien_thu_duoc_danh_muc_3, loi_nhuan_danh_muc_1, loi_nhuan_danh_muc_2, loi_nhuan_danh_muc_3, gia_tri_danh_muc_cao_nhat_1, gia_tri_danh_muc_cao_nhat_2, gia_tri_danh_muc_cao_nhat_3, gia_tri_danh_muc_thap_nhat_1, gia_tri_danh_muc_thap_nhat_2, gia_tri_danh_muc_thap_nhat_3 }
+        result[item.code] = { so_tien_thu_duoc_danh_muc_1, so_tien_thu_duoc_danh_muc_2, so_tien_thu_duoc_danh_muc_3, loi_nhuan_danh_muc_1, loi_nhuan_danh_muc_2, loi_nhuan_danh_muc_3, gia_tri_danh_muc_cao_nhat_1, gia_tri_danh_muc_cao_nhat_2, gia_tri_danh_muc_cao_nhat_3, gia_tri_danh_muc_thap_nhat_1, gia_tri_danh_muc_thap_nhat_2, gia_tri_danh_muc_thap_nhat_3, danh_muc_1, danh_muc_2, danh_muc_3 }
       }
 
       let so_tien_thu_duoc_danh_muc_1_arr = []
@@ -130,6 +155,10 @@ export class InvestmentService {
       let loi_nhuan_danh_muc_1_arr = []
       let loi_nhuan_danh_muc_2_arr = []
       let loi_nhuan_danh_muc_3_arr = []
+
+      let danh_muc_1_arr = []
+      let danh_muc_2_arr = []
+      let danh_muc_3_arr = []
 
       let gia_tri_danh_muc_thap_nhat_1 = 0
       let gia_tri_danh_muc_thap_nhat_2 = 0
@@ -147,6 +176,10 @@ export class InvestmentService {
         loi_nhuan_danh_muc_1_arr = this.addArrays(loi_nhuan_danh_muc_1_arr, result[item].loi_nhuan_danh_muc_1)
         loi_nhuan_danh_muc_2_arr = this.addArrays(loi_nhuan_danh_muc_2_arr, result[item].loi_nhuan_danh_muc_2)
         loi_nhuan_danh_muc_3_arr = this.addArrays(loi_nhuan_danh_muc_3_arr, result[item].loi_nhuan_danh_muc_3)
+
+        danh_muc_1_arr = this.addArrays(danh_muc_1_arr, result[item].danh_muc_1)
+        danh_muc_2_arr = this.addArrays(danh_muc_2_arr, result[item].danh_muc_2)
+        danh_muc_3_arr = this.addArrays(danh_muc_3_arr, result[item].danh_muc_3)
 
         gia_tri_danh_muc_thap_nhat_1 += result[item].gia_tri_danh_muc_thap_nhat_1
         gia_tri_danh_muc_thap_nhat_2 += result[item].gia_tri_danh_muc_thap_nhat_2
@@ -181,11 +214,56 @@ export class InvestmentService {
       const loi_nhuan_am_cao_nhat_danh_muc_2 = Math.min(...loi_nhuan_danh_muc_2_arr.filter(item => item < 0))
       const loi_nhuan_am_cao_nhat_danh_muc_3 = Math.min(...loi_nhuan_danh_muc_3_arr.filter(item => item < 0))
 
-      const rf = (await this.mssqlService.query(`select top 1 laiSuatPhatHanh as value from [marketBonds].[dbo].[BondsInfor] where code ='VCB' and kyHan =N'5 năm' order by ngayPhatHanh desc`))[0].value
+      const rf = data_3[0].value
       const sharpe_1 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_1, (gia_tri_danh_muc_cao_nhat_1 + gia_tri_danh_muc_thap_nhat_1) / 2, gia_tri_danh_muc_cao_nhat_1)
       const sharpe_2 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_2, (gia_tri_danh_muc_cao_nhat_2 + gia_tri_danh_muc_thap_nhat_2) / 2, gia_tri_danh_muc_cao_nhat_2)
       const sharpe_3 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_3, (gia_tri_danh_muc_cao_nhat_3 + gia_tri_danh_muc_thap_nhat_3) / 2, gia_tri_danh_muc_cao_nhat_3)
-      return result
+
+      const roc_1 = (new calTech.ROC({ period: 1, values: danh_muc_1_arr })).result;
+      const roc_2 = (new calTech.ROC({ period: 1, values: danh_muc_2_arr })).result;
+      const roc_3 = (new calTech.ROC({ period: 1, values: danh_muc_3_arr })).result;
+
+      const roc_tt = (new calTech.ROC({ period: 1, values: data_2.map(item => item.closePrice) })).result
+
+      const beta_1 = this.betaCalculate(roc_1, roc_tt)
+      const beta_2 = this.betaCalculate(roc_2, roc_tt)
+      const beta_3 = this.betaCalculate(roc_3, roc_tt)
+
+      const alpha_1 = this.alphaCalculate(loi_nhuan_danh_muc_1, rf, roc_tt[roc_tt.length - 1], beta_1)
+      const alpha_2 = this.alphaCalculate(loi_nhuan_danh_muc_2, rf, roc_tt[roc_tt.length - 1], beta_2)
+      const alpha_3 = this.alphaCalculate(loi_nhuan_danh_muc_3, rf, roc_tt[roc_tt.length - 1], beta_3)
+
+      const dataMapped = EmulatorInvestmentResponse.mapToList({
+        value: b.value,
+        so_tien_thu_duoc_danh_muc_1,
+        so_tien_thu_duoc_danh_muc_2,
+        so_tien_thu_duoc_danh_muc_3,
+        loi_nhuan_danh_muc_1,
+        loi_nhuan_danh_muc_2,
+        loi_nhuan_danh_muc_3,
+        lai_thap_nhat_danh_muc_1,
+        lai_thap_nhat_danh_muc_2,
+        lai_thap_nhat_danh_muc_3,
+        lai_cao_nhat_danh_muc_1,
+        lai_cao_nhat_danh_muc_2,
+        lai_cao_nhat_danh_muc_3,
+        lai_trung_binh_danh_muc_1,
+        lai_trung_binh_danh_muc_2,
+        lai_trung_binh_danh_muc_3,
+        loi_nhuan_am_cao_nhat_danh_muc_1,
+        loi_nhuan_am_cao_nhat_danh_muc_2,
+        loi_nhuan_am_cao_nhat_danh_muc_3,
+        sharpe_1,
+        sharpe_2,
+        sharpe_3,
+        beta_1,
+        beta_2,
+        beta_3,
+        alpha_1,
+        alpha_2,
+        alpha_3
+      })
+      return dataMapped
     } catch (e) {
       throw new CatchException(e)
     }
@@ -194,6 +272,55 @@ export class InvestmentService {
   private sharpeCalculate(rf: number, rp: number, TBGT_DM: number, gtcn: number) {
     return (rp - rf) / ((gtcn - TBGT_DM) / TBGT_DM)
   }
+
+  private betaCalculate(roc_danh_muc: number[], roc_tt: number[]) {
+    return this.calculateCovariance(roc_danh_muc, roc_tt) / this.calculateVariance(roc_tt)
+  }
+
+  private alphaCalculate(rp: number, rf: number, rm: number, beta: number) {
+    return rp - (rf + (rm - rf) * beta)
+  }
+
+  private calculateVariance(data: number[]) {
+    if (data.length < 2) {
+      throw new Error("Tập dữ liệu phải có ít nhất 2 giá trị.");
+    }
+
+    const N = data.length;
+    const mean = data.reduce((sum, value) => sum + value, 0) / N;
+
+    let variance = 0;
+
+    for (let i = 0; i < N; i++) {
+      variance += (data[i] - mean) ** 2;
+    }
+
+    variance /= (N - 1); // Chia cho (N-1) để tính variance mẫu
+
+    return variance;
+  }
+
+
+  private calculateCovariance(X: number[], Y: number[]) {
+    if (X.length !== Y.length || X.length < 2) {
+      throw new Error("X và Y phải có cùng độ dài và ít nhất 2 giá trị.");
+    }
+
+    const N = X.length;
+    const meanX = X.reduce((sum, value) => sum + value, 0) / N;
+    const meanY = Y.reduce((sum, value) => sum + value, 0) / N;
+
+    let covariance = 0;
+
+    for (let i = 0; i < N; i++) {
+      covariance += (X[i] - meanX) * (Y[i] - meanY);
+    }
+
+    covariance /= (N - 1); // Chia cho (N-1) để tính covariance mẫu
+
+    return covariance;
+  }
+
 
   private addArrays(...arrays) {
     const maxLength = Math.max(...arrays.map(arr => arr.length));

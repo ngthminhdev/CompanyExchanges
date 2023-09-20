@@ -42,7 +42,7 @@ export class NewsEventResponse {
 
     constructor(data: NewsEventResponse){
         this.date =  data?.date ? UtilCommonTemplate.toDateV2(data?.date) : ''
-        this.date_dkcc = UtilCommonTemplate.toDateV2(data?.date_dkcc) || ''
+        this.date_dkcc =  UtilCommonTemplate.toDateV2(data?.date_dkcc) || ''
         this.date_gdkhq = UtilCommonTemplate.toDateV2(data?.date_gdkhq) || ''
         this.exchange = data?.exchange ? data?.exchange.toUpperCase() : ''
         this.code = data?.code || ''
