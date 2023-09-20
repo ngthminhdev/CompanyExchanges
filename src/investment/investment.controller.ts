@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
@@ -48,4 +48,15 @@ export class InvestmentController {
       throw new CatchException(e)
     }
   }
+
+  // @Get('search')
+  // @ApiOperation({summary: 'Tìm cổ phiếu'})
+  // async search(@Query() q: {stock: string}, @Res() res: Response){
+  //   try {
+  //     const data = await this.investmentService.search(q.stock.toUpperCase())
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
 }
