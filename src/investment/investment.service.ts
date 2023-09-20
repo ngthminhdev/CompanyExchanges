@@ -76,24 +76,25 @@ export class InvestmentService {
 
       //Lấy giá cổ phiếu
       const query = `
-    select closePrice / 1000 as closePrice, code, date from marketTrade.dbo.historyTicker 
-    where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
-    and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
-    and code in (${b.category.map(item => `'${item.code}'`).join(',')})
-    order by date asc
-    `
+      select closePrice / 1000 as closePrice, code, date from marketTrade.dbo.historyTicker 
+      where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
+      and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
+      and code in (${b.category.map(item => `'${item.code}'`).join(',')})
+      order by date asc
+      `
+      
       //Lấy giá VNINDEX
       const query_2 = `
-    select closePrice, code, date from marketTrade.dbo.indexTradeVND 
-    where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
-    and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
-    and code = 'VNINDEX'
-    order by date asc
-    `
+      select closePrice, code, date from marketTrade.dbo.indexTradeVND 
+      where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
+      and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
+      and code = 'VNINDEX'
+      order by date asc
+      `
       //Kỳ hạn 5 năm
       const query_3 = `
-    select top 1 laiSuatPhatHanh as value from [marketBonds].[dbo].[BondsInfor] where code ='VCB' and kyHan =N'5 năm' order by ngayPhatHanh desc
-    `
+      select top 1 laiSuatPhatHanh as value from [marketBonds].[dbo].[BondsInfor] where code ='VCB' and kyHan =N'5 năm' order by ngayPhatHanh desc
+      `
 
       const promise = this.mssqlService.query(query)
       const promise_2 = this.mssqlService.query(query_2)
@@ -102,6 +103,7 @@ export class InvestmentService {
       const [data, data_2, data_3] = await Promise.all([promise, promise_2, promise_3]) as any
 
       const result = {}
+      const date_arr = data.filter(item => item.code == b.category[0].code).map(item => item.date)
 
       for (const item of b.category) {
         //Tính giá trị của mỗi cổ phiếu trong danh mục
@@ -168,6 +170,10 @@ export class InvestmentService {
       let gia_tri_danh_muc_cao_nhat_2 = 0
       let gia_tri_danh_muc_cao_nhat_3 = 0
 
+      let loi_nhuan_theo_co_phieu_1 = []
+      let loi_nhuan_theo_co_phieu_2 = []
+      let loi_nhuan_theo_co_phieu_3 = []
+
       for (const item of Object.keys(result)) {
         so_tien_thu_duoc_danh_muc_1_arr = this.addArrays(so_tien_thu_duoc_danh_muc_1_arr, result[item].so_tien_thu_duoc_danh_muc_1)
         so_tien_thu_duoc_danh_muc_2_arr = this.addArrays(so_tien_thu_duoc_danh_muc_2_arr, result[item].so_tien_thu_duoc_danh_muc_2)
@@ -188,6 +194,10 @@ export class InvestmentService {
         gia_tri_danh_muc_cao_nhat_1 += result[item].gia_tri_danh_muc_cao_nhat_1
         gia_tri_danh_muc_cao_nhat_2 += result[item].gia_tri_danh_muc_cao_nhat_2
         gia_tri_danh_muc_cao_nhat_3 += result[item].gia_tri_danh_muc_cao_nhat_3
+
+        loi_nhuan_theo_co_phieu_1.push(...result[item].loi_nhuan_danh_muc_1.map((i, index) => ({code: item, value: i, date: date_arr[index + 1]})))
+        loi_nhuan_theo_co_phieu_2.push(...result[item].loi_nhuan_danh_muc_2.map((i, index) => ({code: item, value: i, date: date_arr[index + 1]})))
+        loi_nhuan_theo_co_phieu_3.push(...result[item].loi_nhuan_danh_muc_3.map((i, index) => ({code: item, value: i, date: date_arr[index + 1]})))
       }
 
       const so_tien_thu_duoc_danh_muc_1 = so_tien_thu_duoc_danh_muc_1_arr[so_tien_thu_duoc_danh_muc_1_arr.length - 1]
@@ -233,6 +243,21 @@ export class InvestmentService {
       const alpha_2 = this.alphaCalculate(loi_nhuan_danh_muc_2, rf, roc_tt[roc_tt.length - 1], beta_2)
       const alpha_3 = this.alphaCalculate(loi_nhuan_danh_muc_3, rf, roc_tt[roc_tt.length - 1], beta_3)
 
+      //Hiệu quả đầu tư theo danh mục
+      const percent_loi_nhuan_danh_muc = loi_nhuan_danh_muc_1_arr.map((item, index) => ({name: 'Danh mục 1', value: item, date: date_arr[index + 1]})).concat(loi_nhuan_danh_muc_2_arr.map((item, index) => ({name: 'Danh mục 2', value: item, date: date_arr[index + 1]}))).concat(loi_nhuan_danh_muc_3_arr.map((item, index) => ({name: 'Danh mục 3', value: item, date: date_arr[index + 1]})))
+      const percent_loi_nhuan = [...roc_tt.map(item => ({name: 'VNINDEX', value: item}))].map((item, index) => ({...item, date: date_arr[index + 1]})).concat(percent_loi_nhuan_danh_muc).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({...item, date: UtilCommonTemplate.toDate(item.date)}))
+
+      //Hiệu quả đầu tư theo cổ phiếu
+      const hieu_qua_dau_tu_co_phieu = {
+        danh_muc_1: loi_nhuan_theo_co_phieu_1.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({...item, date: UtilCommonTemplate.toDate(item.date)})),
+        danh_muc_2: loi_nhuan_theo_co_phieu_2.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({...item, date: UtilCommonTemplate.toDate(item.date)})),
+        danh_muc_3: loi_nhuan_theo_co_phieu_3.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({...item, date: UtilCommonTemplate.toDate(item.date)})),
+      }
+      //Biểu đồ lãi lỗ theo danh mục
+      const bieu_do_lai_lo_danh_muc = so_tien_thu_duoc_danh_muc_1_arr.map((item, index) => ({name: 'Danh mục 1', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1])})).concat(so_tien_thu_duoc_danh_muc_2_arr.map((item, index) => ({name: 'Danh mục 2', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1])}))).concat(so_tien_thu_duoc_danh_muc_3_arr.map((item, index) => ({name: 'Danh mục 3', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1])})))
+      const bieu_do_lai_lo_vn_index = data_2.map((item, index) => ({name: item.code, value: item.closePrice - data_2[0].closePrice, date: UtilCommonTemplate.toDate(item.date)})).slice(1, data_2.length)
+      const bieu_do_lai_lo = bieu_do_lai_lo_danh_muc.concat(bieu_do_lai_lo_vn_index).sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+      
       const dataMapped = EmulatorInvestmentResponse.mapToList({
         value: b.value,
         so_tien_thu_duoc_danh_muc_1,
@@ -261,7 +286,10 @@ export class InvestmentService {
         beta_3,
         alpha_1,
         alpha_2,
-        alpha_3
+        alpha_3,
+        percent_loi_nhuan,
+        hieu_qua_dau_tu_co_phieu,
+        bieu_do_lai_lo
       })
       return dataMapped
     } catch (e) {
@@ -338,18 +366,21 @@ export class InvestmentService {
   }
 
   private getMonth(
-    count: number,
-    date: moment.Moment | Date | string = new Date(),
-    results = [],
-  ): string[] {
-    if (count === 0) {
-      return results;
+    from: moment.Moment,
+    to: moment.Moment
+  ){
+    const count = to.diff(from, 'month')
+    const result = []
+    console.log(from);
+    
+    for(let i = 0; i <= count; i++) {
+      console.log(from);
+      
+      const from_1 = from      
+      result.push(from_1.add(i, 'month').endOf('month').format('YYYY-MM-DD'))
     }
-    let previousEndDate: moment.Moment | Date | string;
-    previousEndDate = moment(date).endOf('month');
-    const resultDate = previousEndDate.format('YYYY-MM-DD');
-    results.push(resultDate);
-
-    return this.getMonth(count - 1, previousEndDate.subtract(1, 'month'), results);
+    console.log(result);
+    
+    return result
   }
 }

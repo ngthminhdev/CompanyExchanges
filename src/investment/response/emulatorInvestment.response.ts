@@ -26,13 +26,14 @@ interface EmulatorInvestmentInterface {
     beta_3: number,
     alpha_1: number,
     alpha_2: number,
-    alpha_3: number
+    alpha_3: number,
+    percent_loi_nhuan: { name: string, date: string, value: number }[],
+    hieu_qua_dau_tu_co_phieu: { danh_muc_1: { name: string, date: string, value: number }[], danh_muc_2: { name: string, date: string, value: number }[], danh_muc_3: { name: string, date: string, value: number }[] },
+    bieu_do_lai_lo: { name: string, date: string, value: number }[]
 }
 export class EmulatorInvestmentResponse {
 
     static mapToList(data?: EmulatorInvestmentInterface) {
-        console.log(data);
-        
         return {
             data_1: [
                 {
@@ -74,7 +75,10 @@ export class EmulatorInvestmentResponse {
                     beta: data.beta_3,
                     alpha: data.alpha_3,
                 }
-            ]
+            ],
+            data_2: data.percent_loi_nhuan,
+            data_3: data.hieu_qua_dau_tu_co_phieu,
+            data_4: data.bieu_do_lai_lo
         }
     }
 }

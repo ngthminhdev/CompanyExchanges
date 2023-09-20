@@ -401,8 +401,8 @@ export class KeyFilterResponse {
             {
                 name: 'RSI(14)',
                 key: 'rsi',
-                min: data.rsi_max,
-                max: data.rsi_min,
+                min: data.rsi_min,
+                max: data.rsi_max,
             },
             {
                 name: 'Thanh khoản doanh nghiệp rating',
