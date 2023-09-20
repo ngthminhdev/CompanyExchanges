@@ -1,12 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger"
 
 interface KeyFilter {
-    MARKETCAP_max: number,
-    MARKETCAP_min: number,
+    marketCap_max: number,
+    marketCap_min: number,
     closePrice_max: number,
     closePrice_min: number,
-    SHAREOUT_max: number,
-    SHAREOUT_min: number,
+    shareout_max: number,
+    shareout_min: number,
     PE_max: number,
     PE_min: number,
     PB_max: number,
@@ -154,9 +154,9 @@ export class KeyFilterResponse {
         return [
             {
                 name: 'Vốn hóa (Tỷ VNĐ)',
-                key: 'MARKETCAP',
-                min: data.MARKETCAP_min / 1000000000,
-                max: data.MARKETCAP_max / 1000000000,
+                key: 'marketCap',
+                min: data.marketCap_min / 1000000000,
+                max: data.marketCap_max / 1000000000,
             },
             {
                 name: 'Thị giá (x1000 vnđ)',
@@ -166,9 +166,9 @@ export class KeyFilterResponse {
             },
             {
                 name: 'Khối lượng cổ phiếu lưu hành (triệu CP)',
-                key: 'SHAREOUT',
-                min: data.SHAREOUT_min / 1000000,
-                max: data.SHAREOUT_max / 1000000,
+                key: 'shareout',
+                min: data.shareout_min / 1000000,
+                max: data.shareout_max / 1000000,
             },
             {
                 name: 'Beta',

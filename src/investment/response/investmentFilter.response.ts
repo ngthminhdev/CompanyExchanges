@@ -184,13 +184,13 @@ export class InvestmentFilterResponse {
         type: Number,
         description: 'Vốn hoá'
     })
-    MARKETCAP: number
+    marketCap: number
 
     @ApiProperty({
         type: Number,
         description: 'Shareout'
     })
-    SHAREOUT: number
+    shareout: number
 
     @ApiProperty({
         type: Number,
@@ -365,8 +365,8 @@ export class InvestmentFilterResponse {
         this.PB = data?.PB || 0
         this.EPS = data?.EPS || 0
         this.BVPS = data?.BVPS || 0
-        this.MARKETCAP = data?.MARKETCAP || 0
-        this.SHAREOUT = data?.SHAREOUT || 0
+        this.marketCap = data?.marketCap || 0
+        this.shareout = data?.shareout || 0
         this.Beta = data?.Beta || 0
         this.growthRevenue = data?.growthRevenue || 0
         this.growthRevenueSamePeriod = data?.growthRevenueSamePeriod || 0
