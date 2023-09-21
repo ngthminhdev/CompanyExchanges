@@ -374,7 +374,7 @@ export class StockService {
         monthDate,
         firstDateYear,
       }: SessionDatesInterface = await this.getSessionDate(
-        '[marketTrade].[dbo].[inDusTrade]',
+        '[RATIO].[dbo].[ratioInday]',
         'date',
         this.dbServer
       );
@@ -410,24 +410,23 @@ export class StockService {
       //           ORDER BY p.date_time DESC
       //       `;
       const marketCapQuery = `
-      SELECT
-      i.date AS date_time,
-      sum(i.closePrice * s.share_out)  AS total_market_cap,
-      f.LV2 as industry
-      FROM marketTrade.dbo.tickerTradeVND i
-      inner join VISUALIZED_DATA.dbo.share_out s on s.code = i.code
-      inner join marketInfor.dbo.info f on f.code = i.code
-      WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
-      '${UtilCommonTemplate.toDate(previousDate)}', 
-      '${UtilCommonTemplate.toDate(weekDate)}', 
-      '${UtilCommonTemplate.toDate(monthDate)}', 
-      '${UtilCommonTemplate.toDate(
+        SELECT
+        i.date AS date_time,
+        sum(i.closePrice * i.shareout)  AS total_market_cap,
+        f.LV2 as industry
+        FROM RATIO.dbo.ratioInday i
+        inner join marketInfor.dbo.info f on f.code = i.code
+        WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+        '${UtilCommonTemplate.toDate(previousDate)}', 
+        '${UtilCommonTemplate.toDate(weekDate)}', 
+        '${UtilCommonTemplate.toDate(monthDate)}', 
+        '${UtilCommonTemplate.toDate(
         firstDateYear,
-      )}')
-      ${exchange == 'ALL' ? `` : (exchange == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange}'`)}
-      GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, i.floor`} 
-      ORDER BY i.date DESC
-      `
+        )}')
+        ${exchange == 'ALL' ? `` : ( exchange == 'HSX' ? `AND f.floor = 'HOSE'` : `AND f.floor = '${exchange}'`)}
+        GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, f.floor`} 
+        ORDER BY i.date DESC
+        `
 
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',

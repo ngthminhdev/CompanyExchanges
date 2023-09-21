@@ -33,7 +33,7 @@ process.on('message', async (data: any) => {
             ((values[0].total_market_cap - values[3].total_market_cap) /
               values[3].total_market_cap) *
             100,
-          ytd:
+          ytd: !values[4]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[4].total_market_cap) /
               values[4].total_market_cap) *
             100,
