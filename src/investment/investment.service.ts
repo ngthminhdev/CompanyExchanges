@@ -187,9 +187,9 @@ export class InvestmentService {
             so_tien_thu_duoc_danh_muc_2.push(tong_co_phieu_giu_cuoi_cung_2 * list_price[i])
             so_tien_thu_duoc_danh_muc_3.push(tong_co_phieu_giu_cuoi_cung_3 * list_price[i])
 
-            loi_nhuan_danh_muc_1.push(((tong_co_phieu_giu_cuoi_cung_1 * list_price[i]) - gia_tri_danh_muc_1) / gia_tri_danh_muc_1 * 100)
-            loi_nhuan_danh_muc_2.push(((tong_co_phieu_giu_cuoi_cung_2 * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
-            loi_nhuan_danh_muc_3.push(((tong_co_phieu_giu_cuoi_cung_3 * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
+            loi_nhuan_danh_muc_1.push(gia_tri_danh_muc_1 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_1 * list_price[i]) - gia_tri_danh_muc_1) / gia_tri_danh_muc_1 * 100)
+            loi_nhuan_danh_muc_2.push(gia_tri_danh_muc_2 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_2 * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
+            loi_nhuan_danh_muc_3.push(gia_tri_danh_muc_3 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_3 * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
           }
         }
         result[item.code] = { so_tien_thu_duoc_danh_muc_1, so_tien_thu_duoc_danh_muc_2, so_tien_thu_duoc_danh_muc_3, loi_nhuan_danh_muc_1, loi_nhuan_danh_muc_2, loi_nhuan_danh_muc_3, gia_tri_danh_muc_cao_nhat_1, gia_tri_danh_muc_cao_nhat_2, gia_tri_danh_muc_cao_nhat_3, gia_tri_danh_muc_thap_nhat_1, gia_tri_danh_muc_thap_nhat_2, gia_tri_danh_muc_thap_nhat_3, danh_muc_1, danh_muc_2, danh_muc_3 }
