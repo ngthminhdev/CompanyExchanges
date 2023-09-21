@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpStatus, Post, Query, Res } from '@nestjs/com
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
+import { StockDto } from '../shares/dto/stock.dto';
 import { BaseResponse } from '../utils/utils.response';
 import { EmulatorInvestmentDto } from './dto/emulator.dto';
 import { InvestmentFilterDto } from './dto/investment-filter.dto';
@@ -12,7 +13,9 @@ import { KeyFilterResponse } from './response/keyFilter.response';
 @Controller('investment')
 @ApiTags('Investment - Công cụ đầu tư')
 export class InvestmentController {
-  constructor(private readonly investmentService: InvestmentService) {}
+  constructor(
+    private readonly investmentService: InvestmentService,
+    ) {}
 
   @Post('filter')
   @ApiOperation({summary: 'Lọc tiêu chí'})
@@ -51,7 +54,7 @@ export class InvestmentController {
 
   @Get('search')
   @ApiOperation({summary: 'Tìm cổ phiếu'})
-  async search(@Query() q: {stock: string}, @Res() res: Response){
+  async search(@Query() q: StockDto, @Res() res: Response){
     try {
       const data = await this.investmentService.search(q.stock.toUpperCase())
       return res.status(HttpStatus.OK).send(new BaseResponse({data}))

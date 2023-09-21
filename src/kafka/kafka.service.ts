@@ -136,167 +136,167 @@ export class KafkaService {
   }
 
   async handleIndustry() {
-    const array = [
-      {floor: 'ALL', event: SocketEmit.PhanNganh},
-      {floor: 'HSX', event: SocketEmit.PhanNganhHOSE},
-      {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
-      {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
-    ]
-    for(const exchange of array) {
-      const {
-        latestDate,
-        previousDate,
-        weekDate,
-        monthDate,
-        firstDateYear,
-      }: SessionDatesInterface = await this.getSessionDate(
-        '[marketTrade].[dbo].[inDusTrade]',
-        'date',
-        this.dbServer
-      );
-      const marketCapQuery = `
-      SELECT
-      i.date AS date_time,
-      sum(i.closePrice * s.share_out)  AS total_market_cap,
-      f.LV2 as industry
-      FROM marketTrade.dbo.tickerTradeVND i
-      inner join VISUALIZED_DATA.dbo.share_out s on s.code = i.code
-      inner join marketInfor.dbo.info f on f.code = i.code
-      WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
-      '${UtilCommonTemplate.toDate(previousDate)}', 
-      '${UtilCommonTemplate.toDate(weekDate)}', 
-      '${UtilCommonTemplate.toDate(monthDate)}', 
-      '${UtilCommonTemplate.toDate(
-      firstDateYear,
-      )}')
-      ${exchange.floor == 'ALL' ? `` : ( exchange.floor == 'HSX' ? `AND i.floor = 'HOSE'` : `AND i.floor = '${exchange.floor}'`)}
-      GROUP BY f.LV2, i.date ${exchange.floor == 'ALL' ? `` : `, i.floor`} 
-      ORDER BY i.date DESC
-      `
-      const marketCap = await this.dbServer.query(marketCapQuery)
-      const groupByIndustry = marketCap.reduce((result, item) => {
-        (result[item.industry] || (result[item.industry] = [])).push(item);
-        return result;
-      }, {});
-  
-      //Calculate change percent per day, week, month
-      const industryChanges = Object.entries(groupByIndustry).map(
-        ([industry, values]: any) => {
-          return {
-            industry,
-            day_change_percent:
-              ((values[0].total_market_cap - values[1].total_market_cap) /
-                values[1].total_market_cap) *
-              100,
-            week_change_percent:
-              ((values[0].total_market_cap - values[2].total_market_cap) /
-                values[2].total_market_cap) *
-              100,
-            month_change_percent:
-              ((values[0].total_market_cap - values[3].total_market_cap) /
-                values[3].total_market_cap) *
-              100,
-            ytd:
-              ((values[0].total_market_cap - values[4].total_market_cap) /
-                values[4].total_market_cap) *
-              100,
-          };
-        },
-      );
-  
-      const query = (date): string => `
+      const array = [
+        {floor: 'ALL', event: SocketEmit.PhanNganh},
+        {floor: 'HSX', event: SocketEmit.PhanNganhHOSE},
+        {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
+        {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
+      ]
+      for(const exchange of array) {
+        const {
+          latestDate,
+          previousDate,
+          weekDate,
+          monthDate,
+          firstDateYear,
+        }: SessionDatesInterface = await this.getSessionDate(
+          '[RATIO].[dbo].[ratioInday]',
+          'date',
+          this.dbServer
+        );
+        const marketCapQuery = `
         SELECT
-          i.LV2 AS industry,
-          t.code AS ticker,
-          t.closePrice AS close_price,
-          t.highPrice AS high,
-          t.lowPrice AS low,
-          t.date AS date_time
-        FROM marketTrade.dbo.tickerTradeVND t
-        INNER JOIN marketInfor.dbo.info i
-          ON t.code = i.code
-        WHERE t.date = '${date}'
-      ${exchange.floor == 'ALL' ? `` : (exchange.floor == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange.floor}'`)}
+        i.date AS date_time,
+        sum(i.closePrice * i.shareout)  AS total_market_cap,
+        f.LV2 as industry
+        FROM RATIO.dbo.ratioInday i
+        inner join marketInfor.dbo.info f on f.code = i.code
+        WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+        '${UtilCommonTemplate.toDate(previousDate)}', 
+        '${UtilCommonTemplate.toDate(weekDate)}', 
+        '${UtilCommonTemplate.toDate(monthDate)}', 
+        '${UtilCommonTemplate.toDate(
+        firstDateYear,
+        )}')
+        ${exchange.floor == 'ALL' ? `` : ( exchange.floor == 'HSX' ? `AND f.floor = 'HOSE'` : `AND f.floor = '${exchange.floor}'`)}
+        GROUP BY f.LV2, i.date ${exchange.floor == 'ALL' ? `` : `, f.floor`} 
+        ORDER BY i.date DESC
         `
-      const dataToday = await this.dbServer.query(query(latestDate))
-      const dataYesterday = await this.dbServer.query(query(previousDate))
-  
-      const result = dataToday.map((item) => {
-        const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
-        if (!yesterdayItem) return;
-        return {
-          industry: item.industry,
-          equal: isEqual(yesterdayItem, item),
-          increase: isIncrease(yesterdayItem, item),
-          decrease: isDecrease(yesterdayItem, item),
-          high: isHigh(yesterdayItem, item),
-          low: isLow(yesterdayItem, item),
-        };
-      });
-  
-      const final = result.reduce((stats, record) => {
-        const existingStats = stats.find(
-          (s) => s?.industry === record?.industry,
+
+        const marketCap = await this.dbServer.query(marketCapQuery)
+        const groupByIndustry = marketCap.reduce((result, item) => {
+          (result[item.industry] || (result[item.industry] = [])).push(item);
+          return result;
+        }, {});
+
+        //Calculate change percent per day, week, month
+        const industryChanges = Object.entries(groupByIndustry).map(
+          ([industry, values]: any) => {
+            return {
+              industry,
+              day_change_percent:
+                ((values[0].total_market_cap - values[1].total_market_cap) /
+                  values[1].total_market_cap) *
+                100,
+              week_change_percent:
+                ((values[0].total_market_cap - values[2].total_market_cap) /
+                  values[2].total_market_cap) *
+                100,
+              month_change_percent:
+                ((values[0].total_market_cap - values[3].total_market_cap) /
+                  values[3].total_market_cap) *
+                100,
+              ytd: !values[4]?.total_market_cap ? 0 :
+                ((values[0].total_market_cap - values[4]?.total_market_cap) /
+                  values[4].total_market_cap) *
+                100,
+            };
+          },
         );
-        const industryChange = industryChanges.find(
-          (i) => i?.industry == record?.industry,
-        );
-        if (!industryChange) return stats;
-  
-        if (existingStats) {
-          existingStats.equal += record.equal;
-          existingStats.increase += record.increase;
-          existingStats.decrease += record.decrease;
-          existingStats.high += record.high;
-          existingStats.low += record.low;
-        } else {
-          stats.push({
-            industry: record.industry,
-            equal: record.equal,
-            increase: record.increase,
-            decrease: record.decrease,
-            high: record.high,
-            low: record.low,
-            ...industryChange,
-          });
-        }
-        return stats;
-      }, []);
-  
-      
-      let ex = '';
-      switch (exchange.floor) {
-        case 'HSX':
-          ex = 'VNINDEX';
-          break;
-        case 'HNX':
-          ex = 'HNXINDEX';
-          break;
-        default:
-          ex = 'UPINDEX';
-      }
-      let query_buy_sell: string = `
-              select top 1 Khoi_luong_cung as sellPressure, Khoi_luong_cau as buyPressure
-              from [PHANTICH].[dbo].[INDEX_AC_CC]
-              where Ticker = '${ex}' order by
-              [DateTime] desc
-          `;
-  
-      if (exchange.floor == 'ALL') {
-        query_buy_sell = `
-                  select sum(CAST(Khoi_luong_cung AS float)) as sellPressure, sum(CAST(Khoi_luong_cau AS float)) as buyPressure
-                  from [PHANTICH].[dbo].[INDEX_AC_CC]
-                  where Ticker in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
-              `;
-      }
-      const buySellData = await this.dbServer.query(query_buy_sell)
-  
-      const mappedData: IndustryResponse[] = [
-        ...new IndustryResponse().mapToList(final),
-      ].sort((a, b) => (a.industry > b.industry ? 1 : -1));
-      this.send(exchange.event, { data: mappedData, buySellData: buySellData?.[0] });
-    }
     
+        const query = (date): string => `
+          SELECT
+            i.LV2 AS industry,
+            t.code AS ticker,
+            t.closePrice AS close_price,
+            t.highPrice AS high,
+            t.lowPrice AS low,
+            t.date AS date_time
+          FROM marketTrade.dbo.tickerTradeVND t
+          INNER JOIN marketInfor.dbo.info i
+            ON t.code = i.code
+          WHERE t.date = '${date}'
+        ${exchange.floor == 'ALL' ? `` : (exchange.floor == 'HSX' ? `AND t.floor = 'HOSE'` : `AND t.floor = '${exchange.floor}'`)}
+          `
+        const dataToday = await this.dbServer.query(query(latestDate))
+        const dataYesterday = await this.dbServer.query(query(previousDate))
+    
+        const result = dataToday.map((item) => {
+          const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
+          if (!yesterdayItem) return;
+          return {
+            industry: item.industry,
+            equal: isEqual(yesterdayItem, item),
+            increase: isIncrease(yesterdayItem, item),
+            decrease: isDecrease(yesterdayItem, item),
+            high: isHigh(yesterdayItem, item),
+            low: isLow(yesterdayItem, item),
+          };
+        });
+    
+        const final = result.reduce((stats, record) => {
+          const existingStats = stats.find(
+            (s) => s?.industry === record?.industry,
+          );
+          const industryChange = industryChanges.find(
+            (i) => i?.industry == record?.industry,
+          );
+          if (!industryChange) return stats;
+    
+          if (existingStats) {
+            existingStats.equal += record.equal;
+            existingStats.increase += record.increase;
+            existingStats.decrease += record.decrease;
+            existingStats.high += record.high;
+            existingStats.low += record.low;
+          } else {
+            stats.push({
+              industry: record.industry,
+              equal: record.equal,
+              increase: record.increase,
+              decrease: record.decrease,
+              high: record.high,
+              low: record.low,
+              ...industryChange,
+            });
+          }
+          return stats;
+        }, []);
+    
+        
+        let ex = '';
+        switch (exchange.floor) {
+          case 'HSX':
+            ex = 'VNINDEX';
+            break;
+          case 'HNX':
+            ex = 'HNXINDEX';
+            break;
+          default:
+            ex = 'UPINDEX';
+        }
+        let query_buy_sell: string = `
+                select top 1 Khoi_luong_cung as sellPressure, Khoi_luong_cau as buyPressure
+                from [PHANTICH].[dbo].[INDEX_AC_CC]
+                where Ticker = '${ex}' order by
+                [DateTime] desc
+            `;
+    
+        if (exchange.floor == 'ALL') {
+          query_buy_sell = `
+                    select sum(CAST(Khoi_luong_cung AS float)) as sellPressure, sum(CAST(Khoi_luong_cau AS float)) as buyPressure
+                    from [PHANTICH].[dbo].[INDEX_AC_CC]
+                    where Ticker in ('VNINDEX', 'HNXINDEX', 'UPINDEX')
+                `;
+        }
+        const buySellData = await this.dbServer.query(query_buy_sell)
+    
+        const mappedData: IndustryResponse[] = [
+          ...new IndustryResponse().mapToList(final),
+        ].sort((a, b) => (a.industry > b.industry ? 1 : -1));
+        
+        this.send(exchange.event, { data: mappedData, buySellData: buySellData?.[0] });
+      }
   }
 
   handleDomesticIndex(payload: DomesticIndexKafkaInterface[]): void {
