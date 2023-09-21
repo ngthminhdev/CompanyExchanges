@@ -577,7 +577,7 @@ export class InvestmentFilterResponse {
     static mapToList(data?: InvestmentFilterResponse[]) {
         return {
             count: data[0]?.count || 0,
-            data
+            data: data.map(item => new InvestmentFilterResponse(item))
         }
     }
 }

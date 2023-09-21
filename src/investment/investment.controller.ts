@@ -49,14 +49,14 @@ export class InvestmentController {
     }
   }
 
-  // @Get('search')
-  // @ApiOperation({summary: 'Tìm cổ phiếu'})
-  // async search(@Query() q: {stock: string}, @Res() res: Response){
-  //   try {
-  //     const data = await this.investmentService.search(q.stock.toUpperCase())
-  //     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
-  //   } catch (e) {
-  //     throw new CatchException(e)
-  //   }
-  // }
+  @Get('search')
+  @ApiOperation({summary: 'Tìm cổ phiếu'})
+  async search(@Query() q: {stock: string}, @Res() res: Response){
+    try {
+      const data = await this.investmentService.search(q.stock.toUpperCase())
+      return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
