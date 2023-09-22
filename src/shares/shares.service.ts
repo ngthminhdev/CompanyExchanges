@@ -3323,13 +3323,15 @@ inner join tt t on t.code = s.code
       AND code = 'VCB'
       ORDER BY ngayPhatHanh DESC)
        AS graham_2,
-      POWER(22.5 * EPS * BVPS, 1 / 2) AS graham_3
+      SQRT(22.5 * EPS * BVPS) AS graham_3
     FROM loi_nhuan l
     INNER JOIN temp t
       ON t.code = l.code
     INNER JOIN ty_gia g
       ON g.code = l.code
     `
+    console.log(query_2);
+    
     const promise = this.mssqlService.query(query)
     const promise_2 = this.mssqlService.query(query_2)
 
