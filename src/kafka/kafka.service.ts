@@ -138,9 +138,9 @@ export class KafkaService {
   async handleIndustry() {
       const array = [
         {floor: 'ALL', event: SocketEmit.PhanNganh},
-        {floor: 'HSX', event: SocketEmit.PhanNganhHOSE},
-        {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
-        {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
+        // {floor: 'HSX', event: SocketEmit.PhanNganhHOSE},
+        // {floor: 'HNX', event: SocketEmit.PhanNganhHNX},
+        // {floor: 'UPCOM', event: SocketEmit.PhanNganhUPCOM},
       ]
       for(const exchange of array) {
         const {
