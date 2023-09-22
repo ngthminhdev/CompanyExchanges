@@ -1374,6 +1374,7 @@ export class MacroService {
   async exchangeRateIndexTable() {
     const redisData = await this.redis.get(`${RedisKeys.exchangeRateIndexTable}`)
     if (redisData) return redisData
+
     const query = `
     WITH temp
     AS (SELECT
@@ -1457,7 +1458,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<ExchangeRateIndexTableResponse[]>(query)
     const dataMapped = ExchangeRateIndexTableResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.exchangeRateIndexTable}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.exchangeRateIndexTable}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -1512,6 +1513,7 @@ export class MacroService {
     HAVING COUNT(date) = 2)
     ORDER BY date DESC
     `
+    
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
     const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
     await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`, dataMapped, { ttl: TimeToLive.OneWeek })
@@ -1521,6 +1523,7 @@ export class MacroService {
   async interestRate() {
     const redisData = await this.redis.get(`${RedisKeys.interestRate}`)
     if (redisData) return redisData
+
     const query = `
     WITH temp
     AS (SELECT TOP 150
@@ -1528,6 +1531,7 @@ export class MacroService {
     FROM macroEconomic.dbo.DuLieuViMo
     WHERE phanBang = N'LÃI SUẤT'
     AND thoiDiem >= '2018-01-01'
+    AND giaTri is not null
     ORDER BY thoiDiem DESC)
     SELECT
       chiTieu AS name,
