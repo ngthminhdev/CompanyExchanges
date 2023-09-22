@@ -148,7 +148,7 @@ export class SharesService {
     INNER JOIN pe e
       ON e.code = t.code
     INNER JOIN vh v
-      ON v.code = t.code  
+      ON v.code = t.code
     `
 
     const data = await this.mssqlService.query<HeaderStockResponse[]>(query)
@@ -518,7 +518,7 @@ export class SharesService {
     LEFT JOIN RATIO.dbo.ratio r
       ON t.code = r.code
       AND t.date = r.date
-    
+
       AND r.ratioCode = 'MARKETCAP'
     ORDER BY t.date DESC
     `
@@ -820,7 +820,7 @@ export class SharesService {
             Title as title,
             Href as href
         FROM macroEconomic.dbo.TinTuc n
-        WHERE Href NOT LIKE 'https://cafef.vn%'  
+        WHERE Href NOT LIKE 'https://cafef.vn%'
         AND Href NOT LIKE 'https://ndh.vn%'
         AND TickerTitle = '${stock}'
         ORDER BY n.date DESC
@@ -1117,7 +1117,7 @@ export class SharesService {
     AND yearQuarter NOT LIKE '%0'
     AND type = '${cate}'
     ${group})
-    select 
+    select
     case when CHARINDEX('-', name) != 0 then LTRIM(RIGHT(name, LEN(name) - CHARINDEX('-', name)))
     when name = N'Các khoản tương đương tiền' and id = 502 then 'Cac khoan tuong duong tien dau ky'
     when name = N'Các khoản tương đương tiền' and id = 602 then 'Cac khoan tuong duong tien cuoi ky'
@@ -1529,7 +1529,7 @@ export class SharesService {
     }
     if (LV2 == 'Dịch vụ tài chính' || LV2 == 'Bảo hiểm') {
       const data = await this.financialHealthRatingCKBH(stock, LV2)
-      return data 
+      return data
     }
 
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
@@ -1780,9 +1780,9 @@ and yearQuarter = '${prevQuarter}')
     INNER JOIN thi_truong t
       ON t.code = s.code
     INNER JOIN nganh_4_quy q
-      ON q.code = s.code  
-    INNER JOIN thi_truong_4_quy y on t.code = s.code 
-    INNER JOIN thi_truong_quy_truoc p on p.code = s.code 
+      ON q.code = s.code
+    INNER JOIN thi_truong_4_quy y on t.code = s.code
+    INNER JOIN thi_truong_quy_truoc p on p.code = s.code
     `
 
     const data = await this.mssqlService.query(query)
@@ -1943,7 +1943,7 @@ and yearQuarter = '${prevQuarter}')
     FROM VISUALIZED_DATA.dbo.rating
     WHERE LV2 = 'ALL'
     and yearQuarter = '${prevQuarter}')
-    select 
+    select
       currentRatioAll,
       quickRatioAll,
       cashRatioAll,
@@ -2076,7 +2076,7 @@ and yearQuarter = '${prevQuarter}')
     const industry_4_data = data.find(item => item.code == 'Industry4Quarter')
     const all_4_data = data.find(item => item.code == 'ALL4Quarter')
     const all_prev_data = data.find(item => item.code == 'ALLPrev')
-    
+
     const {star, starAll, starIndustry} = this.checkRatingFinanceHealthCK(stock_data, industry_data, all_data, industry_4_data, all_4_data, all_prev_data)
 
     const dataMapped = await FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
@@ -2107,18 +2107,18 @@ and yearQuarter = '${prevQuarter}')
       else star[item] = 1
 
       //Ngành
-      if(data_industry > data_industry_4 > data_all) starIndustry[item] = 5 
+      if(data_industry > data_industry_4 > data_all) starIndustry[item] = 5
       else if(data_industry > data_all > data_industry_4) starIndustry[item] = 4
-      else if(data_industry_4 > data_industry > data_all) starIndustry[item] = 3 
+      else if(data_industry_4 > data_industry > data_all) starIndustry[item] = 3
       else if(data_all > data_industry > data_industry_4) starIndustry[item] = 2
-      else starIndustry[item] = 1 
+      else starIndustry[item] = 1
 
       //Thị trường
-      if(data_all > data_all_prev > data_all_4) starAll[item] = 5 
+      if(data_all > data_all_prev > data_all_4) starAll[item] = 5
       else if(data_all > data_all_4 > data_all_prev) starAll[item] = 4
-      else if(data_all_prev > data_all > data_all_4) starAll[item] = 3 
+      else if(data_all_prev > data_all > data_all_4) starAll[item] = 3
       else if(data_all_4 > data_all > data_all_prev) starAll[item] = 2
-      else starAll[item] = 1 
+      else starAll[item] = 1
     }
 
     return {star, starIndustry, starAll}
@@ -2337,7 +2337,7 @@ and yearQuarter = '${prevQuarter}')
       ON c.code = '${stock}'
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON t.code = '${stock}'
-      inner join LV2 l on l.code = '${stock}'  
+      inner join LV2 l on l.code = '${stock}'
     WHERE r.code = l.LV2
     AND r.date = (SELECT
       MAX(date)
@@ -2351,7 +2351,7 @@ and yearQuarter = '${prevQuarter}')
     WHERE code = '${stock}')
     `
 
-    //Ngành  
+    //Ngành
     const query_2 = `
     WITH temp
     AS (SELECT TOP 1
@@ -2820,14 +2820,14 @@ and yearQuarter = '${prevQuarter}')
       l.vnd,
       NoiDungSuKien,
       SUBSTRING(NoiDungSuKien, CHARINDEX('20', NoiDungSuKien), 4) AS year
-    FROM RATIO.dbo.ratioInYearQuarter c 
+    FROM RATIO.dbo.ratioInYearQuarter c
     INNER JOIN PHANTICH.dbo.LichSukien l
       ON l.ticker = c.code
     WHERE c.yearQuarter = (SELECT TOP 1
       yearQuarter
     FROM RATIO.dbo.ratioInYearQuarter c WHERE RIGHT(yearQuarter, 1) <> 0
     ORDER BY yearQuarter DESC)
-    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt' 
+    AND l.LoaiSuKien = N'Trả cổ tức bằng tiền mặt'
     ),
     ty_le_theo_nam_stock
     AS (SELECT
@@ -3007,7 +3007,7 @@ and yearQuarter = '${prevQuarter}')
       ON ms.code = s.code
     `
     const promise = this.mssqlService.query(query)
-    
+
     //Query Thị trường quan tâm
     const query_4 = `
     with stock as (select
@@ -3232,7 +3232,7 @@ inner join tt t on t.code = s.code
       ON c.code = '${stock}'
     INNER JOIN marketTrade.dbo.tickerTradeVND t
       ON t.code = '${stock}'
-      inner join LV2 l on l.code = '${stock}'  
+      inner join LV2 l on l.code = '${stock}'
     WHERE r.code = l.LV2
     AND r.date = (SELECT
       MAX(date)
@@ -3245,8 +3245,8 @@ inner join tt t on t.code = s.code
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}')
     `
-    
-    //Ngành  
+
+    //Ngành
     const query_2 = `
     WITH temp
     AS (SELECT TOP 1
@@ -3330,7 +3330,6 @@ inner join tt t on t.code = s.code
     INNER JOIN ty_gia g
       ON g.code = l.code
     `
-    console.log(query_2);
     
     const promise = this.mssqlService.query(query)
     const promise_2 = this.mssqlService.query(query_2)

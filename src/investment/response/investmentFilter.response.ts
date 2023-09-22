@@ -456,7 +456,7 @@ export class InvestmentFilterResponse {
         this.code = data?.code || ''
         this.floor = data?.floor || ''
         this.LV2 = data?.LV2 || ''
-        this.closePrice = data?.closePrice || 0
+        this.closePrice = data?.closePrice ? data.closePrice / 1000 : 0
         this.shareout = data?.shareout ? data?.shareout / 1000000 : 0
         this.marketCap = data?.marketCap ? data?.marketCap / 1000000000 : 0
         this.EPS = data?.EPS || 0
