@@ -16,19 +16,19 @@ export class BusinessRatingResponse {
                 child: [
                     {
                         name: 'Tăng trưởng doanh thu',
-                        value: sortDoanhThu
+                        value: sortDoanhThuIndustry
                     },
                     {
                         name: 'Tăng trưởng lợi nhuận',
-                        value: sortLoiNhuan
+                        value: sortLoiNhuanIndustry
                     },
                     {
                         name: 'Tăng trưởng vốn hoá',
-                        value: sortVonHoa
+                        value: sortVonHoaIndustry
                     },
                     {
                         name: 'Tăng trưởng tài sản',
-                        value: sortTaiSan
+                        value: sortTaiSanIndustry
                     }
                 ]
             },
@@ -38,19 +38,19 @@ export class BusinessRatingResponse {
                 child: [
                     {
                         name: 'Tỷ lệ giá trị giao dịch/TTT 1 tháng gần nhất',
-                        value: sortGia1Thang
+                        value: sortGia1ThangIndustry
                     },
                     {
                         name: 'Tỷ lệ giá trị giao dịch/TTT 3 tháng gần nhất',
-                        value: sortGia3Thang
+                        value: sortGia3ThangIndustry
                     },
                     {
                         name: 'Tỷ lệ giá trị giao dịch/TTT 6 tháng gần nhất',
-                        value: sortGia6Thang
+                        value: sortGia6ThangIndustry
                     },
                     {
                         name: 'Tỷ lệ giá trị giao dịch/TTT 1 năm gần nhất',
-                        value: sortGia1Nam
+                        value: sortGia1NamIndustry
                     }
                 ]
             },
@@ -60,11 +60,11 @@ export class BusinessRatingResponse {
                 child: [
                     {
                         name: 'Tỷ trọng vốn hoá/TTT',
-                        value: sortTyTrongVonHoa
+                        value: sortTyTrongVonHoaIndustry
                     },
                     {
                         name: 'Tỷ trọng tài sản/TTT',
-                        value: sortTyTrongTaiSan
+                        value: sortTyTrongTaiSanIndustry
                     }
                 ]
             }
