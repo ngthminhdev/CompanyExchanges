@@ -12,7 +12,7 @@ export class BusinessRatingResponse {
         const data = [
             {
                 name: 'Tăng trưởng ngành',
-                value: UtilCommonTemplate.checkStarCommonV2(sortDoanhThu + sortLoiNhuan + sortVonHoa + sortTaiSan, 4),
+                value: UtilCommonTemplate.checkStarCommonV2(sortDoanhThuIndustry + sortLoiNhuanIndustry+ sortVonHoaIndustry + sortTaiSanIndustry, 4),
                 child: [
                     {
                         name: 'Tăng trưởng doanh thu',
@@ -34,7 +34,7 @@ export class BusinessRatingResponse {
             },
             {
                 name: 'Thị trường quan tâm',
-                value: UtilCommonTemplate.checkStarCommonV2(sortGia1Thang + sortGia3Thang + sortGia6Thang + sortGia1Nam, 4),
+                value: UtilCommonTemplate.checkStarCommonV2(sortGia1ThangIndustry + sortGia3ThangIndustry + sortGia6ThangIndustry + sortGia1NamIndustry, 4),
                 child: [
                     {
                         name: 'Tỷ lệ giá trị giao dịch/TTT 1 tháng gần nhất',
@@ -56,7 +56,7 @@ export class BusinessRatingResponse {
             },
             {
                 name: 'Quy mô ngành',
-                value: UtilCommonTemplate.checkStarCommonV2(sortTyTrongVonHoa + sortTyTrongTaiSan, 2),
+                value: UtilCommonTemplate.checkStarCommonV2(sortTyTrongVonHoaIndustry + sortTyTrongTaiSanIndustry, 2),
                 child: [
                     {
                         name: 'Tỷ trọng vốn hoá/TTT',
