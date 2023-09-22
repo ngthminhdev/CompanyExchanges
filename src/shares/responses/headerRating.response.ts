@@ -60,11 +60,11 @@ export class HeaderRatingResponse {
             },
             {
                 name: 'Kháng cự',
-                value: resistance,
+                value: resistance * 1000,
             },
             {
                 name: 'Hỗ trợ',
-                value: support,
+                value: support * 1000,
             },
             {
                 name: 'Xu hướng ngắn hạn',

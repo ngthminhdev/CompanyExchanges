@@ -176,8 +176,8 @@ export class InvestmentService {
 
             //Tính lợi nhuân
             loi_nhuan_danh_muc_1.push(gia_tri_danh_muc_1 == 0 ? 0 : ((gia_tri_danh_muc_1 / list_price[0] * list_price[i]) - gia_tri_danh_muc_1) / gia_tri_danh_muc_1 * 100)
-            loi_nhuan_danh_muc_2.push(gia_tri_danh_muc_1 == 0 ? 0 : ((gia_tri_danh_muc_2 / list_price[0] * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
-            loi_nhuan_danh_muc_3.push(gia_tri_danh_muc_1 == 0 ? 0 : ((gia_tri_danh_muc_3 / list_price[0] * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
+            loi_nhuan_danh_muc_2.push(gia_tri_danh_muc_2 == 0 ? 0 : ((gia_tri_danh_muc_2 / list_price[0] * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
+            loi_nhuan_danh_muc_3.push(gia_tri_danh_muc_3 == 0 ? 0 : ((gia_tri_danh_muc_3 / list_price[0] * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
           } else {
             tong_co_phieu_giu_cuoi_cung_1 += (b.value_period * item.category_1 / 100) / list_price[i]
             tong_co_phieu_giu_cuoi_cung_2 += (b.value_period * item.category_2 / 100) / list_price[i]

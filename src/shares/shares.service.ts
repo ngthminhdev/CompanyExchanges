@@ -2710,7 +2710,7 @@ and yearQuarter = '${prevQuarter}')
     select code, now, month_6, year_1, year_2, year_4
     from date_ranges;
     `)
-
+      
     const now = UtilCommonTemplate.toDate(date[0].now)
     const month_6 = UtilCommonTemplate.toDate(date[0].month_6)
     const year_1 = UtilCommonTemplate.toDate(date[0].year_1)
@@ -3102,7 +3102,7 @@ and yearQuarter = '${prevQuarter}')
   select * from stock s inner join industry i on i.code = s.code
   inner join tt t on t.code = s.code
     `
-
+        
     const promise_2 = this.mssqlService.query(query_2)
 
     //Query Giá trị tăng trưởng VCSH
@@ -3194,7 +3194,7 @@ inner join tt t on t.code = s.code
 
   async headerRating(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.headerRating}:${stock}`)
-    if (redisData) return redisData
+    // if (redisData) return redisData
 
     const query = `
     WITH tang_truong
@@ -3282,7 +3282,7 @@ inner join tt t on t.code = s.code
     AS (SELECT
       AVG(closePrice) AS closePrice,
       '${stock}' AS code
-    FROM marketTrade.dbo.tickerTradeVND
+    FROM RATIO.dbo.ratioInday
     WHERE code IN (SELECT
       code
     FROM marketInfor.dbo.info
@@ -3292,7 +3292,7 @@ inner join tt t on t.code = s.code
     WHERE code = '${stock}'))
     AND date = (SELECT TOP 1
       date
-    FROM marketTrade.dbo.tickerTradeVND
+    FROM RATIO.dbo.ratioInday
     ORDER BY date DESC)),
     tang_truong
     AS (SELECT TOP 4
@@ -3323,17 +3323,15 @@ inner join tt t on t.code = s.code
       AND code = 'VCB'
       ORDER BY ngayPhatHanh DESC)
        AS graham_2,
-      SQRT(22.5 * EPS * BVPS) AS graham_3
+      case when 22.5 * EPS * BVPS < 0 then 0 else SQRT(22.5 * EPS * BVPS) end AS graham_3
     FROM loi_nhuan l
     INNER JOIN temp t
       ON t.code = l.code
     INNER JOIN ty_gia g
       ON g.code = l.code
     `
-    
     const promise = this.mssqlService.query(query)
     const promise_2 = this.mssqlService.query(query_2)
-
 
     const promise_3: any = this.mssqlService.query(`
     SELECT   [code]
@@ -3347,6 +3345,9 @@ inner join tt t on t.code = s.code
                 FROM [marketTrade].[dbo].[historyTicker] where date >='2022-09-01' and code ='${stock}'
             order by date
     `)
+
+    const month_1 = moment().subtract(1, 'month').format('YYYY-MM-DD')
+    const year_star = moment().startOf('year').format('YYYY-MM-DD')
 
     const promise_4 = this.mssqlService.query(`
     WITH now
@@ -3363,7 +3364,7 @@ inner join tt t on t.code = s.code
       code
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}'
-    AND date <= DATEADD(MONTH, -1, GETDATE())
+    AND date <= '${month_1}'
     ORDER BY date DESC),
     start_year
     AS (SELECT TOP 1
@@ -3372,7 +3373,7 @@ inner join tt t on t.code = s.code
       date
     FROM marketTrade.dbo.tickerTradeVND
     WHERE code = '${stock}'
-    AND YEAR(date) = YEAR(GETDATE())
+    AND date >= '${year_star}'
     ORDER BY date ASC)
     SELECT
       (now - month_1) / month_1 * 100 AS bd_1_month,
@@ -3385,6 +3386,7 @@ inner join tt t on t.code = s.code
   `)
 
     const [data, data_2, data_3, data_4] = await Promise.all([promise, promise_2, promise_3, promise_4])
+    
     const price = {
       date: data_3.map(item => item.date),
       highPrice: data_3.map(item => item.highPrice),
@@ -3447,8 +3449,10 @@ inner join tt t on t.code = s.code
     `
     const promise_2 = this.mssqlService.query(query_EPS_nganh)
 
-    const promise_co_dong_lon = this.mssqlService.query(`select top 1 value from RATIO.dbo.ratio where ratioCode = 'TOTAL_INTERNAL_OWNERSHIP' and code = '${stock}' order by date desc`)
-
+    const promise_co_dong_lon = this.mssqlService.query(`
+    select co_dong_lon, code from VISUALIZED_DATA.dbo.rating_gia where date = (select max(date) from VISUALIZED_DATA.dbo.rating_gia) and co_dong_lon > 100000000 order by co_dong_lon desc
+    `)
+    
     const [data, data_2, chenh_lech, doanh_nghiep, dinh_hinh, co_dong_lon] = await Promise.all([promise, promise_2, this.individualInvestorBenefitsRating(stock), this.businessPositionRating(stock), this.businessRating(stock), promise_co_dong_lon]) as any
 
     const tang_truong_quy = data[0].tt_eps_quy
@@ -3464,7 +3468,7 @@ inner join tt t on t.code = s.code
       this.checkStatusEPSHeaderRating([tang_truong_nam, tang_truong_nam_truoc, tang_truong_nam_nganh], tang_truong_nam),
       this.checkStatusStarHeaderRating(chenh_lech.data[0].value),
       this.checkStatusStarHeaderRating(doanh_nghiep.totalStar),
-      this.checkStatusCoDongLon(co_dong_lon[0].value),
+      this.checkStatusCoDongLon(co_dong_lon, stock),
       this.checkStatusStarHeaderRating(dinh_hinh.totalStar)
     )
 
@@ -3486,10 +3490,15 @@ inner join tt t on t.code = s.code
     if (num == 0 || num == 1 || num == 2) return 'Không đạt'
   }
 
-  private checkStatusCoDongLon(val: number) {
-    if (val >= 0.65) return 'Đạt'
-    if (val > 0.5 && val < 0.65) return 'Bình thường'
-    return 'Không đạt'
+  private checkStatusCoDongLon(arr: {code: string, value: number}[], stock: string) {
+    const length = arr.length
+    const indx = arr.findIndex(item => item.code == stock)
+    if (indx == -1) return 'Không đạt'
+    const per = (indx + 1) / length * 100
+
+    if (per > 66.66) return 'Không đạt'
+    if (per <= 66.66 && per > 33.33) return 'Bình thường'
+    return 'Đạt'
   }
 
   private getLevels(data) {
