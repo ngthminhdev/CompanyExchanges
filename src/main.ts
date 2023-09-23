@@ -23,7 +23,7 @@ async function bootstrap() {
   //   credentials: true,
   //   allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
   // });
-  app.enableCors({ origin: ['http://localhost:3000', 'http://192.168.15.104:3000', 'http://192.168.15.101:3000', '*'], credentials: true});
+  app.enableCors({ origin: ['http://localhost:3000', 'http://192.168.15.104:3000', 'http://192.168.15.101:3000', '*'], credentials: true });
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLoggerInterceptor());
@@ -55,8 +55,8 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  await app.startAllMicroservices().catch((e) => console.log(e));
+  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  // await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(

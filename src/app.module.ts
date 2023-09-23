@@ -91,7 +91,7 @@ import { SharesModule } from './shares/shares.module';
     SocketModule,
     MarketModule,
     MacroModule,
-    KafkaModule,
+    // KafkaModule,
     RetailModule,
     NewsModule,
     ReportModule,

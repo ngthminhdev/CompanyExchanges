@@ -23,30 +23,30 @@ export class BalanceSheetDetailResponse {
                 [0.78, 'rgba(49,23,201,1)'],
             ],
         } : {}
-        if(is_chart){
-            if(data.name == 'TỔNG CỘNG TÀI SẢN' ||
-            data.name == 'NỢ PHẢI TRẢ' ||
-            data.name == 'NGUỒN VỐN CHỦ SỞ HỮU' ||
-            data.name == 'LỢI ÍCH CỔ ĐÔNG THIỂU SỐ' ||
-            data.name == 'VỐN CHỦ SỞ HỮU'
+        if (is_chart) {
+            if (data.name == 'TỔNG CỘNG TÀI SẢN' ||
+                data.name == 'NỢ PHẢI TRẢ' ||
+                data.name == 'NGUỒN VỐN CHỦ SỞ HỮU' ||
+                data.name == 'LỢI ÍCH CỔ ĐÔNG THIỂU SỐ' ||
+                data.name == 'VỐN CHỦ SỞ HỮU'
             ) this.name = data.name.toLowerCase().charAt(0).toUpperCase() + data.name.slice(1).toLowerCase()
-            if(data.name == 'no phai tra') this.name = 'Nợ phải trả trên tổng nguồn vốn (%)'
-            if(data.name == 'von so huu') this.name = 'Vốn chủ sở hữu trên tổng nguồn vốn (%)'
-            if(data.name == 'ngan han') this.name = 'Tài sản tài chính ngắn hạn (%)'
-            if(data.name == 'dai han') this.name = 'Tài sản tài chính dài hạn (%)'
+            if (data.name == 'no phai tra') this.name = 'Nợ phải trả trên tổng nguồn vốn (%)'
+            if (data.name == 'von so huu') this.name = 'Vốn chủ sở hữu trên tổng nguồn vốn (%)'
+            if (data.name == 'ngan han') this.name = 'Tài sản tài chính ngắn hạn (%)'
+            if (data.name == 'dai han') this.name = 'Tài sản tài chính dài hạn (%)'
         }
         else {
             switch (type) {
                 case 'Bảo hiểm':
-                    if(data.name == 'Tài sản lưu động và đầu tư ngắn hạn' ||
-                    data.name == 'Tài sản cố định và đầu tư dài hạn'
+                    if (data.name == 'Tài sản lưu động và đầu tư ngắn hạn' ||
+                        data.name == 'Tài sản cố định và đầu tư dài hạn'
                     ) this.name = data.name.toUpperCase()
                     break;
                 default:
-                    if(data.name == 'Tài sản lưu động và đầu tư ngắn hạn' ||
-                    data.name == 'Tài sản cố định và đầu tư dài hạn' ||
-                    data.name == 'Nợ phải trả' || 
-                    data.name == 'Nguồn vốn chủ sở hữu'
+                    if (data.name == 'Tài sản lưu động và đầu tư ngắn hạn' ||
+                        data.name == 'Tài sản cố định và đầu tư dài hạn' ||
+                        data.name == 'Nợ phải trả' ||
+                        data.name == 'Nguồn vốn chủ sở hữu'
                     ) this.name = data.name.toUpperCase()
                     break;
             }

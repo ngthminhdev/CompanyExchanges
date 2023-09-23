@@ -2,8 +2,8 @@ import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 var gauss = require('gauss');
-var talib = require('ta-lib')
-var talib_2 = require('talib')
+// var talib = require('ta-lib')
+// var talib_2 = require('talib')
 import { TimeToLive, TimeTypeEnum } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { ExceptionResponse } from '../exceptions/common.exception';
@@ -1579,6 +1579,7 @@ export class SharesService {
     WHERE code = '${stock}')
     `
     const data = await this.mssqlService.query(query)
+    console.log(data)
     let tong = 0, index_graham = 0
     const map = Object.keys(data[0]).reduce((acc, current) => {
       const index = acc.findIndex(item => item.name == 'graham')
@@ -1600,63 +1601,68 @@ export class SharesService {
     return dataMapped
   }
 
-  private calculateEMA(price: number[], period: number) { //price: mảng closePrice, period: số phiên
-    return talib.EMA(price, period)[0] //Lấy giá trị ngày gần nhất
-  }
+  // private calculateEMA(price: number[], period: number) { //price: mảng closePrice, period: số phiên
+  //   return talib.EMA(price, period)[0] //Lấy giá trị ngày gần nhất
+  // }
 
-  private calculateWilliamR(hP: number[], lP: number[], p: number[], period: number) {
-    return talib.WILLR(hP, lP, p, period)[0]
-  }
+  // private calculateWilliamR(hP: number[], lP: number[], p: number[], period: number) {
+  //   return talib.WILLR(hP, lP, p, period)[0]
+  // }
 
-  private calculateMacD(p: number[]) { //p: mảng closePrice
-    return talib.MACD(p, 12, 26, 9).macd[0]
-  }
+  // private calculateMacD(p: number[]) { //p: mảng closePrice
+  //   return talib.MACD(p, 12, 26, 9).macd[0]
+  // }
 
-  private calculateRSI(p: number[], period: number) {
-    return talib_2.execute({
-      name: 'RSI',
-      startIdx: 0,
-      endIdx: p.length - 1,
-      inReal: p,
-      optInTimePeriod: period
-    }).result.outReal[0]
-  }
+  // private calculateRSI(p: number[], period: number) {
+  //   return talib_2.execute({
+  //     name: 'RSI',
+  //     startIdx: 0,
+  //     endIdx: p.length - 1,
+  //     inReal: p,
+  //     optInTimePeriod: period
+  //   }).result.outReal[0]
+  // }
 
-  async techniqueRating(stock: string) {
+  // async techniqueRating(stock: string) {
+  //   const query = `
+  //   SELECT closePrice, highPrice, lowPrice
+  //   FROM marketTrade.dbo.historyTicker
+  //   WHERE code = '${stock}'
+  //   and date >= '2021-01-01'
+  //   order by date desc
+  //   `
+  //   const data: any = await this.mssqlService.query(query)
+
+  //   const closePrice = data.map(item => item.closePrice / 1000)
+  //   const highPrice = data.map(item => item.highPrice / 1000)
+  //   const lowPrice = data.map(item => item.lowPrice / 1000)
+
+  //   const ema5 = this.calculateEMA(closePrice, 5)
+  //   const ema10 = this.calculateEMA(closePrice, 10)
+  //   const ema20 = this.calculateEMA(closePrice, 20)
+  //   const ema50 = this.calculateEMA(closePrice, 50)
+  //   const ema100 = this.calculateEMA(closePrice, 100)
+  //   const ema200 = this.calculateEMA(closePrice, 200)
+
+  //   const williamR = this.calculateWilliamR(highPrice, lowPrice, closePrice, 14)
+  //   const macD = this.calculateMacD(closePrice)
+  //   const rsi = this.calculateRSI(closePrice, 14)
+  //   const adx = talib_2.execute({
+  //     name: 'ADX',
+  //     startIdx: 0,
+  //     endIdx: data.length - 1,
+  //     high: highPrice,
+  //     low: lowPrice,
+  //     close: closePrice,
+  //     optInTimePeriod: 14
+  //   });
+  //   // return {ema5: ema5[0],ema10: ema10[0], ema20: ema20[0], ema50: ema50[0], ema100: ema100[0], ema200: ema200[0], williamR, macD, adx};
+  //   return { ema5, ema10, ema20, ema50, ema100, ema200, williamR, macD, rsi, adx }
+
+  // }
+  async indicatorDCF(stock: string) {
     const query = `
-    SELECT closePrice, highPrice, lowPrice
-    FROM marketTrade.dbo.historyTicker
-    WHERE code = '${stock}'
-    and date >= '2021-01-01'
-    order by date desc
+
     `
-    const data: any = await this.mssqlService.query(query)
-
-    const closePrice = data.map(item => item.closePrice / 1000)
-    const highPrice = data.map(item => item.highPrice / 1000)
-    const lowPrice = data.map(item => item.lowPrice / 1000)
-
-    const ema5 = this.calculateEMA(closePrice, 5)
-    const ema10 = this.calculateEMA(closePrice, 10)
-    const ema20 = this.calculateEMA(closePrice, 20)
-    const ema50 = this.calculateEMA(closePrice, 50)
-    const ema100 = this.calculateEMA(closePrice, 100)
-    const ema200 = this.calculateEMA(closePrice, 200)
-
-    const williamR = this.calculateWilliamR(highPrice, lowPrice, closePrice, 14)
-    const macD = this.calculateMacD(closePrice)
-    const rsi = this.calculateRSI(closePrice, 14)
-    const adx = talib_2.execute({
-      name: 'ADX',
-      startIdx: 0,
-      endIdx: data.length - 1,
-      high: highPrice,
-      low: lowPrice,
-      close: closePrice,
-      optInTimePeriod: 14
-    });
-    // return {ema5: ema5[0],ema10: ema10[0], ema20: ema20[0], ema50: ema50[0], ema100: ema100[0], ema200: ema200[0], williamR, macD, adx};
-    return { ema5, ema10, ema20, ema50, ema100, ema200, williamR, macD, rsi, adx }
-
   }
 }

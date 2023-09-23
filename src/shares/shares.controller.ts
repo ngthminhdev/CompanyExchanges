@@ -35,11 +35,11 @@ import { SharesService } from './shares.service';
 @Controller('shares')
 @ApiTags('Shares - Site Cổ phiếu')
 export class SharesController {
-  constructor(private readonly sharesService: SharesService) {}
+  constructor(private readonly sharesService: SharesService) { }
 
   @Get('search')
-  @ApiOperation({summary: 'Tìm kiếm cổ phiếu'})
-  @ApiOkResponse({type: SearchStockResponse})
+  @ApiOperation({ summary: 'Tìm kiếm cổ phiếu' })
+  @ApiOkResponse({ type: SearchStockResponse })
   async searchStock(@Query() q: SearchStockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.searchStock(q.key_search)
@@ -50,8 +50,8 @@ export class SharesController {
   }
 
   @Get('header')
-  @ApiOperation({summary: 'Header'})
-  @ApiOkResponse({type: HeaderStockResponse})
+  @ApiOperation({ summary: 'Header' })
+  @ApiOkResponse({ type: HeaderStockResponse })
   async header(@Query() q: StockTypeDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.header(q.stock, q.type)
@@ -62,8 +62,8 @@ export class SharesController {
   }
 
   @Get('chart-nen')
-  @ApiOperation({summary: 'Chart nến'})
-  @ApiOkResponse({type: CandleChartResponse})
+  @ApiOperation({ summary: 'Chart nến' })
+  @ApiOkResponse({ type: CandleChartResponse })
   async candleChart(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.candleChart(q.stock)
@@ -76,8 +76,8 @@ export class SharesController {
   //Tổng quan
 
   @Get('thong-ke-giao-dich')
-  @ApiOperation({summary: 'Thống kê giao dịch'})
-  @ApiOkResponse({type: TransactionStatisticsResponse})
+  @ApiOperation({ summary: 'Thống kê giao dịch' })
+  @ApiOkResponse({ type: TransactionStatisticsResponse })
   async transactionStatistics(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.transactionStatistics(q.stock)
@@ -88,8 +88,8 @@ export class SharesController {
   }
 
   @Get('ket-qua-kinh-doanh')
-  @ApiOperation({summary: 'Kết quả kinh doanh'})
-  @ApiOkResponse({type: BusinessResultsResponse})
+  @ApiOperation({ summary: 'Kết quả kinh doanh' })
+  @ApiOkResponse({ type: BusinessResultsResponse })
   async businessResults(@Query() q: StockOrderDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.businessResults(q.stock, +q.order, q.type.toUpperCase())
@@ -100,8 +100,8 @@ export class SharesController {
   }
 
   @Get('can-doi-ke-toan')
-  @ApiOperation({summary: 'Cân đối kế toán'})
-  @ApiOkResponse({type: BusinessResultsResponse})
+  @ApiOperation({ summary: 'Cân đối kế toán' })
+  @ApiOkResponse({ type: BusinessResultsResponse })
   async balanceSheet(@Query() q: StockOrderDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.balanceSheet(q.stock, +q.order, q.type.toUpperCase())
@@ -110,10 +110,10 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
-  
+
   @Get('luu-chuyen-tien-te')
-  @ApiOperation({summary: 'Lưu chuyển tiền tệ'})
-  @ApiOkResponse({type: BusinessResultsResponse})
+  @ApiOperation({ summary: 'Lưu chuyển tiền tệ' })
+  @ApiOkResponse({ type: BusinessResultsResponse })
   async castFlow(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.castFlow(q.stock, +q.order)
@@ -121,11 +121,11 @@ export class SharesController {
     } catch (e) {
       throw new CatchException(e)
     }
-  } 
+  }
 
   @Get('chi-so-tai-chinh')
-  @ApiOperation({summary: 'Chỉ số tài chính'})
-  @ApiOkResponse({type: FinancialIndicatorsResponse})
+  @ApiOperation({ summary: 'Chỉ số tài chính' })
+  @ApiOkResponse({ type: FinancialIndicatorsResponse })
   async financialIndicators(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.financialIndicators(q.stock)
@@ -136,8 +136,8 @@ export class SharesController {
   }
 
   @Get('doanh-nghiep-cung-nganh')
-  @ApiOperation({summary: 'Doanh nghiệp cùng ngành'})
-  @ApiOkResponse({type: EnterprisesSameIndustryResponse})
+  @ApiOperation({ summary: 'Doanh nghiệp cùng ngành' })
+  @ApiOkResponse({ type: EnterprisesSameIndustryResponse })
   async enterprisesSameIndustry(@Query() q: EnterprisesSameIndustryDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.enterprisesSameIndustry(q.stock, q.exchange)
@@ -148,8 +148,8 @@ export class SharesController {
   }
 
   @Get('lich-su-kien')
-  @ApiOperation({summary: 'Lịch sự kiện'})
-  @ApiOkResponse({type: EventCalendarResponse})
+  @ApiOperation({ summary: 'Lịch sự kiện' })
+  @ApiOkResponse({ type: EventCalendarResponse })
   async eventCalendar(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.eventCalendar(q.stock)
@@ -161,8 +161,8 @@ export class SharesController {
 
   //Thống kê GD
   @Get('du-lieu-giao-dich')
-  @ApiOperation({summary: 'Dữ liệu giao dịch'})
-  @ApiOkResponse({type: TransactionDataResponse})
+  @ApiOperation({ summary: 'Dữ liệu giao dịch' })
+  @ApiOkResponse({ type: TransactionDataResponse })
   async transactionData(@Query() q: TransactionDataDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.transactionData(q.stock, q.from, q.to)
@@ -173,8 +173,8 @@ export class SharesController {
   }
 
   @Get('bien-dong-gia-giao-dich')
-  @ApiOperation({summary: 'Biến động giá giao dịch'})
-  @ApiOkResponse({type: TradingPriceFluctuationsResponse})
+  @ApiOperation({ summary: 'Biến động giá giao dịch' })
+  @ApiOkResponse({ type: TradingPriceFluctuationsResponse })
   async tradingPriceFluctuations(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.tradingPriceFluctuations(q.stock)
@@ -185,8 +185,8 @@ export class SharesController {
   }
 
   @Get('khoi-luong-giao-dich-binh-quan-ngay')
-  @ApiOperation({summary: 'Khối lượng giao dịch bình quân/ngày'})
-  @ApiOkResponse({type: TradingPriceFluctuationsResponse})
+  @ApiOperation({ summary: 'Khối lượng giao dịch bình quân/ngày' })
+  @ApiOkResponse({ type: TradingPriceFluctuationsResponse })
   async averageTradingVolume(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.averageTradingVolume(q.stock)
@@ -197,8 +197,8 @@ export class SharesController {
   }
 
   @Get('thong-ke-theo-cac-thang-quy-nam')
-  @ApiOperation({summary: 'Thống kê theo các tháng, quý, năm'})
-  @ApiOkResponse({type: StatisticsMonthQuarterYearResponse})
+  @ApiOperation({ summary: 'Thống kê theo các tháng, quý, năm' })
+  @ApiOkResponse({ type: StatisticsMonthQuarterYearResponse })
   async statisticsMonthQuarterYear(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.statisticsMonthQuarterYear(q.stock, +q.order)
@@ -209,8 +209,8 @@ export class SharesController {
   }
 
   @Get('giao-dich-cac-nhom-nha-dau-tu')
-  @ApiOperation({summary: 'Giao dịch các nhóm nhà đầu tư'})
-  @ApiOkResponse({type: TradingGroupsInvestorsResponse})
+  @ApiOperation({ summary: 'Giao dịch các nhóm nhà đầu tư' })
+  @ApiOkResponse({ type: TradingGroupsInvestorsResponse })
   async tradingGroupsInvestors(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.tradingGroupsInvestors(q.stock)
@@ -219,11 +219,11 @@ export class SharesController {
       throw new CatchException(e)
     }
   }
-  
+
   //Tin tức và sự kiện
   @Get('chi-tiet-lich-su-kien')
-  @ApiOperation({summary: 'Chi tiết lịch sự kiện (site tin tức và sự kiện)'})
-  @ApiOkResponse({type: NewsEventResponse})
+  @ApiOperation({ summary: 'Chi tiết lịch sự kiện (site tin tức và sự kiện)' })
+  @ApiOkResponse({ type: NewsEventResponse })
   async eventCalendarDetail(@Query() q: EventCalendarDetailDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.eventCalendarDetail(q.stock, +q.type)
@@ -234,8 +234,8 @@ export class SharesController {
   }
 
   @Get('tin-tuc')
-  @ApiOperation({summary: 'Tin tức)'})
-  @ApiOkResponse({type: NewsStockResponse})
+  @ApiOperation({ summary: 'Tin tức)' })
+  @ApiOkResponse({ type: NewsStockResponse })
   async newsStock(@Query() q: EventCalendarDetailDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.newsStock(q.stock, +q.type)
@@ -248,8 +248,8 @@ export class SharesController {
   //Tai chinh doanh nghiep
 
   @Get('chi-tiet-luu-chuyen-tien-te')
-  @ApiOperation({summary: 'Báo cáo lưu chuyển tiền tệ'})
-  @ApiOkResponse({type: CastFlowDetailResponse})
+  @ApiOperation({ summary: 'Báo cáo lưu chuyển tiền tệ' })
+  @ApiOkResponse({ type: CastFlowDetailResponse })
   async castFlowDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.castFlowDetail(q.stock, +q.order, +q.is_chart)
@@ -260,8 +260,8 @@ export class SharesController {
   }
 
   @Get('chi-tiet-ket-qua-kinh-doanh')
-  @ApiOperation({summary: 'Báo cáo kết quả kinh doanh'})
-  @ApiOkResponse({type: BusinessResultDetailResponse})
+  @ApiOperation({ summary: 'Báo cáo kết quả kinh doanh' })
+  @ApiOkResponse({ type: BusinessResultDetailResponse })
   async businessResultDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.businessResultDetail(q.stock, +q.order, +q.is_chart)
@@ -272,8 +272,8 @@ export class SharesController {
   }
 
   @Get('chi-tiet-can-doi-ke-toan')
-  @ApiOperation({summary: 'Báo cáo cân đối kế toán'})
-  @ApiOkResponse({type: BalanceSheetDetailResponse})
+  @ApiOperation({ summary: 'Báo cáo cân đối kế toán' })
+  @ApiOkResponse({ type: BalanceSheetDetailResponse })
   async balanceSheetDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.balanceSheetDetail(q.stock, +q.order, +q.is_chart)
@@ -284,8 +284,8 @@ export class SharesController {
   }
 
   @Get('chi-tiet-can-doi-ke-toan-chart-tron')
-  @ApiOperation({summary: 'Báo cáo cân đối kế toán chart tròn'})
-  @ApiOkResponse({type: BalanceSheetDetailCircleResponse})
+  @ApiOperation({ summary: 'Báo cáo cân đối kế toán chart tròn' })
+  @ApiOkResponse({ type: BalanceSheetDetailCircleResponse })
   async balanceSheetDetailCircle(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.balanceSheetDetailCircle(q.stock, +q.order)
@@ -296,8 +296,8 @@ export class SharesController {
   }
 
   @Get('chi-tiet-chi-so-tai-chinh')
-  @ApiOperation({summary: 'Báo cáo chỉ số tài chính'})
-  @ApiOkResponse({type: BalanceSheetDetailResponse})
+  @ApiOperation({ summary: 'Báo cáo chỉ số tài chính' })
+  @ApiOkResponse({ type: BalanceSheetDetailResponse })
   async financialIndicatorsDetail(@Query() q: CastFlowDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.financialIndicatorsDetail(q.stock, +q.order, +q.is_chart)
@@ -308,7 +308,7 @@ export class SharesController {
   }
 
   //Rating
-  
+
   // @Get('rating-suc-khoe-tai-chinh')
   // @ApiOperation({summary: 'Rating sức khoẻ tài chính'})
   // @ApiOkResponse({type: BalanceSheetDetailResponse})
@@ -322,8 +322,8 @@ export class SharesController {
   // }
 
   @Get('rating-dinh-gia')
-  @ApiOperation({summary: 'Rating định giá'})
-  @ApiOkResponse({type: ValuationRatingResponse})
+  @ApiOperation({ summary: 'Rating định giá' })
+  @ApiOkResponse({ type: ValuationRatingResponse })
   async valuationRating(@Query() q: StockDto, @Res() res: Response) {
     try {
       const data = await this.sharesService.valuationRating(q.stock)
@@ -333,15 +333,17 @@ export class SharesController {
     }
   }
 
-  @Get('rating-ky-thuat')
-  @ApiOperation({summary: 'Rating kỹ thuật'})
-  @ApiOkResponse({type: ValuationRatingResponse})
-  async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
-    try {
-      const data = await this.sharesService.techniqueRating(q.stock)
-      return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-    } catch (e) {
-      throw new CatchException(e)
-    }
-  }
+  // @Get('rating-ky-thuat')
+  // @ApiOperation({summary: 'Rating kỹ thuật'})
+  // @ApiOkResponse({type: ValuationRatingResponse})
+  // async techniqueRating(@Query() q: StockDto, @Res() res: Response) {
+  //   try {
+  //     const data = await this.sharesService.techniqueRating(q.stock)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  //   } catch (e) {
+  //     throw new CatchException(e)
+  //   }
+  // }
+
+  // @Get('chi-so-dcf')
 }
