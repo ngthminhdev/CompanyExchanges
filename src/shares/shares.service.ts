@@ -530,7 +530,8 @@ export class SharesService {
 
   async tradingPriceFluctuations(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`)
-    // if (redisData) return redisData
+    if (redisData) return redisData
+    
     const date = UtilCommonTemplate.getLastTwoQuarters()
 
     const now = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment().format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')

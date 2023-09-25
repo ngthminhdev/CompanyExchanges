@@ -1013,6 +1013,7 @@ export class StockService {
         await this.getSessionDate(
           `[PHANTICH].[dbo].[TICKER_AC_CC]`,
           '[DateTime]',
+          this.dbServer
         );
 
       let startDate: Date | string;
