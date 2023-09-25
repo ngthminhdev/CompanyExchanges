@@ -530,7 +530,7 @@ export class SharesService {
 
   async tradingPriceFluctuations(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`)
-    if (redisData) return redisData
+    // if (redisData) return redisData
     const date = UtilCommonTemplate.getLastTwoQuarters()
 
     const now = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment().format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
@@ -541,14 +541,9 @@ export class SharesService {
     const quarter_end = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment(date.months[5], 'YYYY/MM/DD').endOf('month').format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
 
-    let pivot = ``
-    if (month == quarter_end) {
-      pivot = `[${now}], [${week}], [${quarter_start}], [${month}], [${year}]`
-    } else if (month == quarter_start) {
-      pivot = `[${now}], [${week}], [${quarter_end}], [${month}], [${year}]`
-    } else {
-      pivot = `[${now}], [${week}], [${quarter_end}], [${quarter_start}], [${month}], [${year}]`
-    }
+    //Xoá những ngày trùng nhau
+    const same_day = this.checkSameDate([now, week, month, year, quarter_end, quarter_start, week_52]) 
+    const pivot = same_day.map(item => `[${item}]`).join(',')
 
     const query = `
     WITH temp
@@ -592,6 +587,20 @@ export class SharesService {
     const dataMapped = new TradingPriceFluctuationsResponse(data[0])
     await this.redis.set(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })
     return dataMapped
+  }
+
+  private checkSameDate(arr: string[]) {
+    let same_day_index = 0
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        if (arr[i] == arr[j]) {
+          same_day_index = j
+          break
+        }
+      }
+    }
+    arr.splice(same_day_index, 1)
+    return arr
   }
 
   async averageTradingVolume(stock: string) {
@@ -2009,9 +2018,9 @@ and yearQuarter = '${prevQuarter}')
     return dataMapped
   }
 
-  async financialHealthRatingCKBH(stock: string, LV2: string){
+  async financialHealthRatingCKBH(stock: string, LV2: string) {
     const redisData = await this.redis.get(`${RedisKeys.financialHealthRating}:${stock}`)
-    if(redisData) return redisData
+    if (redisData) return redisData
 
     const query = `
     select c.currentRatio, c.cashRatio, c.quickRatio, c.interestCoverageRatio,
@@ -2077,14 +2086,14 @@ and yearQuarter = '${prevQuarter}')
     const all_4_data = data.find(item => item.code == 'ALL4Quarter')
     const all_prev_data = data.find(item => item.code == 'ALLPrev')
 
-    const {star, starAll, starIndustry} = this.checkRatingFinanceHealthCK(stock_data, industry_data, all_data, industry_4_data, all_4_data, all_prev_data)
+    const { star, starAll, starIndustry } = this.checkRatingFinanceHealthCK(stock_data, industry_data, all_data, industry_4_data, all_4_data, all_prev_data)
 
     const dataMapped = await FinancialHealthRatingResponse.mapToList(star, starIndustry, starAll)
     await this.redis.set(`${RedisKeys.financialHealthRating}:${stock}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
-  private checkRatingFinanceHealthCK(stock: any, industry: any, all: any, industry_4_quarter: any, all_4_quarter: any, all_prev: any){
+  private checkRatingFinanceHealthCK(stock: any, industry: any, all: any, industry_4_quarter: any, all_4_quarter: any, all_prev: any) {
     const key = Object.keys(stock).slice(0, Object.keys(stock).length - 1);
 
     const star = {}
@@ -2100,28 +2109,28 @@ and yearQuarter = '${prevQuarter}')
       const data_all_prev = all_prev[item]
 
       //Cổ phiếu
-      if(data_stock > data_industry > data_all) star[item] = 5
-      else if(data_stock > data_all > data_industry) star[item] = 4
-      else if(data_industry > data_stock > data_all) star[item] = 3
-      else if(data_all > data_stock > data_industry) star[item] = 2
+      if (data_stock > data_industry > data_all) star[item] = 5
+      else if (data_stock > data_all > data_industry) star[item] = 4
+      else if (data_industry > data_stock > data_all) star[item] = 3
+      else if (data_all > data_stock > data_industry) star[item] = 2
       else star[item] = 1
 
       //Ngành
-      if(data_industry > data_industry_4 > data_all) starIndustry[item] = 5
-      else if(data_industry > data_all > data_industry_4) starIndustry[item] = 4
-      else if(data_industry_4 > data_industry > data_all) starIndustry[item] = 3
-      else if(data_all > data_industry > data_industry_4) starIndustry[item] = 2
+      if (data_industry > data_industry_4 > data_all) starIndustry[item] = 5
+      else if (data_industry > data_all > data_industry_4) starIndustry[item] = 4
+      else if (data_industry_4 > data_industry > data_all) starIndustry[item] = 3
+      else if (data_all > data_industry > data_industry_4) starIndustry[item] = 2
       else starIndustry[item] = 1
 
       //Thị trường
-      if(data_all > data_all_prev > data_all_4) starAll[item] = 5
-      else if(data_all > data_all_4 > data_all_prev) starAll[item] = 4
-      else if(data_all_prev > data_all > data_all_4) starAll[item] = 3
-      else if(data_all_4 > data_all > data_all_prev) starAll[item] = 2
+      if (data_all > data_all_prev > data_all_4) starAll[item] = 5
+      else if (data_all > data_all_4 > data_all_prev) starAll[item] = 4
+      else if (data_all_prev > data_all > data_all_4) starAll[item] = 3
+      else if (data_all_4 > data_all > data_all_prev) starAll[item] = 2
       else starAll[item] = 1
     }
 
-    return {star, starIndustry, starAll}
+    return { star, starIndustry, starAll }
   }
 
   private checkRatingFinanceHealthNH(stock: any, industry: any, compv: any) {
@@ -2710,7 +2719,7 @@ and yearQuarter = '${prevQuarter}')
     select code, now, month_6, year_1, year_2, year_4
     from date_ranges;
     `)
-      
+
     const now = UtilCommonTemplate.toDate(date[0].now)
     const month_6 = UtilCommonTemplate.toDate(date[0].month_6)
     const year_1 = UtilCommonTemplate.toDate(date[0].year_1)
@@ -3102,7 +3111,7 @@ and yearQuarter = '${prevQuarter}')
   select * from stock s inner join industry i on i.code = s.code
   inner join tt t on t.code = s.code
     `
-        
+
     const promise_2 = this.mssqlService.query(query_2)
 
     //Query Giá trị tăng trưởng VCSH
@@ -3386,7 +3395,7 @@ inner join tt t on t.code = s.code
   `)
 
     const [data, data_2, data_3, data_4] = await Promise.all([promise, promise_2, promise_3, promise_4])
-    
+
     const price = {
       date: data_3.map(item => item.date),
       highPrice: data_3.map(item => item.highPrice),
@@ -3452,7 +3461,7 @@ inner join tt t on t.code = s.code
     const promise_co_dong_lon = this.mssqlService.query(`
     select co_dong_lon, code from VISUALIZED_DATA.dbo.rating_gia where date = (select max(date) from VISUALIZED_DATA.dbo.rating_gia) and co_dong_lon > 100000000 order by co_dong_lon desc
     `)
-    
+
     const [data, data_2, chenh_lech, doanh_nghiep, dinh_hinh, co_dong_lon] = await Promise.all([promise, promise_2, this.individualInvestorBenefitsRating(stock), this.businessPositionRating(stock), this.businessRating(stock), promise_co_dong_lon]) as any
 
     const tang_truong_quy = data[0].tt_eps_quy
@@ -3490,7 +3499,7 @@ inner join tt t on t.code = s.code
     if (num == 0 || num == 1 || num == 2) return 'Không đạt'
   }
 
-  private checkStatusCoDongLon(arr: {code: string, value: number}[], stock: string) {
+  private checkStatusCoDongLon(arr: { code: string, value: number }[], stock: string) {
     const length = arr.length
     const indx = arr.findIndex(item => item.code == stock)
     if (indx == -1) return 'Không đạt'
