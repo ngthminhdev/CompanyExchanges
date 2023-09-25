@@ -531,7 +531,7 @@ export class SharesService {
   async tradingPriceFluctuations(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.tradingPriceFluctuations}:${stock.toUpperCase()}`)
     if (redisData) return redisData
-    
+
     const date = UtilCommonTemplate.getLastTwoQuarters()
 
     const now = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${moment().format('YYYY-MM-DD')}'`))[0].date).format('YYYY-MM-DD')
@@ -3274,15 +3274,15 @@ inner join tt t on t.code = s.code
     ORDER BY date DESC),
     loi_nhuan
     AS (SELECT
-      [Lợi nhuận sau thuế tổng 4 quý] AS loi_nhuan,
-      [Vốn chủ sở hữu] AS vcsh,
+      avg([Lợi nhuận sau thuế tổng 4 quý]) AS loi_nhuan,
+      avg([Vốn chủ sở hữu]) AS vcsh,
       '${stock}' AS code
     FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = (SELECT
       LV2
     FROM marketInfor.dbo.info
     WHERE code = '${stock}')
-    AND yearQuarter = (SELECT TOP 1
+    AND yearQuarter in (SELECT TOP 4
       yearQuarter
     FROM RATIO.dbo.ratioInYearQuarter
     WHERE code = '${stock}'

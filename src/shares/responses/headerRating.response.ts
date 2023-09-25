@@ -30,13 +30,13 @@ export class HeaderRatingResponse {
          return [
             {
                 name: 'Định giá theo P/E',
-                value: dg_co_phieu.dinh_gia_pe,
-                value_industry: dg_nganh.dinh_gia_pe
+                value: dg_co_phieu.dinh_gia_pe < 0 ? dg_co_phieu.dinh_gia_pe * -1 : dg_co_phieu.dinh_gia_pe,
+                value_industry: dg_nganh.dinh_gia_pe < 0 ? dg_nganh.dinh_gia_pe * -1 : dg_nganh.dinh_gia_pe
             },
             {
                 name: 'Định giá theo P/B',
-                value: dg_co_phieu.dinh_gia_pb,
-                value_industry: dg_nganh.dinh_gia_pb
+                value: dg_co_phieu.dinh_gia_pb < 0 ? dg_co_phieu.dinh_gia_pb * -1 : dg_co_phieu.dinh_gia_pb,
+                value_industry: dg_nganh.dinh_gia_pb < 0 ? dg_nganh.dinh_gia_pb * -1 : dg_nganh.dinh_gia_pb
             },
             {
                 name: 'Định giá Graham 1',

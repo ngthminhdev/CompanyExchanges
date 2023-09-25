@@ -1367,7 +1367,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<CentralExchangeRateResponse[]>(query)
     const dataMapped = CentralExchangeRateResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.centralExchangeRate}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.centralExchangeRate}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -1516,7 +1516,7 @@ export class MacroService {
     
     const data = await this.mssqlService.query<ExchangeRateAndInterestRateResponse[]>(query)
     const dataMapped = ExchangeRateAndInterestRateResponse.mapToList(data.reverse())
-    await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.exchangeRateAndInterestRate}:${type}:${category}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 
@@ -1542,7 +1542,7 @@ export class MacroService {
     `
     const data = await this.mssqlService.query<InterestRateResponse[]>(query)
     const dataMapped = InterestRateResponse.mapToList(data)
-    await this.redis.set(`${RedisKeys.interestRate}`, dataMapped, { ttl: TimeToLive.OneWeek })
+    await this.redis.set(`${RedisKeys.interestRate}`, dataMapped, { ttl: TimeToLive.OneDay })
     return dataMapped
   }
 }

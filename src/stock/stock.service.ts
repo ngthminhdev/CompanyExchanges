@@ -85,7 +85,7 @@ export class StockService {
       if (!exchange) {
         exchange = (
           await this.dbServer.query(
-            `
+              `
                     SELECT c.floor AS exchange, SUM(t.totalVal) as value
                     FROM [marketTrade].[dbo].[tickerTradeVND] t
                     JOIN [marketInfor].[dbo].[info] c ON c.code = t.code
@@ -1038,10 +1038,10 @@ export class StockService {
                 join PHANTICH.dbo.ICBID c on t.Ticker = c.TICKER 
                 join marketTrade.dbo.tickerTradeVND m on c.TICKER = m.code
                 and t.[DateTime] = m.date 
-                where t.[DateTime] >= @0 and t.[DateTime] <= @1  ${ex} ${group} 
+                where t.[DateTime] >= @0 and t.[DateTime] <= @1 ${ex} ${group} 
                 order by totalValueMil desc
             `;
-
+      
       const data = await this.dbServer.query(query, [
         startDate,
         UtilCommonTemplate.toDate(latestDate),
@@ -1074,9 +1074,9 @@ export class StockService {
       const redisData = await this.redis.get(
         `${RedisKeys.MarketMap}:${ex}:${order}`,
       );
-      // if (redisData) {
-      //   return redisData;
-      // }
+      if (redisData) {
+        return redisData;
+      }
 
       let { latestDate }: SessionDatesInterface = await this.getSessionDate(
         '[marketTrade].[dbo].[tickerTradeVND]',
