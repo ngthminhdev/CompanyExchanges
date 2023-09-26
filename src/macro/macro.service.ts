@@ -1376,68 +1376,66 @@ export class MacroService {
     if (redisData) return redisData
 
     const query = `
-    WITH temp
+    WITH max_date
+    AS (SELECT
+      MAX(lastUpdated) AS date,
+      MONTH(MAX(lastUpdated)) AS month,
+      YEAR(MAX(lastUpdated)) AS year,
+      DATEPART(QUARTER, MAX(lastUpdated)) AS quarter,
+      name
+    FROM macroEconomic.dbo.HangHoa
+    WHERE unit = ''
+    GROUP BY name),
+    temp
     AS (SELECT
       price,
       change1D,
-      change1M, 
-      change3M, 
+      change1M,
+      change3M,
       change1Y,
-      name
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = ''
-    AND lastUpdated = (SELECT
-      MAX(lastUpdated)
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')),
+      h.name
+    FROM macroEconomic.dbo.HangHoa h
+    INNER JOIN max_date m
+      ON m.name = h.name
+      AND m.date = h.lastUpdated
+    WHERE unit = ''),
     month
     AS (SELECT
       SUM(price) / COUNT(*) AS month,
-      name
-    FROM macroEconomic.dbo.HangHoa
+      h.name
+    FROM macroEconomic.dbo.HangHoa h
+    INNER JOIN max_date m
+      ON m.month = MONTH(h.lastUpdated)
+      AND m.year = YEAR(h.lastUpdated)
+      AND m.name = h.name
     WHERE unit = ''
-    AND MONTH(lastUpdated) = (SELECT
-      MAX(MONTH(lastUpdated))
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')
-    AND YEAR(lastUpdated) = (SELECT
-      MAX(YEAR(lastUpdated))
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')
     GROUP BY MONTH(lastUpdated),
             YEAR(lastUpdated),
-            name),
+            h.name),
     quarter
     AS (SELECT
       SUM(price) / COUNT(*) AS quarter,
-      name
-    FROM macroEconomic.dbo.HangHoa
+      h.name
+    FROM macroEconomic.dbo.HangHoa h
+    INNER JOIN max_date m
+      ON m.year = YEAR(h.lastUpdated)
+      AND m.quarter = DATEPART(QUARTER, h.lastUpdated)
+      AND m.name = h.name
     WHERE unit = ''
-    AND DATEPART(QUARTER, lastUpdated) =
-    DATEPART(QUARTER, (SELECT
-      MAX(lastUpdated)
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')
-    )
-    AND YEAR(lastUpdated) = (SELECT
-      MAX(YEAR(lastUpdated))
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')
     GROUP BY DATEPART(QUARTER, lastUpdated),
             YEAR(lastUpdated),
-            name),
+            h.name),
     year
     AS (SELECT
       SUM(price) / COUNT(*) AS year,
-      name
-    FROM macroEconomic.dbo.HangHoa
+      h.name
+    FROM macroEconomic.dbo.HangHoa h
+    INNER JOIN max_date m
+      ON m.name = h.name
+      AND m.year = YEAR(h.lastUpdated)
     WHERE unit = ''
-    AND YEAR(lastUpdated) = (SELECT
-      MAX(YEAR(lastUpdated))
-    FROM macroEconomic.dbo.HangHoa
-    WHERE unit = '')
     GROUP BY YEAR(lastUpdated),
-            name)
+            h.name)
     SELECT
       t.name AS name,
       t.price AS day_price,

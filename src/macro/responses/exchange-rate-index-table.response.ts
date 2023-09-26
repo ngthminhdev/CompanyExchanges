@@ -58,13 +58,13 @@ export class ExchangeRateIndexTableResponse {
     constructor(data?: any) {
         this.name = data?.name || ''
         this.day_price = data?.day_price || 0
-        this.day_change = +data.day_change.slice(data?.day_change.indexOf('(') + 1, data?.day_change.indexOf(')') - 1) || 0
+        this.day_change = data?.day_change ? +data.day_change.slice(data?.day_change.indexOf('(') + 1, data?.day_change.indexOf(')') - 1) : 0
         this.month_price = data?.month_price || 0
-        this.month_change = data?.month_price ? +data.month_change.slice(data?.month_change.indexOf('(') + 1, data?.month_change.indexOf(')') - 1) : 0
+        this.month_change = data?.month_change ? +data.month_change.slice(data?.month_change.indexOf('(') + 1, data?.month_change.indexOf(')') - 1) : 0
         this.quarter_price = data?.quarter_price || 0
-        this.quarter_change = data?.quarter_price ? +data.quarter_change.slice(data?.quarter_change.indexOf('(') + 1, data?.quarter_change.indexOf(')') - 1) : 0
+        this.quarter_change = data?.quarter_change ? +data.quarter_change.slice(data?.quarter_change.indexOf('(') + 1, data?.quarter_change.indexOf(')') - 1) : 0
         this.year_price = data?.year_price || 0
-        this.year_change = data?.quarter_price ? +data.year_change.slice(data?.year_change.indexOf('(') + 1, data?.year_change.indexOf(')') - 1) : 0
+        this.year_change = data?.year_change ? +data.year_change.slice(data?.year_change.indexOf('(') + 1, data?.year_change.indexOf(')') - 1) : 0
     }
 
 
