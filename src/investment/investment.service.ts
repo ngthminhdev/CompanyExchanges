@@ -344,7 +344,7 @@ export class InvestmentService {
 
   async search(stock: string) {
     const query = `
-    with temp as (select code, companyName as company_name, floor, status from marketInfor.dbo.info
+      with temp as (select code, companyName as company_name, floor, status from marketInfor.dbo.info
       where code like N'%${UtilCommonTemplate.normalizedString(stock)}%' and type = 'STOCK')
       select * from temp where status = 'listed'
     `
