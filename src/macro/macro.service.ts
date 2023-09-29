@@ -1524,7 +1524,7 @@ export class MacroService {
 
     const query = `
     WITH temp
-    AS (SELECT TOP 150
+    AS (SELECT distinct TOP 210
       *
     FROM macroEconomic.dbo.DuLieuViMo
     WHERE phanBang = N'LÃI SUẤT'

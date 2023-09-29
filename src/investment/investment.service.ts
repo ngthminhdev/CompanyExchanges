@@ -69,6 +69,7 @@ export class InvestmentService {
 
   async emulatorInvestment(b: EmulatorInvestmentDto) {
     try {
+      const value = b.value * 1000000
       const from = moment(b.from, 'M/YYYY')
       const to = moment(b.to, 'M/YYYY')
 
@@ -90,14 +91,14 @@ export class InvestmentService {
 
       //Lấy giá cổ phiếu
       const query = !b.isPeriodic ? `
-      select closePrice / 1000 as closePrice, code, date from marketTrade.dbo.historyTicker 
+      select closePrice, code, date from marketTrade.dbo.historyTicker 
       where date >= '${from.startOf('month').format('YYYY-MM-DD')}' 
       and date <= '${to.endOf('month').format('YYYY-MM-DD')}'
       and code in (${b.category.map(item => `'${item.code}'`).join(',')})
       order by date asc
       `
         : `
-      select closePrice / 1000 as closePrice, code, date from marketTrade.dbo.historyTicker 
+      select closePrice, code, date from marketTrade.dbo.historyTicker 
       where date in (${Object.values(query_date).map(item => `'${UtilCommonTemplate.toDate(item)}'`).join(',')})
       and code in (${b.category.map(item => `'${item.code}'`).join(',')})
       order by date asc
@@ -132,153 +133,159 @@ export class InvestmentService {
       const date_arr = data.filter(item => item.code == b.category[0].code).map(item => item.date)
 
       for (const item of b.category) {
-        //Tính giá trị của mỗi cổ phiếu trong danh mục
-        const gia_tri_danh_muc_1 = b.value * (item.category_1 / 100)
-        const gia_tri_danh_muc_2 = b.value * (item.category_2 / 100)
-        const gia_tri_danh_muc_3 = b.value * (item.category_3 / 100)
-
         const list_price = data.filter(i => i.code == item.code).map(item => item.closePrice);
 
-        const so_tien_thu_duoc_danh_muc_1 = []
-        const so_tien_thu_duoc_danh_muc_2 = []
-        const so_tien_thu_duoc_danh_muc_3 = []
+        const gttd_1_arr = []
+        const gttd_2_arr = []
+        const gttd_3_arr = []
+
+        const lai_lo_1_arr = []
+        const lai_lo_2_arr = []
+        const lai_lo_3_arr = []
 
         const loi_nhuan_danh_muc_1 = []
         const loi_nhuan_danh_muc_2 = []
         const loi_nhuan_danh_muc_3 = []
 
-        //Tính giá trị danh mục
-        const danh_muc_1 = list_price.map(item => item * gia_tri_danh_muc_1)
-        const danh_muc_2 = list_price.map(item => item * gia_tri_danh_muc_2)
-        const danh_muc_3 = list_price.map(item => item * gia_tri_danh_muc_3)
-        //----------------------------
+        for (let i = 0; i < list_price.length; i++) {
+          let gttd_1 = 0
+          let gttd_2 = 0
+          let gttd_3 = 0
 
-        const gia_tri_danh_muc_cao_nhat_1 = Math.max(...danh_muc_1)
-        const gia_tri_danh_muc_cao_nhat_2 = Math.max(...danh_muc_2)
-        const gia_tri_danh_muc_cao_nhat_3 = Math.max(...danh_muc_3)
-
-        const gia_tri_danh_muc_thap_nhat_1 = Math.min(...danh_muc_1)
-        const gia_tri_danh_muc_thap_nhat_2 = Math.min(...danh_muc_2)
-        const gia_tri_danh_muc_thap_nhat_3 = Math.min(...danh_muc_3)
-
-        //Đầu tư định kỳ
-        let tong_co_phieu_giu_cuoi_cung_1 = list_price[0] * gia_tri_danh_muc_1 //Số cp ban đầu
-        let tong_co_phieu_giu_cuoi_cung_2 = list_price[0] * gia_tri_danh_muc_2 //Số cp ban đầu
-        let tong_co_phieu_giu_cuoi_cung_3 = list_price[0] * gia_tri_danh_muc_3 //Số cp ban đầu
-
-        for (let i = 1; i <= list_price.length - 1; i++) {
-          (b.value_period * item.category_1 / 100) / list_price[i]
-          if (!b.isPeriodic) {
-            //Tính số tiền thu được
-            so_tien_thu_duoc_danh_muc_1.push(gia_tri_danh_muc_1 / list_price[0] * list_price[i])
-            so_tien_thu_duoc_danh_muc_2.push(gia_tri_danh_muc_2 / list_price[0] * list_price[i])
-            so_tien_thu_duoc_danh_muc_3.push(gia_tri_danh_muc_3 / list_price[0] * list_price[i])
-
-            //Tính lợi nhuân
-            loi_nhuan_danh_muc_1.push(gia_tri_danh_muc_1 == 0 ? 0 : ((gia_tri_danh_muc_1 / list_price[0] * list_price[i]) - gia_tri_danh_muc_1) / gia_tri_danh_muc_1 * 100)
-            loi_nhuan_danh_muc_2.push(gia_tri_danh_muc_2 == 0 ? 0 : ((gia_tri_danh_muc_2 / list_price[0] * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
-            loi_nhuan_danh_muc_3.push(gia_tri_danh_muc_3 == 0 ? 0 : ((gia_tri_danh_muc_3 / list_price[0] * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
+          if (i == 0) {
+            //Tính giá trị thay đổi
+            gttd_1 = value * item.category_1 / 100
+            gttd_2 = value * item.category_2 / 100
+            gttd_3 = value * item.category_3 / 100
           } else {
-            tong_co_phieu_giu_cuoi_cung_1 += (b.value_period * item.category_1 / 100) / list_price[i]
-            tong_co_phieu_giu_cuoi_cung_2 += (b.value_period * item.category_2 / 100) / list_price[i]
-            tong_co_phieu_giu_cuoi_cung_3 += (b.value_period * item.category_3 / 100) / list_price[i]
-
-            so_tien_thu_duoc_danh_muc_1.push(tong_co_phieu_giu_cuoi_cung_1 * list_price[i])
-            so_tien_thu_duoc_danh_muc_2.push(tong_co_phieu_giu_cuoi_cung_2 * list_price[i])
-            so_tien_thu_duoc_danh_muc_3.push(tong_co_phieu_giu_cuoi_cung_3 * list_price[i])
-
-            loi_nhuan_danh_muc_1.push(gia_tri_danh_muc_1 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_1 * list_price[i]) - gia_tri_danh_muc_1) / gia_tri_danh_muc_1 * 100)
-            loi_nhuan_danh_muc_2.push(gia_tri_danh_muc_2 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_2 * list_price[i]) - gia_tri_danh_muc_2) / gia_tri_danh_muc_2 * 100)
-            loi_nhuan_danh_muc_3.push(gia_tri_danh_muc_3 == 0 ? 0 : ((tong_co_phieu_giu_cuoi_cung_3 * list_price[i]) - gia_tri_danh_muc_3) / gia_tri_danh_muc_3 * 100)
+            gttd_1 = ((value * item.category_1 / 100) / list_price[i - 1]) * list_price[i]
+            gttd_2 = ((value * item.category_2 / 100) / list_price[i - 1]) * list_price[i]
+            gttd_3 = ((value * item.category_3 / 100) / list_price[i - 1]) * list_price[i]
           }
+
+          gttd_1_arr.push(gttd_1)
+          gttd_2_arr.push(gttd_2)
+          gttd_3_arr.push(gttd_3)
+
+          //Tính lãi lỗ
+          const lai_lo_1 = gttd_1 - gttd_1_arr[0]
+          const lai_lo_2 = gttd_2 - gttd_2_arr[0]
+          const lai_lo_3 = gttd_3 - gttd_3_arr[0]
+
+          //Tính lợi nhuận
+          const loi_nhuan_1 = lai_lo_1 / gttd_1_arr[0] * 100
+          const loi_nhuan_2 = lai_lo_2 / gttd_2_arr[0] * 100
+          const loi_nhuan_3 = lai_lo_3 / gttd_3_arr[0] * 100
+
+          loi_nhuan_danh_muc_1.push(loi_nhuan_1)
+          loi_nhuan_danh_muc_2.push(loi_nhuan_2)
+          loi_nhuan_danh_muc_3.push(loi_nhuan_3)
+
+          lai_lo_1_arr.push(lai_lo_1)
+          lai_lo_2_arr.push(lai_lo_2)
+          lai_lo_3_arr.push(lai_lo_3)
         }
-        result[item.code] = { so_tien_thu_duoc_danh_muc_1, so_tien_thu_duoc_danh_muc_2, so_tien_thu_duoc_danh_muc_3, loi_nhuan_danh_muc_1, loi_nhuan_danh_muc_2, loi_nhuan_danh_muc_3, gia_tri_danh_muc_cao_nhat_1, gia_tri_danh_muc_cao_nhat_2, gia_tri_danh_muc_cao_nhat_3, gia_tri_danh_muc_thap_nhat_1, gia_tri_danh_muc_thap_nhat_2, gia_tri_danh_muc_thap_nhat_3, danh_muc_1, danh_muc_2, danh_muc_3 }
+
+        const so_tien_thu_duoc_1 = (value * item.category_1 / 100) / list_price[0] * list_price[list_price.length - 1]
+        const so_tien_thu_duoc_2 = (value * item.category_2 / 100) / list_price[0] * list_price[list_price.length - 1]
+        const so_tien_thu_duoc_3 = (value * item.category_3 / 100) / list_price[0] * list_price[list_price.length - 1]
+
+        result[item.code] = { so_tien_thu_duoc_1, so_tien_thu_duoc_2, so_tien_thu_duoc_3, loi_nhuan_danh_muc_1, loi_nhuan_danh_muc_2, loi_nhuan_danh_muc_3, gttd_1_arr, gttd_2_arr, gttd_3_arr, lai_lo_1_arr, lai_lo_2_arr, lai_lo_3_arr }
       }
-
-      let so_tien_thu_duoc_danh_muc_1_arr = []
-      let so_tien_thu_duoc_danh_muc_2_arr = []
-      let so_tien_thu_duoc_danh_muc_3_arr = []
-
-      let loi_nhuan_danh_muc_1_arr = []
-      let loi_nhuan_danh_muc_2_arr = []
-      let loi_nhuan_danh_muc_3_arr = []
-
-      let danh_muc_1_arr = []
-      let danh_muc_2_arr = []
-      let danh_muc_3_arr = []
-
-      let gia_tri_danh_muc_thap_nhat_1 = 0
-      let gia_tri_danh_muc_thap_nhat_2 = 0
-      let gia_tri_danh_muc_thap_nhat_3 = 0
-
-      let gia_tri_danh_muc_cao_nhat_1 = 0
-      let gia_tri_danh_muc_cao_nhat_2 = 0
-      let gia_tri_danh_muc_cao_nhat_3 = 0
 
       let loi_nhuan_theo_co_phieu_1 = []
       let loi_nhuan_theo_co_phieu_2 = []
       let loi_nhuan_theo_co_phieu_3 = []
 
+      let so_tien_thu_duoc_1 = 0
+      let so_tien_thu_duoc_2 = 0
+      let so_tien_thu_duoc_3 = 0
+
+      let loi_nhuan_1_arr = []
+      let loi_nhuan_2_arr = []
+      let loi_nhuan_3_arr = []
+
+      let gttd_1_arr = []
+      let gttd_2_arr = []
+      let gttd_3_arr = []
+
+      let lai_lo_1_arr = []
+      let lai_lo_2_arr = []
+      let lai_lo_3_arr = []
+
       for (const item of Object.keys(result)) {
-        so_tien_thu_duoc_danh_muc_1_arr = this.addArrays(so_tien_thu_duoc_danh_muc_1_arr, result[item].so_tien_thu_duoc_danh_muc_1)
-        so_tien_thu_duoc_danh_muc_2_arr = this.addArrays(so_tien_thu_duoc_danh_muc_2_arr, result[item].so_tien_thu_duoc_danh_muc_2)
-        so_tien_thu_duoc_danh_muc_3_arr = this.addArrays(so_tien_thu_duoc_danh_muc_3_arr, result[item].so_tien_thu_duoc_danh_muc_3)
 
-        loi_nhuan_danh_muc_1_arr = this.addArrays(loi_nhuan_danh_muc_1_arr, result[item].loi_nhuan_danh_muc_1)
-        loi_nhuan_danh_muc_2_arr = this.addArrays(loi_nhuan_danh_muc_2_arr, result[item].loi_nhuan_danh_muc_2)
-        loi_nhuan_danh_muc_3_arr = this.addArrays(loi_nhuan_danh_muc_3_arr, result[item].loi_nhuan_danh_muc_3)
+        so_tien_thu_duoc_1 += result[item].so_tien_thu_duoc_1
+        so_tien_thu_duoc_2 += result[item].so_tien_thu_duoc_2
+        so_tien_thu_duoc_3 += result[item].so_tien_thu_duoc_3
 
-        danh_muc_1_arr = this.addArrays(danh_muc_1_arr, result[item].danh_muc_1)
-        danh_muc_2_arr = this.addArrays(danh_muc_2_arr, result[item].danh_muc_2)
-        danh_muc_3_arr = this.addArrays(danh_muc_3_arr, result[item].danh_muc_3)
+        loi_nhuan_1_arr = this.addArrays(loi_nhuan_1_arr, result[item].loi_nhuan_danh_muc_1)
+        loi_nhuan_2_arr = this.addArrays(loi_nhuan_2_arr, result[item].loi_nhuan_danh_muc_2)
+        loi_nhuan_3_arr = this.addArrays(loi_nhuan_3_arr, result[item].loi_nhuan_danh_muc_3)
 
-        gia_tri_danh_muc_thap_nhat_1 += result[item].gia_tri_danh_muc_thap_nhat_1
-        gia_tri_danh_muc_thap_nhat_2 += result[item].gia_tri_danh_muc_thap_nhat_2
-        gia_tri_danh_muc_thap_nhat_3 += result[item].gia_tri_danh_muc_thap_nhat_3
+        gttd_1_arr = this.addArrays(gttd_1_arr, result[item].gttd_1_arr)
+        gttd_2_arr = this.addArrays(gttd_2_arr, result[item].gttd_2_arr)
+        gttd_3_arr = this.addArrays(gttd_3_arr, result[item].gttd_3_arr)
 
-        gia_tri_danh_muc_cao_nhat_1 += result[item].gia_tri_danh_muc_cao_nhat_1
-        gia_tri_danh_muc_cao_nhat_2 += result[item].gia_tri_danh_muc_cao_nhat_2
-        gia_tri_danh_muc_cao_nhat_3 += result[item].gia_tri_danh_muc_cao_nhat_3
+        lai_lo_1_arr = this.addArrays(lai_lo_1_arr, result[item].lai_lo_1_arr)
+        lai_lo_2_arr = this.addArrays(lai_lo_2_arr, result[item].lai_lo_2_arr)
+        lai_lo_3_arr = this.addArrays(lai_lo_3_arr, result[item].lai_lo_3_arr)
 
-        loi_nhuan_theo_co_phieu_1.push(...result[item].loi_nhuan_danh_muc_1.map((i, index) => ({ code: item, value: i, date: date_arr[index + 1] })))
-        loi_nhuan_theo_co_phieu_2.push(...result[item].loi_nhuan_danh_muc_2.map((i, index) => ({ code: item, value: i, date: date_arr[index + 1] })))
-        loi_nhuan_theo_co_phieu_3.push(...result[item].loi_nhuan_danh_muc_3.map((i, index) => ({ code: item, value: i, date: date_arr[index + 1] })))
+        loi_nhuan_theo_co_phieu_1.push(...result[item].loi_nhuan_danh_muc_1.map((i, index) => ({ code: item, value: i, date: date_arr[index] })))
+        loi_nhuan_theo_co_phieu_2.push(...result[item].loi_nhuan_danh_muc_2.map((i, index) => ({ code: item, value: i, date: date_arr[index] })))
+        loi_nhuan_theo_co_phieu_3.push(...result[item].loi_nhuan_danh_muc_3.map((i, index) => ({ code: item, value: i, date: date_arr[index] })))
       }
 
-      const so_tien_thu_duoc_danh_muc_1 = so_tien_thu_duoc_danh_muc_1_arr[so_tien_thu_duoc_danh_muc_1_arr.length - 1]
-      const so_tien_thu_duoc_danh_muc_2 = so_tien_thu_duoc_danh_muc_2_arr[so_tien_thu_duoc_danh_muc_2_arr.length - 1]
-      const so_tien_thu_duoc_danh_muc_3 = so_tien_thu_duoc_danh_muc_3_arr[so_tien_thu_duoc_danh_muc_3_arr.length - 1]
+      const loi_nhuan_danh_muc_1 = (so_tien_thu_duoc_1 - value) / value * 100
+      const loi_nhuan_danh_muc_2 = (so_tien_thu_duoc_2 - value) / value * 100
+      const loi_nhuan_danh_muc_3 = (so_tien_thu_duoc_3 - value) / value * 100
 
-      const loi_nhuan_danh_muc_1 = loi_nhuan_danh_muc_1_arr[loi_nhuan_danh_muc_1_arr.length - 1]
-      const loi_nhuan_danh_muc_2 = loi_nhuan_danh_muc_2_arr[loi_nhuan_danh_muc_2_arr.length - 1]
-      const loi_nhuan_danh_muc_3 = loi_nhuan_danh_muc_3_arr[loi_nhuan_danh_muc_3_arr.length - 1]
+      const loi_nhuan_cao_nhat_1 = Math.max(...loi_nhuan_1_arr.filter(item => item > 0))
+      const loi_nhuan_cao_nhat_2 = Math.max(...loi_nhuan_2_arr.filter(item => item > 0))
+      const loi_nhuan_cao_nhat_3 = Math.max(...loi_nhuan_3_arr.filter(item => item > 0))
 
-      const lai_thap_nhat_danh_muc_1 = Math.min(...loi_nhuan_danh_muc_1_arr.filter(item => item > 0))
-      const lai_thap_nhat_danh_muc_2 = Math.min(...loi_nhuan_danh_muc_2_arr.filter(item => item > 0))
-      const lai_thap_nhat_danh_muc_3 = Math.min(...loi_nhuan_danh_muc_3_arr.filter(item => item > 0))
+      const loi_nhuan_thap_nhat_1 = Math.min(...loi_nhuan_1_arr.filter(item => item > 0))
+      const loi_nhuan_thap_nhat_2 = Math.min(...loi_nhuan_2_arr.filter(item => item > 0))
+      const loi_nhuan_thap_nhat_3 = Math.min(...loi_nhuan_3_arr.filter(item => item > 0))
 
-      const lai_cao_nhat_danh_muc_1 = Math.max(...loi_nhuan_danh_muc_1_arr.filter(item => item > 0))
-      const lai_cao_nhat_danh_muc_2 = Math.max(...loi_nhuan_danh_muc_2_arr.filter(item => item > 0))
-      const lai_cao_nhat_danh_muc_3 = Math.max(...loi_nhuan_danh_muc_3_arr.filter(item => item > 0))
+      const loi_nhuan_am_thap_nhat_1 = Math.min(...loi_nhuan_1_arr.filter(item => item < 0))
+      const loi_nhuan_am_thap_nhat_2 = Math.min(...loi_nhuan_2_arr.filter(item => item < 0))
+      const loi_nhuan_am_thap_nhat_3 = Math.min(...loi_nhuan_3_arr.filter(item => item < 0))
 
-      const lai_trung_binh_danh_muc_1 = loi_nhuan_danh_muc_1_arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / loi_nhuan_danh_muc_1_arr.length;
-      const lai_trung_binh_danh_muc_2 = loi_nhuan_danh_muc_2_arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / loi_nhuan_danh_muc_2_arr.length;
-      const lai_trung_binh_danh_muc_3 = loi_nhuan_danh_muc_3_arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / loi_nhuan_danh_muc_3_arr.length;
+      const tg_loi_nhuan_cao_nhat_1 = date_arr[loi_nhuan_1_arr.findIndex(item => item == loi_nhuan_cao_nhat_1)]
+      const tg_loi_nhuan_cao_nhat_2 = date_arr[loi_nhuan_2_arr.findIndex(item => item == loi_nhuan_cao_nhat_2)]
+      const tg_loi_nhuan_cao_nhat_3 = date_arr[loi_nhuan_3_arr.findIndex(item => item == loi_nhuan_cao_nhat_3)]
 
-      const loi_nhuan_am_cao_nhat_danh_muc_1 = Math.min(...loi_nhuan_danh_muc_1_arr.filter(item => item < 0))
-      const loi_nhuan_am_cao_nhat_danh_muc_2 = Math.min(...loi_nhuan_danh_muc_2_arr.filter(item => item < 0))
-      const loi_nhuan_am_cao_nhat_danh_muc_3 = Math.min(...loi_nhuan_danh_muc_3_arr.filter(item => item < 0))
+      const tg_loi_nhuan_thap_nhat_1 = date_arr[loi_nhuan_1_arr.findIndex(item => item == loi_nhuan_thap_nhat_1)]
+      const tg_loi_nhuan_thap_nhat_2 = date_arr[loi_nhuan_2_arr.findIndex(item => item == loi_nhuan_thap_nhat_2)]
+      const tg_loi_nhuan_thap_nhat_3 = date_arr[loi_nhuan_3_arr.findIndex(item => item == loi_nhuan_thap_nhat_3)]
+
+      const tg_loi_nhuan_am_thap_nhat_1 = date_arr[loi_nhuan_1_arr.findIndex(item => item == loi_nhuan_am_thap_nhat_1)]
+      const tg_loi_nhuan_am_thap_nhat_2 = date_arr[loi_nhuan_2_arr.findIndex(item => item == loi_nhuan_am_thap_nhat_2)]
+      const tg_loi_nhuan_am_thap_nhat_3 = date_arr[loi_nhuan_3_arr.findIndex(item => item == loi_nhuan_am_thap_nhat_3)]
+
+      const loi_nhuan_trung_binh_1 = loi_nhuan_1_arr.reduce((acc, curr) => acc + curr, 0) / loi_nhuan_1_arr.length
+      const loi_nhuan_trung_binh_2 = loi_nhuan_2_arr.reduce((acc, curr) => acc + curr, 0) / loi_nhuan_2_arr.length
+      const loi_nhuan_trung_binh_3 = loi_nhuan_3_arr.reduce((acc, curr) => acc + curr, 0) / loi_nhuan_3_arr.length
+
+      const gia_tri_danh_muc_cao_nhat_1 = Math.max(...gttd_1_arr)
+      const gia_tri_danh_muc_cao_nhat_2 = Math.max(...gttd_2_arr)
+      const gia_tri_danh_muc_cao_nhat_3 = Math.max(...gttd_3_arr)
+
+      const gia_tri_danh_muc_thap_nhat_1 = Math.min(...gttd_1_arr)
+      const gia_tri_danh_muc_thap_nhat_2 = Math.min(...gttd_2_arr)
+      const gia_tri_danh_muc_thap_nhat_3 = Math.min(...gttd_3_arr)
 
       const rf = data_3[0].value
       const sharpe_1 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_1, (gia_tri_danh_muc_cao_nhat_1 + gia_tri_danh_muc_thap_nhat_1) / 2, gia_tri_danh_muc_cao_nhat_1)
       const sharpe_2 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_2, (gia_tri_danh_muc_cao_nhat_2 + gia_tri_danh_muc_thap_nhat_2) / 2, gia_tri_danh_muc_cao_nhat_2)
       const sharpe_3 = this.sharpeCalculate(rf, loi_nhuan_danh_muc_3, (gia_tri_danh_muc_cao_nhat_3 + gia_tri_danh_muc_thap_nhat_3) / 2, gia_tri_danh_muc_cao_nhat_3)
 
-      const roc_1 = (new calTech.ROC({ period: 1, values: danh_muc_1_arr })).result;
-      const roc_2 = (new calTech.ROC({ period: 1, values: danh_muc_2_arr })).result;
-      const roc_3 = (new calTech.ROC({ period: 1, values: danh_muc_3_arr })).result;
+      const roc_1 = loi_nhuan_1_arr
+      const roc_2 = loi_nhuan_2_arr
+      const roc_3 = loi_nhuan_3_arr
 
-      const roc_tt = (new calTech.ROC({ period: 1, values: data_2.map(item => item.closePrice) })).result
+      const roc_tt = data_2.map((item, index) => index == 0 ? 0 : (item.closePrice - data_2[0].closePrice) / data_2[0].closePrice * 100)
 
       const beta_1 = this.betaCalculate(roc_1, roc_tt)
       const beta_2 = this.betaCalculate(roc_2, roc_tt)
@@ -289,8 +296,8 @@ export class InvestmentService {
       const alpha_3 = this.alphaCalculate(loi_nhuan_danh_muc_3, rf, roc_tt[roc_tt.length - 1], beta_3)
 
       //Hiệu quả đầu tư theo danh mục
-      const percent_loi_nhuan_danh_muc = loi_nhuan_danh_muc_1_arr.map((item, index) => ({ name: 'Danh mục 1', value: item, date: date_arr[index + 1] })).concat(loi_nhuan_danh_muc_2_arr.map((item, index) => ({ name: 'Danh mục 2', value: item, date: date_arr[index + 1] }))).concat(loi_nhuan_danh_muc_3_arr.map((item, index) => ({ name: 'Danh mục 3', value: item, date: date_arr[index + 1] })))
-      const percent_loi_nhuan = [...roc_tt.map(item => ({ name: 'VNINDEX', value: item }))].map((item, index) => ({ ...item, date: date_arr[index + 1] })).concat(percent_loi_nhuan_danh_muc).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) }))
+      const percent_loi_nhuan_danh_muc = loi_nhuan_1_arr.map((item_1, index) => ({ name: 'Danh mục 1', value: item_1, date: date_arr[index] })).concat(loi_nhuan_2_arr.map((item_2, index) => ({ name: 'Danh mục 2', value: item_2, date: date_arr[index] }))).concat(loi_nhuan_3_arr.map((item_3, index) => ({ name: 'Danh mục 3', value: item_3, date: date_arr[index] })))
+      const percent_loi_nhuan = [...roc_tt.map((item, index) => ({ name: 'VNINDEX', value: item, date: date_arr[index] }))].concat(percent_loi_nhuan_danh_muc).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) }))
 
       //Hiệu quả đầu tư theo cổ phiếu
       const hieu_qua_dau_tu_co_phieu = {
@@ -298,31 +305,40 @@ export class InvestmentService {
         danh_muc_2: loi_nhuan_theo_co_phieu_2.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) })),
         danh_muc_3: loi_nhuan_theo_co_phieu_3.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) })),
       }
-      //Biểu đồ lãi lỗ theo danh mục
-      const bieu_do_lai_lo_danh_muc = so_tien_thu_duoc_danh_muc_1_arr.map((item, index) => ({ name: 'Danh mục 1', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1]) })).concat(so_tien_thu_duoc_danh_muc_2_arr.map((item, index) => ({ name: 'Danh mục 2', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1]) }))).concat(so_tien_thu_duoc_danh_muc_3_arr.map((item, index) => ({ name: 'Danh mục 3', value: item - b.value, date: UtilCommonTemplate.toDate(date_arr[index + 1]) })))
-      const bieu_do_lai_lo_vn_index = data_2.map((item) => ({ name: item.code, value: item.closePrice - data_2[0].closePrice, date: UtilCommonTemplate.toDate(item.date) })).slice(1, data_2.length)
-      const bieu_do_lai_lo = bieu_do_lai_lo_danh_muc.concat(bieu_do_lai_lo_vn_index).sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
 
+      //Biểu đồ lãi lỗ theo danh mục
+      const bieu_do_lai_lo_danh_muc = lai_lo_1_arr.map((item, index) => ({ name: 'Danh mục 1', value: item, date: UtilCommonTemplate.toDate(date_arr[index]) })).concat(lai_lo_2_arr.map((item, index) => ({ name: 'Danh mục 2', value: item, date: UtilCommonTemplate.toDate(date_arr[index]) }))).concat(lai_lo_3_arr.map((item, index) => ({ name: 'Danh mục 3', value: item, date: UtilCommonTemplate.toDate(date_arr[index]) })))
+      const bieu_do_lai_lo_vn_index = data_2.map((item) => ({ name: item.code, value: item.closePrice - data_2[0].closePrice, date: UtilCommonTemplate.toDate(item.date) }))
+      const bieu_do_lai_lo = bieu_do_lai_lo_danh_muc.concat(bieu_do_lai_lo_vn_index).sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
       const dataMapped = EmulatorInvestmentResponse.mapToList({
         value: b.value,
-        so_tien_thu_duoc_danh_muc_1,
-        so_tien_thu_duoc_danh_muc_2,
-        so_tien_thu_duoc_danh_muc_3,
+        so_tien_thu_duoc_1,
+        so_tien_thu_duoc_2,
+        so_tien_thu_duoc_3,
         loi_nhuan_danh_muc_1,
         loi_nhuan_danh_muc_2,
         loi_nhuan_danh_muc_3,
-        lai_thap_nhat_danh_muc_1,
-        lai_thap_nhat_danh_muc_2,
-        lai_thap_nhat_danh_muc_3,
-        lai_cao_nhat_danh_muc_1,
-        lai_cao_nhat_danh_muc_2,
-        lai_cao_nhat_danh_muc_3,
-        lai_trung_binh_danh_muc_1,
-        lai_trung_binh_danh_muc_2,
-        lai_trung_binh_danh_muc_3,
-        loi_nhuan_am_cao_nhat_danh_muc_1,
-        loi_nhuan_am_cao_nhat_danh_muc_2,
-        loi_nhuan_am_cao_nhat_danh_muc_3,
+        lai_thap_nhat_danh_muc_1: loi_nhuan_thap_nhat_1,
+        lai_thap_nhat_danh_muc_2: loi_nhuan_thap_nhat_2,
+        lai_thap_nhat_danh_muc_3: loi_nhuan_thap_nhat_3,
+        lai_cao_nhat_danh_muc_1: loi_nhuan_cao_nhat_1,
+        lai_cao_nhat_danh_muc_2: loi_nhuan_cao_nhat_2,
+        lai_cao_nhat_danh_muc_3: loi_nhuan_cao_nhat_3,
+        lai_trung_binh_danh_muc_1: loi_nhuan_trung_binh_1,
+        lai_trung_binh_danh_muc_2: loi_nhuan_trung_binh_2,
+        lai_trung_binh_danh_muc_3: loi_nhuan_trung_binh_3,
+        loi_nhuan_am_cao_nhat_danh_muc_1: loi_nhuan_am_thap_nhat_1,
+        loi_nhuan_am_cao_nhat_danh_muc_2: loi_nhuan_am_thap_nhat_2,
+        loi_nhuan_am_cao_nhat_danh_muc_3: loi_nhuan_am_thap_nhat_3,
+        tg_loi_nhuan_cao_nhat_1,
+        tg_loi_nhuan_cao_nhat_2,
+        tg_loi_nhuan_cao_nhat_3,
+        tg_loi_nhuan_thap_nhat_1,
+        tg_loi_nhuan_thap_nhat_2,
+        tg_loi_nhuan_thap_nhat_3,
+        tg_loi_nhuan_am_thap_nhat_1,
+        tg_loi_nhuan_am_thap_nhat_2,
+        tg_loi_nhuan_am_thap_nhat_3,
         sharpe_1,
         sharpe_2,
         sharpe_3,
