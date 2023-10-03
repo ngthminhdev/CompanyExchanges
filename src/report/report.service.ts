@@ -5,6 +5,7 @@ import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
+import { UtilCommonTemplate } from '../utils/utils.common';
 import { ReportIndexResponse } from './response/index.response';
 
 @Injectable()
@@ -88,7 +89,7 @@ export class ReportService {
     const now = moment().format('DD-MM-YYYY')
     
     for(const item of file){
-      await this.minio.put(`report`, `${now}/${item.originalname}`, item.buffer, {
+      await this.minio.put(`report`, `${now}/${UtilCommonTemplate.removeVietnameseString(item.originalname)}`, item.buffer, {
         'Content-Type': item.mimetype,
         'X-Amz-Meta-Testing': 1234,
       })

@@ -503,6 +503,11 @@ export class UtilCommonTemplate {
     // .replace(/\s/g, '');
   }
 
+  static removeVietnameseString(value: string) {
+    return value
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
   static checkStarCommon(sum_point: number, quantity: number) {
     switch (quantity) {
       case 4:
