@@ -83,4 +83,16 @@ export class ReportService {
     }
     return 'success'
   }
+
+  async uploadFileReport(file: any[]){
+    const now = moment().format('DD-MM-YYYY')
+    
+    for(const item of file){
+      await this.minio.put(`report`, `${now}/${item.originalname}`, item.buffer, {
+        'Content-Type': item.mimetype,
+        'X-Amz-Meta-Testing': 1234,
+      })
+    }
+    return
+  }
 }

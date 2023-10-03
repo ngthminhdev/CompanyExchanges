@@ -36,4 +36,15 @@ export class ReportController {
   //     throw new CatchException(error)
   //   }
   // }
+
+  @Post('upload-report')
+  @UseInterceptors(AnyFilesInterceptor())
+  async uploadReport(@UploadedFiles() file: any, @Res() res: Response){
+    try {
+      await this.reportService.uploadFileReport(file)
+      return res.status(HttpStatus.OK).send(new BaseResponse({}))
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
 }
