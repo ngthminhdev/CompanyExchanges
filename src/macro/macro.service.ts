@@ -143,7 +143,15 @@ export class MacroService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDateV2(2, order);
+    const lastDate = (await this.mssqlService.query(`
+    SELECT TOP 1 thoiDiem as date 
+    FROM [macroEconomic].[dbo].[DuLieuViMo] 
+    WHERE phanBang = 'GDP'
+    AND nhomDulieu = N'Tăng trưởng GDP theo giá 2010'
+    ORDER BY thoiDiem desc
+    `))[0].date
+
+    const date = UtilCommonTemplate.getPastDateV2(2, order, moment(lastDate).add(1, 'quarter'));
 
     const { dateFilter } = UtilCommonTemplate.getDateFilterV2(date);
 
@@ -160,7 +168,7 @@ export class MacroService {
         ORDER BY [name]
                 ,[date]
     `;
-
+      
     const data = await this.mssqlService.query<IIndustryGDPValue[]>(query);
 
     const mappedData = new GDPResponse().mapToList(data);
