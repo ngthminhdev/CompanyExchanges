@@ -600,7 +600,7 @@ export class SharesService {
         }
       }
     }
-    arr.splice(same_day_index, 1)
+    if(same_day_index != 0) arr.splice(same_day_index, 1)
     return arr
   }
 
@@ -717,9 +717,10 @@ export class SharesService {
       COUNT(*) AS total,
       ${select}
     FROM marketTrade.dbo.tickerTradeVND
-    WHERE code = 'hpg'
+    WHERE code = '${stock}'
     ${group}
     `
+    
     const data = await this.mssqlService.query<StatisticsMonthQuarterYearResponse[]>(query)
     const dataMapped = StatisticsMonthQuarterYearResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.statisticsMonthQuarterYear}:${order}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.OneWeek })
