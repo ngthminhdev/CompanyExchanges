@@ -413,6 +413,8 @@ export class AuthService {
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
+    console.log(response_incom);
+    
     if(response_incom.StatusCode != 200) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
     
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
