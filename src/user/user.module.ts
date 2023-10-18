@@ -12,12 +12,12 @@ import {SmsService} from "../sms/sms.service";
 import {QueueService} from "../queue/queue.service";
 import {VerifyEntity} from "../auth/entities/verify.entity";
 import { DB_SERVER } from '../constants';
+import { HttpConfigModule } from '../http/http.module';
 
 @Module({
   imports: [
     
     TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
-
     //queue
     BullModule.registerQueue(
         {name: QueueEnum.MainProcessor}

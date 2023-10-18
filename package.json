@@ -21,6 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/axios": "^3.0.0",
     "@nestjs/bull": "^0.6.3",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.3.1",
@@ -36,6 +37,7 @@
     "@types/cache-manager": "^4.0.2",
     "@types/cache-manager-redis-store": "^2.0.1",
     "@types/mssql": "^8.1.2",
+    "axios": "^1.5.1",
     "bcrypt": "^5.1.0",
     "bull": "^4.10.4",
     "cache-manager": "^4.0.0",

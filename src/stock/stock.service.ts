@@ -364,7 +364,7 @@ export class StockService {
       const redisData: IndustryResponse[] = await this.redis.get(
         `${RedisKeys.Industry}:${exchange}`,
       );
-      if (redisData) return redisData;
+      // if (redisData) return redisData;
 
       //Get 2 latest date
       const {
@@ -378,6 +378,13 @@ export class StockService {
         'date',
         this.dbServer
       );
+
+      console.log({latestDate,
+        previousDate,
+        weekDate,
+        monthDate,
+        firstDateYear,});
+      
 
       const query = (date): string => `
       SELECT
@@ -427,6 +434,8 @@ export class StockService {
         GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, f.floor`} 
         ORDER BY i.date DESC
         `
+        console.log(marketCapQuery);
+        
 
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',

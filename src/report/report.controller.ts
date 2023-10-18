@@ -1,18 +1,15 @@
-import { Controller, Get, HttpStatus, Post, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, HttpStatus, Post, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { MinioOptionService } from '../minio/minio.service';
 import { BaseResponse } from '../utils/utils.response';
 import { ReportService } from './report.service';
-import { ReportIndexResponse } from './response/index.response';
 
 @Controller('report')
 export class ReportController {
   constructor(
-    private readonly reportService: ReportService,
-    private readonly minio: MinioOptionService
+    private readonly reportService: ReportService
     ) {}
 
   // @ApiOperation({summary: 'Chỉ số'})

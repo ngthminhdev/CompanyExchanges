@@ -28,6 +28,8 @@ import { ReportModule } from './report/report.module';
 import { MinioModule } from 'nestjs-minio-client';
 import { SharesModule } from './shares/shares.module';
 import { InvestmentModule } from './investment/investment.module';
+import { HttpConfigModule } from './http/http.module';
+import { SmsModule } from './sms/sms.module';
 
 @Module({
   imports: [
@@ -81,7 +83,6 @@ import { InvestmentModule } from './investment/investment.module';
       inject: [ConfigServiceProvider],
       isGlobal: true
     }),
-
     //aplication modules
     ConfigModuleModule,
     MssqlModule,
@@ -92,12 +93,13 @@ import { InvestmentModule } from './investment/investment.module';
     SocketModule,
     MarketModule,
     MacroModule,
-    KafkaModule,
+    // KafkaModule,
     RetailModule,
     NewsModule,
     ReportModule,
     SharesModule,
     InvestmentModule,
+    HttpConfigModule
   ],
 })
 export class AppModule implements NestModule {

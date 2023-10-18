@@ -409,11 +409,12 @@ export class AuthService {
     const verifyOTP: string = UtilCommonTemplate.generateOTP();
 
     // Gửi tin nhắn SMS chứa mã OTP đến số điện thoại của người dùng (có thời hạn 5 phút)
-    await this.smsService.sendSMS(
+    const response_incom = await this.smsService.sendSMSV2(
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
-
+    if(response_incom.StatusCode != 200) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
+    
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
     const verifyData: VerifyEntity = await this.verifyRepo.save({
       user_id: user.user_id,
