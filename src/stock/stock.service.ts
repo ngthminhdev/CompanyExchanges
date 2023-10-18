@@ -364,7 +364,7 @@ export class StockService {
       const redisData: IndustryResponse[] = await this.redis.get(
         `${RedisKeys.Industry}:${exchange}`,
       );
-      // if (redisData) return redisData;
+      if (redisData) return redisData;
 
       //Get 2 latest date
       const {

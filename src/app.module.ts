@@ -93,7 +93,7 @@ import { SmsModule } from './sms/sms.module';
     SocketModule,
     MarketModule,
     MacroModule,
-    // KafkaModule,
+    KafkaModule,
     RetailModule,
     NewsModule,
     ReportModule,

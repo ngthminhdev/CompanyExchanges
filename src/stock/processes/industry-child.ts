@@ -21,7 +21,7 @@ process.on('message', async (data: any) => {
       ([industry, values]: any) => {
         return {
           industry,
-          day_change_percent:
+          day_change_percent: !values[1]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[1].total_market_cap) /
               values[1].total_market_cap) *
             100,
