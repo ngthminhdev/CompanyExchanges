@@ -176,15 +176,15 @@ export class KafkaService {
       ([industry, values]: any) => {
         return {
           industry,
-          day_change_percent:
+          day_change_percent: !values[1]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[1].total_market_cap) /
               values[1].total_market_cap) *
             100,
-          week_change_percent:
+          week_change_percent: !values[2]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[2].total_market_cap) /
               values[2].total_market_cap) *
             100,
-          month_change_percent:
+          month_change_percent: !values[3]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[3].total_market_cap) /
               values[3].total_market_cap) *
             100,
@@ -336,15 +336,15 @@ export class KafkaService {
         ([industry, values]: any) => {
           return {
             industry,
-            day_change_percent:
+            day_change_percent: !values[1]?.total_market_cap ? 0 :
               ((values[0].total_market_cap - values[1].total_market_cap) /
                 values[1].total_market_cap) *
               100,
-            week_change_percent:
+            week_change_percent: !values[2]?.total_market_cap ? 0 :
               ((values[0].total_market_cap - values[2].total_market_cap) /
                 values[2].total_market_cap) *
               100,
-            month_change_percent:
+            month_change_percent: !values[3]?.total_market_cap ? 0 :
               ((values[0].total_market_cap - values[3].total_market_cap) /
                 values[3].total_market_cap) *
               100,
