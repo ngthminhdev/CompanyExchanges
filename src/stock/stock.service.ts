@@ -379,13 +379,6 @@ export class StockService {
         this.dbServer
       );
 
-      console.log({latestDate,
-        previousDate,
-        weekDate,
-        monthDate,
-        firstDateYear,});
-      
-
       const query = (date): string => `
       SELECT
         i.LV2 AS industry,
@@ -434,9 +427,7 @@ export class StockService {
         GROUP BY f.LV2, i.date ${exchange == 'ALL' ? `` : `, f.floor`} 
         ORDER BY i.date DESC
         `
-        console.log(marketCapQuery);
-        
-
+          
       const industryChild: ChildProcess = fork(
         __dirname + '/processes/industry-child.js',
       );

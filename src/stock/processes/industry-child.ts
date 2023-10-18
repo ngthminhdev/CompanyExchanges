@@ -25,11 +25,11 @@ process.on('message', async (data: any) => {
             ((values[0].total_market_cap - values[1].total_market_cap) /
               values[1].total_market_cap) *
             100,
-          week_change_percent:
+          week_change_percent: !values[2]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[2].total_market_cap) /
               values[2].total_market_cap) *
             100,
-          month_change_percent:
+          month_change_percent: !values[3]?.total_market_cap ? 0 :
             ((values[0].total_market_cap - values[3].total_market_cap) /
               values[3].total_market_cap) *
             100,
