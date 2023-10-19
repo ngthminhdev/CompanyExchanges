@@ -132,7 +132,7 @@ export class FinanceHealthService {
     WHERE i.floor IN ${floor}
     AND i.type IN ('STOCK', 'ETF')
     AND i.status = 'listed'
-    AND i.LV2 IN (${inds})
+    AND i.LV2 IN ${inds}
     AND date IN ('${moment(start_date).format('YYYY-MM-DD')}', '${moment(end_date).format('YYYY-MM-DD')}')
     ),
     codeData
@@ -214,7 +214,7 @@ export class FinanceHealthService {
     WHERE i.floor IN ${floor}
     AND i.type IN ('STOCK', 'ETF')
     AND i.status = 'listed'
-    AND i.LV2 IN (${inds})
+    AND i.LV2 IN ${inds}
     AND date IN ('${moment(start_date).format('YYYY-MM-DD')}', '${moment(end_date).format('YYYY-MM-DD')}')
     ),
     codeData
