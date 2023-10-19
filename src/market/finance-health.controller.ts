@@ -28,8 +28,8 @@ export class FinanceHealthController {
     summary: 'P/B bình quân các nhóm ngành (lần)',
   })
   @ApiOkResponse({ type: PEPBIndustrySwagger })
-  async PEPBIndustry(@Query() q: TimeFrameDto, @Res() res: Response) {
-    const data = await this.fHealthService.PEPBIndustry(
+  async PBIndustry(@Query() q: TimeFrameDto, @Res() res: Response) {
+    const data = await this.fHealthService.PBIndustry(
       q.exchange.toUpperCase(),
       parseInt(q.type),
       parseInt(q.order),

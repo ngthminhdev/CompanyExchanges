@@ -39,7 +39,7 @@ export class FinanceHealthService {
     private readonly marketService: MarketService,
   ) {}
 
-  async PEPBIndustry(ex: string, type: number, order: number, industries: string) {
+  async PBIndustry(ex: string, type: number, order: number, industries: string) {
     const floor = ex == 'ALL' ? ` ('ALL') ` : ` ('${ex}') `;
     const inds: string = industries ? UtilCommonTemplate.getIndustryFilter(industries.split(',')) : '';
 
@@ -47,47 +47,16 @@ export class FinanceHealthService {
       `${RedisKeys.PEPBIndustry}:${floor}:${order}:${type}:${inds}`,
     );
     if (redisData) return redisData;
-    const query_date = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.pb_nganh order by date desc`))[0].date
-    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(+query_date + 1, 'YYYYQ').endOf('quarter').toDate());
-
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
     
-    // const query = `
-    //   with valueData as (
-    //       select
-    //           [code],
-    //           [date],
-    //           [ratioCode],
-    //           [value]
-    //       from RATIO.dbo.ratio
-    //       where
-    //       ratioCode in ('PRICE_TO_BOOK', 'PRICE_TO_EARNINGS')
-    //       and date in ${dateFilter}
-    //   )
-    //   select [LV2] industry, [date], [PRICE_TO_BOOK] PB, [PRICE_TO_EARNINGS] PE
-    //   from (
-    //       select [LV2], [date], [ratioCode], value
-    //       from valueData v
-    //       inner join marketInfor.dbo.info i
-    //               on i.code = v.code
-    //           where i.LV2 != ''
-    //               and i.floor in ${floor}
-    //               and i.type in ('STOCK', 'ETF')
-    //               and i.status = 'listed'
-    //   --     group by LV2, ratioCode, [date]
-    //   ) as srouces
-    //   pivot (
-    //       avg(value)
-    //       for ratioCode in ([PRICE_TO_BOOK], [PRICE_TO_EARNINGS])
-    //   ) as pvTable
-    // `;
-
+    const query_date: any[] = (await this.mssqlService.query(`select distinct top ${type} yearQuarter as date from RATIO.dbo.ratioInYearQuarter where right(yearQuarter, 1) ${order == 0 ? '<>' : '='} 0 and type = 'INDUSTRY' order by yearQuarter desc`))
+      
     const query = `
-      select *, pb as PB from VISUALIZED_DATA.dbo.pb_nganh
+      select code as industry, yearQuarter as date, PB, PE from RATIO.dbo.ratioInYearQuarter
       where floor IN ${floor}
-      ${inds != '' ? 'and industry IN' : ''}
-      and date IN ${dateFilter}
+      and type = 'INDUSTRY'
+      and yearQuarter IN ${`(${query_date.map(item => `'${item.date}'`).join(', ')})`}
     `
+    
     const data = await this.mssqlService.query<ISPEPBIndustry[]>(query);
 
     const mappedData = new PEPBIndustryResponse().mapToList(data);

@@ -513,16 +513,13 @@ export class SharesService {
     )
     SELECT
       t.*,
-      r.value AS vh
+      r.marketCap AS vh
     FROM temp t
-    LEFT JOIN RATIO.dbo.ratio r
+    LEFT JOIN RATIO.dbo.ratioInday r
       ON t.code = r.code
       AND t.date = r.date
-
-      AND r.ratioCode = 'MARKETCAP'
     ORDER BY t.date DESC
     `
-
     const data = await this.mssqlService.query<TransactionDataResponse[]>(query)
     const dataMapped = TransactionDataResponse.mapToList(data)
     return dataMapped
