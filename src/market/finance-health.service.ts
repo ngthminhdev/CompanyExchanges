@@ -71,52 +71,20 @@ export class FinanceHealthService {
   }
 
   async PEIndustry(ex: string, type: number, order: number) {
-    const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
+    const floor = ex == 'ALL' ? ` ('ALL') ` : ` ('${ex}') `;
     const redisData = await this.redis.get(
       `${RedisKeys.PEIndustry}:${floor}:${order}:${type}`,
     );
     if (redisData) return redisData;
 
-    const query_date = (await this.mssqlService.query(`select top 1 date from VISUALIZED_DATA.dbo.EPS_code order by date desc`))[0].date
-    const date = UtilCommonTemplate.getYearQuarters(type, order, moment(+query_date + 1, 'YYYYQ').endOf('quarter').toDate());
-
-    const { dateFilter } = UtilCommonTemplate.getDateFilter(date);
-
+    const query_date: any[] = (await this.mssqlService.query(`select distinct top ${type} yearQuarter as date from RATIO.dbo.ratioInYearQuarter where right(yearQuarter, 1) ${order == 0 ? '<>' : '='} 0 and type = 'INDUSTRY' order by yearQuarter desc`))
+      
     const query = `
-      WITH epsData AS
-      (
-        SELECT  [industry]
-              ,[date]
-              ,[floor]
-              ,SUM([thuNhapRong4Quy]) / SUM(shareOut) AS EPS
-        FROM [VISUALIZED_DATA].[dbo].[EPS_code]
-        WHERE floor in ${floor}
-        AND [date] IN ${dateFilter}
-        GROUP BY  [industry]
-                ,[date]
-                ,[floor]
-      ), bqgqData AS
-      (
-        SELECT  b.[industry]
-              ,b.[date]
-              ,b.[floor]
-              ,SUM([marketCap]) / sum([shareOut]) AS [giaBQGQ]
-        FROM VISUALIZED_DATA.dbo.BQGQ b
-        WHERE floor in ${floor}
-        AND [date] IN ${dateFilter}
-        GROUP BY  [industry]
-                ,[date]
-                ,[floor]
-      )
-      SELECT  b.[industry]
-            ,b.[date]
-            ,SUM([giaBQGQ]) / SUM(NULLIF([EPS],0)) AS PE
-      FROM bqgqData b
-      INNER JOIN epsData e
-      ON b.[industry] = e.[industry] AND b.[date] = e.[date] AND b.[floor] = e.[floor]
-      GROUP BY  b.[industry]
-              ,b.[date]
-    `;
+      select code as industry, yearQuarter as date, PB, PE from RATIO.dbo.ratioInYearQuarter
+      where floor IN ${floor}
+      and type = 'INDUSTRY'
+      and yearQuarter IN ${`(${query_date.map(item => `'${item.date}'`).join(', ')})`}
+    `
 
     const data = await this.mssqlService.query<IPEIndustry[]>(query);
 
