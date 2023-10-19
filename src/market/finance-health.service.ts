@@ -108,80 +108,65 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDate(5);
-
-    const startDate = await this.marketService.getNearestDate(
-      'marketTrade.dbo.tickerTradeVND',
-      date[4],
-    );
-
-    const endDate = await this.marketService.getNearestDate(
-      'marketTrade.dbo.tickerTradeVND',
-      date[0],
-    );
-
-    const { latestDate } = await this.marketService.getSessionDate(
-      'marketTrade.dbo.proprietary',
-    );
-
-    const ratioDate = await this.mssqlService.query(
-      `select top 2 date from RATIO.dbo.ratio where ratioCode = 'EPS_TR' group by date order by date desc`,
-    );
-
-    const peDate = await this.mssqlService.query(
-      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'PRICE_TO_EARNINGS' group by date order by date desc`,
-    );
+    const start_date = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND order by date desc`))[0].date
+    const end_date = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date >= '${moment(start_date).subtract(1, 'year').format('YYYY-MM-DD')}' order by date asc`))[0].date
+    const lastYearQuarterRatio = (await this.mssqlService.query(
+      `select top 1 yearQuarter as date from RATIO.dbo.ratioInYearQuarter where right(yearQuarter, 1) <> 0 order by yearQuarter desc`,
+    ))[0].date;
 
     const query: string = `
-      with codeData as (select t.code,
-                              date,
-                              closePrice,
-                              lead(closePrice) over (
-                                  partition by t.code
-                                  order by date desc
-                                  ) as prevClosePrice
-                        from marketTrade.dbo.tickerTradeVND t
-                                inner join marketInfor.dbo.info i on t.code = i.code
-                        where i.floor in ${floor}
-                          and i.type in ('STOCK', 'ETF')
-                          and i.LV2 in ${inds}
-                          and i.status = 'listed'
-                          and date in ('${startDate}', '${endDate}')),
-          epsVNDData as (select c.date, c.code, r.value as epsVND
-                          from codeData c
-                                  inner join RATIO.dbo.ratio r
-                                              on c.code = r.code
-                          where r.ratioCode = 'EPS_TR'
-                            and r.date = '${UtilCommonTemplate.toDate(
-                              ratioDate[0].date,
-                            )}'),  
-          epsVNDPer as (select pivotTable.code, [${UtilCommonTemplate.toDate(ratioDate[1].date)}], [${UtilCommonTemplate.toDate(ratioDate[0].date)}], date from (select distinct c.code, r.value as epsVND, r.date as ratioDate, c.date as date
-                            from codeData c
-                                    inner join RATIO.dbo.ratio r
-                                                on c.code = r.code
-                            where r.ratioCode = 'EPS_TR'
-                                and r.date IN ('2022/12/31', '2023/03/31')) as source pivot ( sum(epsVND) for ratioDate in ([${UtilCommonTemplate.toDate(ratioDate[1].date)}], [${UtilCommonTemplate.toDate(ratioDate[0].date)}])) as pivotTable),                               
-          PData as (select c.date, c.code, r.value as pData
-                    from codeData c
-                             inner join RATIO.dbo.ratio r
-                                        on c.code = r.code
-                    where r.ratioCode = 'PRICE_TO_EARNINGS'
-                      and r.date = '${UtilCommonTemplate.toDate(peDate[0].date)}')
-      select top 50 c.code,
-            c.date,
-            e.epsVND as VND,
-            ((c.closePrice - c.prevClosePrice) / c.prevClosePrice) * 100 as pricePerChange,
-            p.pData,
-            CASE WHEN ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}] = NULL THEN NULL
-              ELSE ((ep.[${UtilCommonTemplate.toDate(ratioDate[0].date)}] - ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}]) / ep.[${UtilCommonTemplate.toDate(ratioDate[1].date)}]) * 100 END AS per
-      from codeData c
-              inner join epsVNDData e
-                          on c.code = e.code and c.date = e.date
-              inner join PData p 
-                          on c.code = p.code and c.date = p.date   
-              inner join epsVNDPer ep
-                          on c.code = ep.code and c.date = ep.date                
-      order by 2 desc, 3 desc
+    WITH temp
+    AS (SELECT
+      t.code,
+      date,
+      (closePrice - LEAD(closePrice) OVER (
+      PARTITION BY t.code
+      ORDER BY date DESC
+      )) / LEAD(closePrice) OVER (
+      PARTITION BY t.code
+      ORDER BY date DESC
+      ) * 100 AS perChange
+    FROM marketTrade.dbo.tickerTradeVND t
+    INNER JOIN marketInfor.dbo.info i
+      ON t.code = i.code
+    WHERE i.floor IN ${floor}
+    AND i.type IN ('STOCK', 'ETF')
+    AND i.status = 'listed'
+    AND i.LV2 IN (${inds})
+    AND date IN ('${moment(start_date).format('YYYY-MM-DD')}', '${moment(end_date).format('YYYY-MM-DD')}')
+    ),
+    codeData
+    AS (SELECT
+      *
+    FROM temp
+    WHERE date = '${moment(start_date).format('YYYY-MM-DD')}'),
+    epsChangeAll
+    AS (SELECT
+      code,
+      EPS,
+      yearQuarter,
+      PE,
+      CASE
+        WHEN LEAD(EPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC) = 0 THEN 0
+        ELSE (EPS - LEAD(EPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC)) / LEAD(EPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC) * 100
+      END AS perEPS
+    FROM RATIO.dbo.ratioInYearQuarter
+    WHERE type = 'STOCK'),
+    epsChangeNow
+    AS (SELECT
+      *
+    FROM epsChangeAll
+    WHERE yearQuarter = '${lastYearQuarterRatio}')
+    SELECT TOP 50
+      c.code,
+      e.EPS as VND,
+      c.perChange as pricePerChange,
+      e.perEPS as per,
+      e.PE as pData
+    FROM codeData c
+    INNER JOIN epsChangeNow e
+      ON e.code = c.code
+    ORDER BY 2 DESC
     `;
 
     const data = await this.mssqlService.query<any[]>(query);
@@ -204,69 +189,67 @@ export class FinanceHealthService {
     );
     if (redisData) return redisData;
 
-    const date = UtilCommonTemplate.getPastDate(5);
+    const start_date = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND order by date desc`))[0].date
+    const end_date = (await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date >= '${moment(start_date).subtract(1, 'year').format('YYYY-MM-DD')}' order by date asc`))[0].date
 
-    const startDate = await this.marketService.getNearestDate(
-      'marketTrade.dbo.tickerTradeVND',
-      date[4],
-    );
-
-    const endDate = await this.marketService.getNearestDate(
-      'marketTrade.dbo.tickerTradeVND',
-      date[0],
-    );
-
-    const { latestDate } = await this.marketService.getSessionDate(
-      'marketTrade.dbo.proprietary',
-    );
-
-    const gtssDate = await this.mssqlService.query(
-      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'BVPS_CR' group by date order by date desc`,
-    );
-
-    const pbDate = await this.mssqlService.query(
-      `select top 1 date from RATIO.dbo.ratio where ratioCode = 'PRICE_TO_BOOK' group by date order by date desc`,
-    );
+    const lastYearQuarterRatio = (await this.mssqlService.query(
+      `select top 1 yearQuarter as date from RATIO.dbo.ratioInYearQuarter where right(yearQuarter, 1) <> 0 order by yearQuarter desc`,
+    ))[0].date;
 
     const query: string = `
-      with codeData as (select t.code,
-                              date,
-                              closePrice,
-                              lead(closePrice) over (
-                                  partition by t.code
-                                  order by date desc
-                                  ) as prevClosePrice
-                        from marketTrade.dbo.tickerTradeVND t
-                                inner join marketInfor.dbo.info i on t.code = i.code
-                        where i.floor in ${floor}
-                          and i.type in ('STOCK', 'ETF')
-                          and i.status = 'listed'
-                          and i.LV2 in ${inds} 
-                          and date in ('${startDate}', '${endDate}')),
-          gtssVNDData as (select c.date, c.code, r.value as gtssVND
-                          from codeData c
-                                  inner join RATIO.dbo.ratio r
-                                              on c.code = r.code
-                          where r.ratioCode = 'BVPS_CR'
-                            and r.date = '${UtilCommonTemplate.toDate(gtssDate[0].date)}'),
-          PData as (select c.date, c.code, r.value as pData
-                    from codeData c
-                             inner join RATIO.dbo.ratio r
-                                        on c.code = r.code
-                    where r.ratioCode = 'PRICE_TO_BOOK'
-                      and r.date = '${UtilCommonTemplate.toDate(pbDate[0].date)}')
-      select top 50 c.code,
-            c.date,
-            e.gtssVND as VND,
-            (c.closePrice - c.prevClosePrice) / c.prevClosePrice * 100 as pricePerChange,
-            p.pData
-      from codeData c
-              inner join gtssVNDData e
-                          on c.code = e.code and c.date = e.date
-              inner join PData p 
-                          on c.code = p.code and c.date = p.date
-      order by 2 desc, 3 desc
-    `;
+    WITH temp
+    AS (SELECT
+      t.code,
+      date,
+      (closePrice - LEAD(closePrice) OVER (
+      PARTITION BY t.code
+      ORDER BY date DESC
+      )) / LEAD(closePrice) OVER (
+      PARTITION BY t.code
+      ORDER BY date DESC
+      ) * 100 AS perChange
+    FROM marketTrade.dbo.tickerTradeVND t
+    INNER JOIN marketInfor.dbo.info i
+      ON t.code = i.code
+    WHERE i.floor IN ${floor}
+    AND i.type IN ('STOCK', 'ETF')
+    AND i.status = 'listed'
+    AND i.LV2 IN (${inds})
+    AND date IN ('${moment(start_date).format('YYYY-MM-DD')}', '${moment(end_date).format('YYYY-MM-DD')}')
+    ),
+    codeData
+    AS (SELECT
+      *
+    FROM temp
+    WHERE date = '${moment(start_date).format('YYYY-MM-DD')}'),
+    epsChangeAll
+    AS (SELECT
+      code,
+      BVPS,
+      yearQuarter,
+      PB,
+      CASE
+        WHEN LEAD(BVPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC) = 0 THEN 0
+        ELSE (BVPS - LEAD(BVPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC)) / LEAD(BVPS) OVER (PARTITION BY code ORDER BY yearQuarter DESC) * 100
+      END AS perBVPS
+    FROM RATIO.dbo.ratioInYearQuarter
+    WHERE type = 'STOCK'),
+    epsChangeNow
+    AS (SELECT
+      *
+    FROM epsChangeAll
+    WHERE yearQuarter = '${lastYearQuarterRatio}')
+    SELECT TOP 50
+      c.code,
+      e.BVPS as VND,
+      c.perChange as pricePerChange,
+      e.perBVPS as per,
+      e.PB as pData
+    FROM codeData c
+    INNER JOIN epsChangeNow e
+      ON e.code = c.code
+    ORDER BY 2 DESC
+    `
 
     const data = await this.mssqlService.query<any[]>(query);
 
