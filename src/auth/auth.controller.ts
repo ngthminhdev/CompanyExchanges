@@ -45,10 +45,7 @@ export class AuthController {
     async login(@Req() req: MRequest, @Body() loginDto: LoginDto, @Headers() headers: Headers, @Res() res: Response) {
         try {
             const data: UserResponse = await this.authService.login(req, loginDto, headers, res);
-            return res.cookie('accessToken', data.access_token, {
-                httpOnly: true,
-                // path: '/',
-              }).status(HttpStatus.OK).send(new BaseResponse({data: data}));
+            return res.status(HttpStatus.OK).send(new BaseResponse({data: data}));
         } catch (e) {
             throw new CatchException(e)
         }

@@ -147,14 +147,14 @@ export class AuthService {
         userAgent,
       );
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('rt', refreshToken, {
       httpOnly: true,
-      // path: '/',
+      path: '/',
     });
 
-    res.cookie('accessToken', accessToken, {
+    res.cookie('at', accessToken, {
       httpOnly: true,
-      // path: '/',
+      path: '/',
     });
 
     // Trả về thông tin người dùng kèm access token và thời gian hết hạn
