@@ -149,12 +149,12 @@ export class AuthService {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      path: '/',
+      // path: '/',
     });
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      path: '/',
+      // path: '/',
     });
 
     // Trả về thông tin người dùng kèm access token và thời gian hết hạn
