@@ -147,16 +147,11 @@ export class AuthService {
         userAgent,
       );
 
-    // Lưu cookie refreshToken
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      path: '/',
-    });
-
     // Trả về thông tin người dùng kèm access token và thời gian hết hạn
     return new UserResponse({
       ...userByPhone,
       access_token: accessToken,
+      refresh_token: refreshToken,
       expired_at: expiredAt,
     });
   }
