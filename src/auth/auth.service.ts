@@ -38,7 +38,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly smsService: SmsService,
     private readonly queueService: QueueService,
-  ) {}
+  ) { }
 
   generateAccessToken(
     userId: number,
@@ -146,6 +146,16 @@ export class AuthService {
         ipAddress,
         userAgent,
       );
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      path: '/',
+    });
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      path: '/',
+    });
 
     // Trả về thông tin người dùng kèm access token và thời gian hết hạn
     return new UserResponse({
@@ -408,9 +418,9 @@ export class AuthService {
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
-    
-    if(response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
-    
+
+    if (response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
+
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
     const verifyData: VerifyEntity = await this.verifyRepo.save({
       user_id: user.user_id,
