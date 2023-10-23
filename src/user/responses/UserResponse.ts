@@ -72,6 +72,13 @@ export class UserResponse {
   access_token: string;
 
   @ApiResponseProperty({
+    type: String,
+    example:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+  })
+  refresh_token: string;
+
+  @ApiResponseProperty({
     type: Date
   })
   expired_at: Date
@@ -87,6 +94,7 @@ export class UserResponse {
     this.role = data?.role ?? 0;
     this.address = data?.address ?? '';
     this.access_token = data?.access_token ?? '';
+    this.refresh_token = data?.refresh_token ?? '';
     this.expired_at = data?.expired_at ?? '';
   }
 
