@@ -76,12 +76,12 @@ export class AuthService {
     const user = await this.userRepo.findOne({
       where: { phone: data.phone },
     });
-    if (user) {
-      throw new ExceptionResponse(
-        HttpStatus.BAD_REQUEST,
-        'Số điện thoại đã được đăng ký',
-      );
-    }
+    // if (user) {
+    //   throw new ExceptionResponse(
+    //     HttpStatus.BAD_REQUEST,
+    //     'Số điện thoại đã được đăng ký',
+    //   );
+    // }
     const saltOrRounds = 10;
     const hash: string = await bcrypt.hash(data.password, saltOrRounds);
     const newUser: UserEntity = await this.userRepo.save({
@@ -409,7 +409,7 @@ export class AuthService {
     const verifyOTP: string = UtilCommonTemplate.generateOTP();
 
     // Gửi tin nhắn SMS chứa mã OTP đến số điện thoại của người dùng (có thời hạn 5 phút)
-    const response_incom = await this.smsService.sendSMSV2(
+    const response_incom = await this.smsService.sendSMS(
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
