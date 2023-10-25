@@ -76,12 +76,12 @@ export class AuthService {
     const user = await this.userRepo.findOne({
       where: { phone: data.phone },
     });
-    // if (user) {
-    //   throw new ExceptionResponse(
-    //     HttpStatus.BAD_REQUEST,
-    //     'Số điện thoại đã được đăng ký',
-    //   );
-    // }
+    if (user) {
+      throw new ExceptionResponse(
+        HttpStatus.BAD_REQUEST,
+        'Số điện thoại đã được đăng ký',
+      );
+    }
     const saltOrRounds = 10;
     const hash: string = await bcrypt.hash(data.password, saltOrRounds);
     const newUser: UserEntity = await this.userRepo.save({
@@ -419,7 +419,7 @@ export class AuthService {
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
 
-    if (response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
+    if (response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Lỗi khi gửi OTP vui lòng thử lại sau')
 
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
     const verifyData: VerifyEntity = await this.verifyRepo.save({
