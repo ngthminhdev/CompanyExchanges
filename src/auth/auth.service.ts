@@ -76,12 +76,12 @@ export class AuthService {
     const user = await this.userRepo.findOne({
       where: { phone: data.phone },
     });
-    if (user) {
-      throw new ExceptionResponse(
-        HttpStatus.BAD_REQUEST,
-        'Số điện thoại đã được đăng ký',
-      );
-    }
+    // if (user) {
+    //   throw new ExceptionResponse(
+    //     HttpStatus.BAD_REQUEST,
+    //     'Số điện thoại đã được đăng ký',
+    //   );
+    // }
     const saltOrRounds = 10;
     const hash: string = await bcrypt.hash(data.password, saltOrRounds);
     const newUser: UserEntity = await this.userRepo.save({
