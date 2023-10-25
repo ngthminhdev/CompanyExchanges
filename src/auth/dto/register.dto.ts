@@ -3,7 +3,7 @@ import {IsPhoneNumber, IsString, Matches, Validate, ValidateIf,} from 'class-val
 import {PasswordMatchValidator} from "../../validators/password-match.validator";
 
 export class RegisterDto {
-    @IsPhoneNumber('VN')
+    @IsPhoneNumber('VN', {message: 'Số điện thoại không hợp lệ'})
     @ApiProperty({
         type: String,
         example: '0343892050',
