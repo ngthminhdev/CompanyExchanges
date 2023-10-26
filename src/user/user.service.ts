@@ -13,18 +13,18 @@ export class UserService {
     constructor(
         @InjectRepository(UserEntity)
         private readonly userRepo: Repository<UserEntity>,
-        @Inject(CACHE_MANAGER)
-        private readonly redis: Cache,
+        // @Inject(CACHE_MANAGER)
+        // private readonly redis: Cache,
     ) {
     }
 
-    async getInfo(userId: number): Promise<UserResponse> {
-        const redisData: UserResponse = await this.redis.get(`${RedisKeys.User}:${userId}`);
-        if (redisData) return redisData;
-        const user: UserEntity = await this.userRepo.findOne({where: {user_id: userId}});
-        if (!user) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'user not found');
-        const mappedData = new UserResponse(user);
-        await this.redis.set(`${RedisKeys.User}:${userId}`, mappedData)
-        return mappedData;
-    }
+    // async getInfo(userId: number): Promise<UserResponse> {
+    //     const redisData: UserResponse = await this.redis.get(`${RedisKeys.User}:${userId}`);
+    //     if (redisData) return redisData;
+    //     const user: UserEntity = await this.userRepo.findOne({where: {user_id: userId}});
+    //     if (!user) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'user not found');
+    //     const mappedData = new UserResponse(user);
+    //     await this.redis.set(`${RedisKeys.User}:${userId}`, mappedData)
+    //     return mappedData;
+    // }
 }

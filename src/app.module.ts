@@ -41,13 +41,13 @@ import { UserModule } from './user/user.module';
         config.createTypeOrmOptions(),
       inject: [ConfigServiceProvider],
     }),
-    TypeOrmModule.forRootAsync({
-      name: DB_SERVER,
-      imports: [ConfigModuleModule],
-      useFactory: (config: ConfigServiceProvider) =>
-        config.createMssqlOptions(),
-      inject: [ConfigServiceProvider],
-    }),
+    // TypeOrmModule.forRootAsync({
+    //   name: DB_SERVER,
+    //   imports: [ConfigModuleModule],
+    //   useFactory: (config: ConfigServiceProvider) =>
+    //     config.createMssqlOptions(),
+    //   inject: [ConfigServiceProvider],
+    // }),
     // TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
 
     //jwt
@@ -58,14 +58,14 @@ import { UserModule } from './user/user.module';
     }),
 
     //redis
-    CacheModule.registerAsync({
-      imports: [ConfigModuleModule],
-      useFactory: async (config: ConfigServiceProvider) => {
-        return await config.createRedisOptions();
-      },
-      isGlobal: true,
-      inject: [ConfigServiceProvider],
-    }),
+    // CacheModule.registerAsync({
+    //   imports: [ConfigModuleModule],
+    //   useFactory: async (config: ConfigServiceProvider) => {
+    //     return await config.createRedisOptions();
+    //   },
+    //   isGlobal: true,
+    //   inject: [ConfigServiceProvider],
+    // }),
 
     //kakfa
     KafkaConfigModule.registerAsync({
@@ -83,20 +83,20 @@ import { UserModule } from './user/user.module';
     }),
     //aplication modules
     ConfigModuleModule,
-    MssqlModule,
-    StockModule,
+    // MssqlModule,
+    // StockModule,
     AuthModule,
     UserModule,
-    QueueModule,
-    SocketModule,
-    MarketModule,
-    MacroModule,
+    // QueueModule,
+    // SocketModule,
+    // MarketModule,
+    // MacroModule,
     // KafkaModule,
-    RetailModule,
-    NewsModule,
-    ReportModule,
-    SharesModule,
-    InvestmentModule,
+    // RetailModule,
+    // NewsModule,
+    // ReportModule,
+    // SharesModule,
+    // InvestmentModule,
     HttpConfigModule
   ],
 })
