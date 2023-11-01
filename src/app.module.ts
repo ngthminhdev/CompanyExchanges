@@ -11,11 +11,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MinioModule } from 'nestjs-minio-client';
 import { KafkaModule as KafkaConfigModule } from 'ngthminhdev-nestjs-kafka';
 import { AuthModule } from './auth/auth.module';
+import { DeviceEntity } from './auth/entities/device.entity';
 import { ConfigModuleModule } from './config-module/config-module.module';
 import { ConfigServiceProvider } from './config-module/config-module.service';
 import { DB_SERVER } from './constants';
 import { HttpConfigModule } from './http/http.module';
 import { InvestmentModule } from './investment/investment.module';
+import { KafkaModule } from './kafka/kafka.module';
 import { MacroModule } from './macro/macro.module';
 import { MarketModule } from './market/market.module';
 import { RealIpMiddleware } from './middlewares/real-ip.middleware';
@@ -27,6 +29,7 @@ import { RetailModule } from './retail/retail.module';
 import { SharesModule } from './shares/shares.module';
 import { SocketModule } from './socket/socket.module';
 import { StockModule } from './stock/stock.module';
+import { UserEntity } from './user/entities/user.entity';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -41,14 +44,14 @@ import { UserModule } from './user/user.module';
         config.createTypeOrmOptions(),
       inject: [ConfigServiceProvider],
     }),
-    // TypeOrmModule.forRootAsync({
-    //   name: DB_SERVER,
-    //   imports: [ConfigModuleModule],
-    //   useFactory: (config: ConfigServiceProvider) =>
-    //     config.createMssqlOptions(),
-    //   inject: [ConfigServiceProvider],
-    // }),
-    // TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
+    TypeOrmModule.forRootAsync({
+      name: DB_SERVER,
+      imports: [ConfigModuleModule],
+      useFactory: (config: ConfigServiceProvider) =>
+        config.createMssqlOptions(),
+      inject: [ConfigServiceProvider],
+    }),
+    TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
 
     //jwt
     JwtModule.registerAsync({
@@ -58,14 +61,14 @@ import { UserModule } from './user/user.module';
     }),
 
     //redis
-    // CacheModule.registerAsync({
-    //   imports: [ConfigModuleModule],
-    //   useFactory: async (config: ConfigServiceProvider) => {
-    //     return await config.createRedisOptions();
-    //   },
-    //   isGlobal: true,
-    //   inject: [ConfigServiceProvider],
-    // }),
+    CacheModule.registerAsync({
+      imports: [ConfigModuleModule],
+      useFactory: async (config: ConfigServiceProvider) => {
+        return await config.createRedisOptions();
+      },
+      isGlobal: true,
+      inject: [ConfigServiceProvider],
+    }),
 
     //kakfa
     KafkaConfigModule.registerAsync({
@@ -83,20 +86,20 @@ import { UserModule } from './user/user.module';
     }),
     //aplication modules
     ConfigModuleModule,
-    // MssqlModule,
-    // StockModule,
+    MssqlModule,
+    StockModule,
     AuthModule,
     UserModule,
-    // QueueModule,
-    // SocketModule,
-    // MarketModule,
-    // MacroModule,
-    // KafkaModule,
-    // RetailModule,
-    // NewsModule,
-    // ReportModule,
-    // SharesModule,
-    // InvestmentModule,
+    QueueModule,
+    SocketModule,
+    MarketModule,
+    MacroModule,
+    KafkaModule,
+    RetailModule,
+    NewsModule,
+    ReportModule,
+    SharesModule,
+    InvestmentModule,
     HttpConfigModule
   ],
 })

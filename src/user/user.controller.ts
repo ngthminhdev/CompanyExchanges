@@ -23,8 +23,8 @@ export class UserController {
     @Get('info')
     async getInfo(@GetUserIdFromToken() user_id: number, @Res() res: Response) {
         try {
-            // const data = await this.userService.getInfo(user_id);
-            // return res.status(HttpStatus.OK).send(new BaseResponse({data}));
+            const data = await this.userService.getInfo(user_id);
+            return res.status(HttpStatus.OK).send(new BaseResponse({data}));
         } catch (e) {
             throw new CatchException(e)
         }

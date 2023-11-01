@@ -13,7 +13,7 @@ export class MssqlService {
   private async initializeDatabase(): Promise<void> {
     try {
       this.database = await sql.connect(
-        'Server=192.168.13.22,1433;Database=marketTrade;User Id=THANHMINH;Password=123beta456;Encrypt=false;Request Timeout=30000',
+        `Server=${process.env.DB_HOST},1433;Database=marketTrade;User Id=THANHMINH;Password=123beta456;Encrypt=false;Request Timeout=30000`,
       );
     } catch (e) {
       throw new CatchException(e);

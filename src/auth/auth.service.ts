@@ -33,8 +33,8 @@ export class AuthService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(VerifyEntity)
     private readonly verifyRepo: Repository<VerifyEntity>,
-    // @Inject(CACHE_MANAGER)
-    // private readonly redis: Cache,
+    @Inject(CACHE_MANAGER)
+    private readonly redis: Cache,
     private readonly jwtService: JwtService,
     private readonly smsService: SmsService,
     private readonly queueService: QueueService,
@@ -76,12 +76,12 @@ export class AuthService {
     const user = await this.userRepo.findOne({
       where: { phone: data.phone },
     });
-    // if (user) {
-    //   throw new ExceptionResponse(
-    //     HttpStatus.BAD_REQUEST,
-    //     'Số điện thoại đã được đăng ký',
-    //   );
-    // }
+    if (user) {
+      throw new ExceptionResponse(
+        HttpStatus.BAD_REQUEST,
+        'Số điện thoại đã được đăng ký',
+      );
+    }
     const saltOrRounds = 10;
     const hash: string = await bcrypt.hash(data.password, saltOrRounds);
     const newUser: UserEntity = await this.userRepo.save({
@@ -94,10 +94,10 @@ export class AuthService {
     await this.sendOTP(newUser);
 
     // Lưu thông tin người dùng mới vào Redis để sử dụng trong các yêu cầu sau này
-    // await this.redis.set(
-    //   `${RedisKeys.User}:${newUser.user_id}`,
-    //   new UserResponse(newUser),
-    // );
+    await this.redis.set(
+      `${RedisKeys.User}:${newUser.user_id}`,
+      new UserResponse(newUser),
+    );
 
     // Trả về đối tượng RegisterResponse với thông tin người dùng mới được đăng ký thành công
     return new RegisterResponse(newUser);
@@ -396,14 +396,14 @@ export class AuthService {
     );
 
     // Cập nhật Redis cache nếu UserEntity đã được lưu trữ trong cache
-    // const userRedis: UserResponse = await this.redis.get(
-    //   `${RedisKeys.User}:${userId}`,
-    // );
-    // if (userRedis)
-      // await this.redis.set(`${RedisKeys.User}:${userId}`, {
-      //   ...userRedis,
-      //   is_verified: BooleanEnum.True,
-      // });
+    const userRedis: UserResponse = await this.redis.get(
+      `${RedisKeys.User}:${userId}`,
+    );
+    if (userRedis)
+      await this.redis.set(`${RedisKeys.User}:${userId}`, {
+        ...userRedis,
+        is_verified: BooleanEnum.True,
+      });
 
     // Trả về một thông báo cho người dùng cho biết tài khoản của họ đã được xác thực thành công
     return 'your account is verified successfully';
