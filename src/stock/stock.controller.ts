@@ -130,16 +130,16 @@ export class StockController {
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
-  @Get('top-roc')
-  @ApiOperation({
-    summary: 'Top thay đổi ROC 5 phiên',
-    description: 'HOSE, VN30, HNX, HNX30, UPCOM',
-  })
-  @ApiOkResponse({ type: TopRocSwagger })
-  async getTopROC(@Query() q: GetExchangeQuery, @Res() res: Response) {
-    const data = await this.stockService.getTopROC(q);
-    return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
-  }
+  // @Get('top-roc')
+  // @ApiOperation({
+  //   summary: 'Top thay đổi ROC 5 phiên',
+  //   description: 'HOSE, VN30, HNX, HNX30, UPCOM',
+  // })
+  // @ApiOkResponse({ type: TopRocSwagger })
+  // async getTopROC(@Query() q: GetExchangeQuery, @Res() res: Response) {
+  //   const data = await this.stockService.getTopROC(q);
+  //   return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
+  // }
 
   @Get('top-net-foreign-change')
   @ApiOperation({

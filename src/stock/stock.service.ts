@@ -34,8 +34,6 @@ import { SessionDatesInterface } from './interfaces/session-dates.interface';
 import { StockEventsInterface } from './interfaces/stock-events.interface';
 import { TopNetForeignByExInterface } from './interfaces/top-net-foreign-by-ex.interface';
 import { TopNetForeignInterface } from './interfaces/top-net-foreign.interface';
-import { TopRocInterface } from './interfaces/top-roc-interface';
-import { isDecrease, isEqual, isHigh, isIncrease, isLow } from './processes/industry-data-child';
 import { DomesticIndexResponse } from './responses/DomesticIndex.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
@@ -52,7 +50,6 @@ import { StockEventsResponse } from './responses/StockEvents.response';
 import { StockNewsResponse } from './responses/StockNews.response';
 import { TopNetForeignResponse } from './responses/TopNetForeign.response';
 import { TopNetForeignByExResponse } from './responses/TopNetForeignByEx.response';
-import { TopRocResponse } from './responses/TopRoc.response';
 import { UpDownTickerResponse } from './responses/UpDownTicker.response';
 
 @Injectable()
@@ -60,7 +57,7 @@ export class StockService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
-    @InjectDataSource() private readonly db: DataSource,
+    // @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly mssqlService: MssqlService,
   ) { }
@@ -149,7 +146,7 @@ export class StockService {
   public async getSessionDate(
     table: string,
     column: string = 'date_time',
-    instance: any = this.db,
+    instance: any = this.dbServer,
   ): Promise<SessionDatesInterface> {
     const redisData = await this.redis.get<SessionDatesInterface>(
       `${RedisKeys.SessionDate}:${table}:${column}`,
@@ -719,46 +716,46 @@ export class StockService {
   }
 
   //Top thay đổi giữa 5 phiên theo sàn
-  async getTopROC(q: GetExchangeQuery): Promise<TopRocResponse[]> {
-    try {
-      const { exchange } = q;
-      let ex =
-        exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
-      ex = exchange.toUpperCase() === 'HSX' ? 'HOSE' : exchange.toUpperCase();
+  // async getTopROC(q: GetExchangeQuery): Promise<TopRocResponse[]> {
+  //   try {
+  //     const { exchange } = q;
+  //     let ex =
+  //       exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
+  //     ex = exchange.toUpperCase() === 'HSX' ? 'HOSE' : exchange.toUpperCase();
 
-      const redisData: TopRocResponse[] = await this.redis.get(
-        `${RedisKeys.TopRoc5}:${ex}`,
-      );
-      if (redisData) return redisData;
+  //     const redisData: TopRocResponse[] = await this.redis.get(
+  //       `${RedisKeys.TopRoc5}:${ex}`,
+  //     );
+  //     if (redisData) return redisData;
 
-      const { latestDate, weekDate }: SessionDatesInterface =
-        await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
+  //     const { latestDate, weekDate }: SessionDatesInterface =
+  //       await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
 
-      const query = (order: string): string => `
-                SELECT TOP 10 t1.ticker, ((t1.gia - t2.gia) / t2.gia) * 100 AS ROC_5
-                FROM [COPHIEUANHHUONG].[dbo].[${ex}] t1
-                JOIN [COPHIEUANHHUONG].[dbo].[${ex}] t2
-                ON t1.ticker = t2.ticker AND t2.date = @1
-                WHERE t1.date = @0
-                ORDER BY ROC_5 ${order}
-            `;
+  //     const query = (order: string): string => `
+  //               SELECT TOP 10 t1.ticker, ((t1.gia - t2.gia) / t2.gia) * 100 AS ROC_5
+  //               FROM [COPHIEUANHHUONG].[dbo].[${ex}] t1
+  //               JOIN [COPHIEUANHHUONG].[dbo].[${ex}] t2
+  //               ON t1.ticker = t2.ticker AND t2.date = @1
+  //               WHERE t1.date = @0
+  //               ORDER BY ROC_5 ${order}
+  //           `;
 
-      const [dataTop, dataBot]: [TopRocInterface[], TopRocInterface[]] =
-        await Promise.all([
-          this.db.query(query('DESC'), [latestDate, weekDate]),
-          this.db.query(query('ASC'), [latestDate, weekDate]),
-        ]);
+  //     const [dataTop, dataBot]: [TopRocInterface[], TopRocInterface[]] =
+  //       await Promise.all([
+  //         this.db.query(query('DESC'), [latestDate, weekDate]),
+  //         this.db.query(query('ASC'), [latestDate, weekDate]),
+  //       ]);
 
-      const mappedData: TopRocResponse[] = new TopRocResponse().mapToList([
-        ...dataTop,
-        ...[...dataBot].reverse(),
-      ]);
-      await this.redis.set(`${RedisKeys.TopRoc5}:${ex}`, mappedData);
-      return mappedData;
-    } catch (e) {
-      throw new CatchException(e);
-    }
-  }
+  //     const mappedData: TopRocResponse[] = new TopRocResponse().mapToList([
+  //       ...dataTop,
+  //       ...[...dataBot].reverse(),
+  //     ]);
+  //     await this.redis.set(`${RedisKeys.TopRoc5}:${ex}`, mappedData);
+  //     return mappedData;
+  //   } catch (e) {
+  //     throw new CatchException(e);
+  //   }
+  // }
 
   //Top mua bán ròng khối ngoại thay đổi giữa 5 phiên theo sàn
   async getTopNetForeignChangeByExchange(

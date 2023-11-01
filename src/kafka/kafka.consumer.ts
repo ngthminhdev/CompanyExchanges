@@ -144,12 +144,12 @@ export class KafkaConsumer {
     @Ctx() context: KafkaContext,
   ) {
     try {
-      await Promise.all([
-        this.kafkaService.handleTopRocHNX(payload),
-        this.kafkaService.handleTopRocHSX(payload),
-        this.kafkaService.handleTopRocUPCOM(payload),
-        // this.kafkaService.handleIndustryByEx(payload),
-      ]);
+      // await Promise.all([
+      //   this.kafkaService.handleTopRocHNX(payload),
+      //   this.kafkaService.handleTopRocHSX(payload),
+      //   this.kafkaService.handleTopRocUPCOM(payload),
+      //   // this.kafkaService.handleIndustryByEx(payload),
+      // ]);
     } catch (error) {
       this.logger.error(error);
     }

@@ -38,12 +38,12 @@ import { UserModule } from './user/user.module';
     ConfigModule.forRoot({ isGlobal: true }),
 
     //ORM
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModuleModule],
-      useFactory: (config: ConfigServiceProvider) =>
-        config.createTypeOrmOptions(),
-      inject: [ConfigServiceProvider],
-    }),
+    // TypeOrmModule.forRootAsync({
+    //   imports: [ConfigModuleModule],
+    //   useFactory: (config: ConfigServiceProvider) =>
+    //     config.createTypeOrmOptions(),
+    //   inject: [ConfigServiceProvider],
+    // }),
     TypeOrmModule.forRootAsync({
       name: DB_SERVER,
       imports: [ConfigModuleModule],
@@ -51,7 +51,7 @@ import { UserModule } from './user/user.module';
         config.createMssqlOptions(),
       inject: [ConfigServiceProvider],
     }),
-    TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
+    // TypeOrmModule.forFeature([DeviceEntity, UserEntity]),
 
     //jwt
     JwtModule.registerAsync({
@@ -88,9 +88,9 @@ import { UserModule } from './user/user.module';
     ConfigModuleModule,
     MssqlModule,
     StockModule,
-    AuthModule,
-    UserModule,
-    QueueModule,
+    // AuthModule,
+    // UserModule,
+    // QueueModule,
     SocketModule,
     MarketModule,
     MacroModule,
