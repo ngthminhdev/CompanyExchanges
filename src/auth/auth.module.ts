@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DB_SERVER } from '../constants';
 import { QueueEnum } from '../enums/queue.enum';
 import { PhoneNumberInterceptor } from '../interceptors/phone-number.interceptor';
 import { QueueService } from '../queue/queue.service';
@@ -17,7 +18,7 @@ import { VerifyEntity } from './entities/verify.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
+    TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity], DB_SERVER),
     //queue
     BullModule.registerQueue({ name: QueueEnum.MainProcessor }),
     UserModule

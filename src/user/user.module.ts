@@ -17,7 +17,7 @@ import { HttpConfigModule } from '../http/http.module';
 @Module({
   imports: [
     
-    TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity]),
+    TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity], DB_SERVER),
     //queue
     BullModule.registerQueue(
         {name: QueueEnum.MainProcessor}

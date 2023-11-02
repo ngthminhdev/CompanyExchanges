@@ -742,9 +742,6 @@ export class StockService {
       const { latestDate, weekDate }: SessionDatesInterface =
         await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
 
-      console.log(query('DESC'), query('ASC'));
-      
-  
       const [dataTop, dataBot]: [TopRocInterface[], TopRocInterface[]] =
         await Promise.all([
           this.dbServer.query(query('DESC'), [latestDate, weekDate]),

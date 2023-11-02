@@ -5,12 +5,13 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { VerifyEntity } from "../auth/entities/verify.entity";
 import { Repository } from "typeorm";
 import {QueueEnum} from "../enums/queue.enum";
+import { DB_SERVER } from "../constants";
 
 @Processor(QueueEnum.MainProcessor)
 export class QueueProcessor {
   private readonly logger = new Logger(QueueProcessor.name);
   constructor(
-    @InjectRepository(VerifyEntity)
+    @InjectRepository(VerifyEntity, DB_SERVER)
     private readonly verifyRepo: Repository<VerifyEntity>,
   ) {
   }

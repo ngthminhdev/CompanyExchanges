@@ -86,16 +86,16 @@ export class KafkaService {
     return { hose, hnx, upcom };
   }
 
-  // getTickerInEx = async (ex: string): Promise<any> => {
-  //   let data = await this.redis.get(RedisKeys[ex]);
-  //   if (!data) {
-  //     data = await this.db.query(`
-  //                   select distinct ticker from [COPHIEUANHHUONG].[dbo].[${ex}] ORDER BY ticker;
-  //               `);
-  //     await this.redis.set(RedisKeys[ex], data, TimeToLive.Forever);
-  //   }
-  //   return data;
-  // };
+  getTickerInEx = async (ex: string): Promise<any> => {
+    let data = await this.redis.get(RedisKeys[ex]);
+    if (!data) {
+      data = await this.dbServer.query(`
+                    select distinct ticker from [COPHIEUANHHUONG].[dbo].[${ex}] ORDER BY ticker;
+                `);
+      await this.redis.set(RedisKeys[ex], data, TimeToLive.Forever);
+    }
+    return data;
+  };
 
   private async filterAndSortPayload(
     payload: ForeignKafkaInterface[],
@@ -451,53 +451,53 @@ export class KafkaService {
     );
   }
 
-  // async handleTopRocHNX(payload: TickerChangeInterface[]): Promise<void> {
-  //   try {
-  //     const data: Pick<TickerChangeInterface, 'ticker'>[] =
-  //       await this.getTickerInEx('HNX');
-  //     const tickerInExchanges = data
-  //       .map((record) => {
-  //         return payload.find((item) => item.ticker == record.ticker);
-  //       })
-  //       .filter((item) => !!item);
+  async handleTopRocHNX(payload: TickerChangeInterface[]): Promise<void> {
+    try {
+      const data: Pick<TickerChangeInterface, 'ticker'>[] =
+        await this.getTickerInEx('HNX');
+      const tickerInExchanges = data
+        .map((record) => {
+          return payload.find((item) => item.ticker == record.ticker);
+        })
+        .filter((item) => !!item);
 
-  //     this.send(SocketEmit.TopRocHNX, tickerInExchanges);
-  //   } catch (e) {
-  //     throw new CatchSocketException(e);
-  //   }
-  // }
+      this.send(SocketEmit.TopRocHNX, tickerInExchanges);
+    } catch (e) {
+      throw new CatchSocketException(e);
+    }
+  }
 
-  // async handleTopRocUPCOM(payload: TickerChangeInterface[]): Promise<void> {
-  //   try {
-  //     const data: Pick<TickerChangeInterface, 'ticker'>[] =
-  //       await this.getTickerInEx('UPCoM');
-  //     const tickerInExchanges = data
-  //       .map((record) => {
-  //         return payload.find((item) => item.ticker == record.ticker);
-  //       })
-  //       .filter((item) => !!item);
+  async handleTopRocUPCOM(payload: TickerChangeInterface[]): Promise<void> {
+    try {
+      const data: Pick<TickerChangeInterface, 'ticker'>[] =
+        await this.getTickerInEx('UPCoM');
+      const tickerInExchanges = data
+        .map((record) => {
+          return payload.find((item) => item.ticker == record.ticker);
+        })
+        .filter((item) => !!item);
 
-  //     this.send(SocketEmit.TopRocUPCOM, tickerInExchanges);
-  //   } catch (e) {
-  //     throw new CatchSocketException(e);
-  //   }
-  // }
+      this.send(SocketEmit.TopRocUPCOM, tickerInExchanges);
+    } catch (e) {
+      throw new CatchSocketException(e);
+    }
+  }
 
-  // async handleTopRocHSX(payload: TickerChangeInterface[]): Promise<void> {
-  //   try {
-  //     const data: Pick<TickerChangeInterface, 'ticker'>[] =
-  //       await this.getTickerInEx('HOSE');
-  //     const tickerInExchanges = data
-  //       .map((record) => {
-  //         return payload.find((item) => item.ticker == record.ticker);
-  //       })
-  //       .filter((item) => !!item);
+  async handleTopRocHSX(payload: TickerChangeInterface[]): Promise<void> {
+    try {
+      const data: Pick<TickerChangeInterface, 'ticker'>[] =
+        await this.getTickerInEx('HOSE');
+      const tickerInExchanges = data
+        .map((record) => {
+          return payload.find((item) => item.ticker == record.ticker);
+        })
+        .filter((item) => !!item);
 
-  //     this.send(SocketEmit.TopRocHSX, tickerInExchanges);
-  //   } catch (e) {
-  //     throw new CatchSocketException(e);
-  //   }
-  // }
+      this.send(SocketEmit.TopRocHSX, tickerInExchanges);
+    } catch (e) {
+      throw new CatchSocketException(e);
+    }
+  }
 
   async handleTickerContribute(payload: TickerContributeKafkaInterface[]) {
     try {

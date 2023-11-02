@@ -23,15 +23,16 @@ import { SmsService } from '../sms/sms.service';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { Cache } from 'cache-manager';
 import { RegisterResponse } from './responses/Register.response';
+import { DB_SERVER } from '../constants';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(DeviceEntity)
+    @InjectRepository(DeviceEntity, DB_SERVER)
     private readonly deviceRepo: Repository<DeviceEntity>,
-    @InjectRepository(UserEntity)
+    @InjectRepository(UserEntity, DB_SERVER)
     private readonly userRepo: Repository<UserEntity>,
-    @InjectRepository(VerifyEntity)
+    @InjectRepository(VerifyEntity, DB_SERVER)
     private readonly verifyRepo: Repository<VerifyEntity>,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,

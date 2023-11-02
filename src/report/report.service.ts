@@ -82,11 +82,6 @@ export class ReportService {
         'Content-Type': item.mimetype,
         'X-Amz-Meta-Testing': 1234,
       })
-
-      // await this.minio.put(`resources`, `landing-page/${item.originalname}`, item.buffer, {
-      //   'Content-Type': item.mimetype,
-      //   'X-Amz-Meta-Testing': 1234,
-      // })
     }
     return 'success'
   }
