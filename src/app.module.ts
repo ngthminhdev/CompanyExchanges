@@ -38,12 +38,12 @@ import { UserModule } from './user/user.module';
     ConfigModule.forRoot({ isGlobal: true }),
 
     //ORM
-    // TypeOrmModule.forRootAsync({
-    //   imports: [ConfigModuleModule],
-    //   useFactory: (config: ConfigServiceProvider) =>
-    //     config.createTypeOrmOptions(),
-    //   inject: [ConfigServiceProvider],
-    // }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModuleModule],
+      useFactory: (config: ConfigServiceProvider) =>
+        config.createTypeOrmOptions(),
+      inject: [ConfigServiceProvider],
+    }),
     TypeOrmModule.forRootAsync({
       name: DB_SERVER,
       imports: [ConfigModuleModule],

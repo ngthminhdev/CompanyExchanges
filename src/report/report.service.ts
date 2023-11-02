@@ -3,6 +3,7 @@ import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
+import { CatchException } from '../exceptions/common.exception';
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
@@ -81,6 +82,11 @@ export class ReportService {
         'Content-Type': item.mimetype,
         'X-Amz-Meta-Testing': 1234,
       })
+
+      // await this.minio.put(`resources`, `landing-page/${item.originalname}`, item.buffer, {
+      //   'Content-Type': item.mimetype,
+      //   'X-Amz-Meta-Testing': 1234,
+      // })
     }
     return 'success'
   }

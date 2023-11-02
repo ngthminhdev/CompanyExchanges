@@ -2,7 +2,6 @@ import { Controller, HttpStatus, Post, Res, UploadedFiles, UseInterceptors } fro
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
-import { MinioOptionService } from '../minio/minio.service';
 import { BaseResponse } from '../utils/utils.response';
 import { ReportService } from './report.service';
 
