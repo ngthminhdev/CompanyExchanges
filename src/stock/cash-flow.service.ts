@@ -370,7 +370,7 @@ export class CashFlowService {
     const redisData = await this.redis.get(
       `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 

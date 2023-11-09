@@ -149,12 +149,12 @@ export class AuthService {
       );
 
     res.cookie('rt', refreshToken, {
-      httpOnly: true,
+      // httpOnly: true,
       path: '/',
     });
 
     res.cookie('at', accessToken, {
-      httpOnly: true,
+      // httpOnly: true,
       path: '/',
     });
 
