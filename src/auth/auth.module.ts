@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 import { DeviceEntity } from './entities/device.entity';
 import { VerifyEntity } from './entities/verify.entity';
 
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([DeviceEntity, UserEntity, VerifyEntity], DB_SERVER),
@@ -33,8 +34,9 @@ import { VerifyEntity } from './entities/verify.entity';
     AuthService,
     JwtService,
     SmsService,
-    QueueService,
+    QueueService
   ],
+  exports: [AuthService]
 })
 export class AuthModule {}
 

@@ -238,10 +238,16 @@ export class AuthService {
       );
     }
 
-    res.cookie('refreshToken', '', {
+    res.cookie('rt', '', {
       maxAge: -1,
       path: '/',
-      httpOnly: true,
+      // httpOnly: true,
+    });
+
+    res.cookie('at', '', {
+      maxAge: -1,
+      path: '/',
+      // httpOnly: true,
     });
 
     await this.deviceRepo.delete({ device_id: deviceId });
@@ -419,7 +425,7 @@ export class AuthService {
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
-
+      
     if (response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Lỗi khi gửi OTP vui lòng thử lại sau')
 
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút

@@ -11,14 +11,9 @@ export class VerifyEntity extends BaseModel {
     @Generated('uuid')
     id: string;
 
-    @OneToOne(() => UserEntity)
+    @OneToOne(() => UserEntity, (user) => user.user_id)
     @JoinColumn({name: 'user_id'})
     user: UserEntity;
-
-    @Column({
-        type: 'integer'
-    })
-    user_id: number;
 
     @Index()
     @Column({
@@ -27,7 +22,4 @@ export class VerifyEntity extends BaseModel {
         default: '',
     })
     verify_otp: string;
-
-
-
 }
