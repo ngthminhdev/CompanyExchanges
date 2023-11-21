@@ -555,4 +555,14 @@ export class UtilCommonTemplate {
     }
 
   }
+
+  static changeDateUTC(time: string){
+    return Date.UTC(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      new Date().getDate(),
+      moment(time, 'HH:mm:ss').hour(),
+      moment(time, 'HH:mm:ss').minute(),
+    ).valueOf()
+  }
 }
