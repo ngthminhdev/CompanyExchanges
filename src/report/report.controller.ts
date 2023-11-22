@@ -1,10 +1,14 @@
-import { Controller, Get, HttpStatus, Post, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
+import { ExchangeRateResponse } from './response/exchangeRate.response';
+import { MerchandiseResponse } from './response/merchandise.response';
+import { MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 
@@ -80,6 +84,30 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Tỷ giá'})
+  @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateResponse})
+  @Get('ty-gia')
+  async exchangeRate(@Res() res: Response){
+    const data = await this.reportService.exchangeRate()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Hàng hoá'})
+  @ApiOkResponse({status: HttpStatus.OK, type: MerchandiseResponse})
+  @Get('hang-hoa')
+  async merchandise(@Res() res: Response){
+    const data = await this.reportService.merchandise()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Thị trường chứng khoán Việt Nam và Quốc tế'})
+  @ApiOkResponse({status: HttpStatus.OK, type: MerchandiseResponse})
+  @Get('thi-truong-chung-khoan')
+  async stockMarket(@Res() res: Response){
+    const data = await this.reportService.stockMarket()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Diễn biến kết phiên sáng'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
   @Get('ket-phien-sang')
@@ -88,11 +116,19 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
-  @ApiOperation({summary: 'Diễn biến kết phiên sáng'})
-  @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
-  @Get('ket-phien-sang')
+  @ApiOperation({summary: 'Diễn biến kết phiên sáng tại HOSE'})
+  @ApiOkResponse({status: HttpStatus.OK, type: MorningHoseResponse})
+  @Get('ket-phien-sang-hose')
   async morningHose(@Res() res: Response){
     const data = await this.reportService.morningHose()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'lấy link hình cổ phiếu'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
+  @Get('stock-image')
+  async stockImage(@Query() q: StockImageDto,@Res() res: Response){
+    const data = await this.reportService.getImageStock(q.code)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }

@@ -1,13 +1,16 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
-import { CatchException } from '../exceptions/common.exception';
+import { CatchException, ExceptionResponse } from '../exceptions/common.exception';
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
+import { MerchandiseResponse } from './response/merchandise.response';
+import { ITop, MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 
@@ -127,7 +130,7 @@ export class ReportService {
   async newsEnterprise() {
     try {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`
-      select distinct top 7 TickerInNews as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc order by Date desc
+      select distinct top 7 TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerInTitle != '' order by Date desc
       `)
       const dataMapped = NewsEnterpriseResponse.mapToList(data)
       return dataMapped
@@ -141,6 +144,133 @@ export class ReportService {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`select distinct top 13 ticker, NoiDungSuKien as title, NgayDKCC as date from PHANTICH.dbo.LichSukien order by NgayDKCC desc`)
       const dataMapped = NewsEnterpriseResponse.mapToList(data)
       return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async exchangeRate(){
+    try {
+      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.exchangeRateVCB order by date desc`))[0].date).format('YYYY-MM-DD')
+      const prev = moment(now).subtract(1, 'day').format('YYYY-MM-DD')
+      const month = moment(now).subtract(1, 'month').format('YYYY-MM-DD')
+      const year = moment(now).startOf('year').format('YYYY-MM-DD')
+
+      const code = `
+      'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'SGD', 'CAD', 'HKD'
+      `
+      const sort = `case ${code.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+
+      const query = `
+      WITH temp
+      AS (SELECT
+        date,
+        code,
+        bySell,
+        ${sort}
+      FROM macroEconomic.dbo.exchangeRateVCB
+      WHERE code IN (${code})
+      AND date IN ('${now}', '${prev}', '${year}', '${month}'))
+      SELECT
+        code,
+        [${now}] AS price,
+        ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
+        ([${now}] - [${month}]) / [${month}] * 100 AS month,
+        ([${now}] - [${year}]) / [${year}] * 100 AS year
+      FROM temp AS source PIVOT (SUM(bySell) FOR date IN ([${now}], [${prev}], [${year}], [${month}])) AS chuyen
+      `
+      console.log();
+      
+      const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
+      const dataMapped = ExchangeRateResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async merchandise(){
+    try {
+      const query = `
+      WITH temp
+      AS (SELECT
+        MAX(lastUpdated) AS date,
+        name
+      FROM macroEconomic.dbo.HangHoa
+      WHERE unit != ''
+      GROUP BY name)
+      SELECT
+        h.name + ' (' + h.unit + ')' AS name,
+        price,
+        change1D AS day,
+        change3M AS month,
+        change1Y AS year,
+        changeYTD AS ytd,
+        CASE
+          WHEN h.name = N'Dầu Brent' THEN 1
+          WHEN h.name = N'Dầu Thô' THEN 2
+          WHEN h.name = N'Vàng' THEN 3
+          ELSE 4
+        END AS row_num
+      FROM macroEconomic.dbo.HangHoa h
+      INNER JOIN temp t
+        ON t.name = h.name
+        AND t.date = h.lastUpdated
+      WHERE h.id IS NOT NULL
+      ORDER BY row_num ASC, h.name ASC
+      `
+      const data = await this.mssqlService.query<MerchandiseResponse[]>(query)
+      const dataMapped = MerchandiseResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async stockMarket(){
+    try {
+      const name = `
+      'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX'
+      `
+      const sort = `case ${name.split(',').map((item, index) => `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+
+      const date = await this.mssqlService.query(
+        `with date_ranges as (
+          select
+              max(case when date <= '${moment().format('YYYY-MM-DD')}' then date else null end) as now,
+              max(case when date <= '${moment().subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
+              max(case when date <= '${moment().subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
+              max(case when date <= '${moment().startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd,
+              max(case when date <= '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year
+          from macroEconomic.dbo.WorldIndices
+      )
+      select now, month, ytd, year
+      from date_ranges;`
+      )
+
+      const query = `
+      WITH temp
+      AS (SELECT
+        date,
+        name,
+        closePrice,
+        ${sort}
+      FROM macroEconomic.dbo.WorldIndices
+      WHERE name IN (${name})
+      AND date IN ('${date[0].now}', '${date[0].prev}', '${date[0].year}', '${date[0].month}', '${date[0].ytd}'))
+      SELECT
+        code,
+        [${date[0].now}] AS price,
+        ([${date[0].now}] - [${date[0].prev}]) / [${date[0].prev}] * 100 AS day,
+        ([${date[0].now}] - [${date[0].month}]) / [${date[0].month}] * 100 AS date[0].month,
+        ([${date[0].now}] - [${date[0].year}]) / [${date[0].year}] * 100 AS year,
+        ([${date[0].now}] - [${date[0].ytd}]) / [${date[0].ytd}] * 100 AS year,
+      FROM temp AS source PIVOT (SUM(bySell) FOR date IN ([${date[0].now}], [${date[0].prev}], [${date[0].year}], [${date[0].month}], [${date[0].ytd}])) AS chuyen
+      `
+      console.log(query);
+      
+      const data = await this.mssqlService.query(query)
+      return data
     } catch (e) {
       throw new CatchException(e)
     }
@@ -166,15 +296,16 @@ export class ReportService {
       ORDER BY code ASC, timeInday DESC
       `
       const data = await this.mssqlService.query<any[]>(query)
+      
       const reduceData = data.reduce((result, cur) => {
-        if(!result?.[cur.code]) {
-          result[cur.code] = {change: cur.change, perChange: cur.perChange, chart: [{time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price}]}
+        const index = result.findIndex(item => item.code == cur.code)
+        if(index == -1){
+          result.push({code: cur.code, change: cur.change, perChange: cur.perChange, chart: [{time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price}]})
         }else{
-          result[cur.code].chart.unshift({time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price})
+          result[index].chart.unshift({time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price})
         }
         return result
-      }, {});
-      
+      }, [])
       return reduceData
     } catch (e) {
       throw new CatchException(e)
@@ -183,7 +314,88 @@ export class ReportService {
 
   async morningHose(){
     try {
-      
+      //Độ rộng vs khối ngoại
+      const promise_1 = this.mssqlService.query(`
+      WITH breath
+      AS (SELECT TOP 1
+        noChange,
+        decline,
+        advance,
+        'HOSE' AS code
+      FROM WEBSITE_SERVER.dbo.MarketBreadth
+      WHERE time >= '10:30:00'),
+      net
+      AS (SELECT TOP 1
+        netVal,
+        'HOSE' AS code
+      FROM marketTrade.dbo.[foreign]
+      WHERE code = 'VNINDEX'
+      ORDER BY date DESC)
+      SELECT
+        *
+      FROM breath b
+      INNER JOIN net n
+        ON n.code = b.code
+      `)
+
+      //Top mua ròng
+      const promise_2 = this.mssqlService.query<ITop[]>(`
+      SELECT TOP 4
+        code, netVal
+      FROM marketTrade.dbo.[foreign]
+      WHERE type = 'STOCK'
+      AND date = (SELECT
+        MAX(date)
+      FROM marketTrade.dbo.[foreign])
+      AND floor = 'HOSE'
+      AND netVal > 0
+      ORDER BY netVal DESC
+      `)
+
+      //Top bán ròng
+      const promise_3 = this.mssqlService.query<ITop[]>(`
+      SELECT TOP 4
+        code, netVal
+      FROM marketTrade.dbo.[foreign]
+      WHERE type = 'STOCK'
+      AND date = (SELECT
+        MAX(date)
+      FROM marketTrade.dbo.[foreign])
+      AND floor = 'HOSE'
+      AND netVal < 0
+      ORDER BY netVal ASC
+      `)
+
+      const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3])
+      const dataMapped = new MorningHoseResponse({
+        noChange: data_1[0].noChange,
+        decline: data_1[0].decline,
+        advance: data_1[0].advance,
+        netVal: data_1[0].netVal,
+        sell: data_2,
+        buy: data_3
+      })
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async getImageStock(stock: string){
+    try {
+      const arr_stock = stock.split(',')
+      const code = arr_stock.map(item => {
+        if(item.length > 5) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Stock length invalid')
+        return `'${item}'`
+      }).join(',')
+      const data: any[] = await this.mssqlService.query(`
+      SELECT
+        code,
+        floor
+      FROM marketInfor.dbo.info
+      WHERE code IN (${code})
+      `)
+      return data.map(item => `/resources/stock/${item.code.toUpperCase()}_${item.floor}.jpg`)
     } catch (e) {
       throw new CatchException(e)
     }
