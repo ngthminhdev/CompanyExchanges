@@ -130,7 +130,7 @@ export class ReportService {
   async newsEnterprise() {
     try {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`
-      select distinct top 7 TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerInTitle != '' order by Date desc
+      select distinct top 7 TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerTitle != '' order by Date desc
       `)
       const dataMapped = NewsEnterpriseResponse.mapToList(data)
       return dataMapped
