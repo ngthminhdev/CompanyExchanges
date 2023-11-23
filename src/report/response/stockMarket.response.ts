@@ -36,10 +36,10 @@ export class StockMarketResponse {
     constructor(data?: StockMarketResponse) {
         this.name = data?.code || ''
         this.price = data?.price || 0
-        this.day = data?.day || 0
-        this.month = data?.month || 0
-        this.year = data?.year || 0
-        this.ytd = data?.ytd || 0
+        this.day = +data?.day.toFixed(2) || 0
+        this.month = +data?.month.toFixed(2) || 0
+        this.year = +data?.year.toFixed(2) || 0
+        this.ytd = +data?.ytd.toFixed(2) || 0
     }
 
     static mapToList(data?: StockMarketResponse[]) {
