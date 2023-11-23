@@ -31,8 +31,10 @@ export class StockMarketResponse {
     })
     ytd: number
 
+    code: string
+
     constructor(data?: StockMarketResponse) {
-        this.name = data?.name || ''
+        this.name = data?.code || ''
         this.price = data?.price || 0
         this.day = data?.day || 0
         this.month = data?.month || 0

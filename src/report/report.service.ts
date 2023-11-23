@@ -278,47 +278,111 @@ export class ReportService {
       const name = `
       'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX'
       `
-      const sort = `case ${name.split(',').map((item, index) => `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.WorldIndices order by date desc`))[0].date).format('YYYY-MM-DD')
-
-      const date = await this.mssqlService.query(
-        `with date_ranges as (
-          select
-              max(case when date <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
-              max(case when date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
-              max(case when date <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd,
-              max(case when date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year
-          from macroEconomic.dbo.WorldIndices
-      )
-      select prev, month, ytd, year
-      from date_ranges;`
-      )
-      
-      const prev = moment(date[0].prev).format('YYYY-MM-DD')
-      const month = moment(date[0].month).format('YYYY-MM-DD')
-      const year = moment(date[0].year).format('YYYY-MM-DD')
-      const ytd = moment(date[0].ytd).format('YYYY-MM-DD')
+      const index = `
+      'VNINDEX', 'VN30', 'HNX', 'UPCOM'
+      `
+      const sort = `case ${name.split(',').map((item, index) => `when t.name = ${item.replace(/\n/g, "").trim()} then ${index + 4}`).join(' ')} end as row_num`
+      const sort_1 = `case ${index.split(',').map((item, index) => `when t.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
 
       const query = `
       WITH temp
       AS (SELECT
-        date,
         name,
         closePrice,
-        ${sort}
+        date,
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS prev,
+        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS month,
+        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS year
       FROM macroEconomic.dbo.WorldIndices
-      WHERE name IN (${name})
-      AND date IN ('${now}', '${prev}', '${year}', '${month}', '${ytd}'))
-      SELECT
-        name,
-        [${now}] AS price,
-        ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
-        ([${now}] - [${month}]) / [${month}] * 100 AS month,
-        ([${now}] - [${year}]) / [${year}] * 100 AS year,
-        ([${now}] - [${ytd}]) / [${ytd}] * 100 AS ytd
-      FROM temp AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${prev}], [${year}], [${month}], [${ytd}])) AS chuyen
-      `
+      WHERE name IN ('Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX')),
+      max_date
+      AS (SELECT
+        MAX(date) AS date,
+        name
+      FROM temp
+      GROUP BY name),
+      ytd_date
+      AS (SELECT
+        MIN(date) AS date,
+        name
+      FROM macroEconomic.dbo.WorldIndices
+      WHERE YEAR(date) = YEAR(GETDATE())
+      GROUP BY name),
+      ytd_price
+      AS (SELECT
+        t.name,
+        t.date,
+        t.closePrice
+      FROM temp t
+      INNER JOIN ytd_date y
+        ON t.name = y.name
+        AND t.date = y.date),
 
+      temp_1
+      AS (SELECT
+        code,
+        closePrice,
+        date,
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS prev,
+        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS month,
+        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS year
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code IN ('VNINDEX', 'HNX', 'UPCOM', 'VN30')),
+      max_date_1
+      AS (SELECT
+        MAX(date) AS date,
+        code
+      FROM temp_1
+      GROUP BY code),
+      ytd_date_1
+      AS (SELECT
+        MIN(date) AS date,
+        code
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE YEAR(date) = YEAR(GETDATE())
+      GROUP BY code),
+      ytd_price_1
+      AS (SELECT
+        t.code,
+        t.date,
+        t.closePrice
+      FROM temp_1 t
+      INNER JOIN ytd_date_1 y
+        ON t.code = y.code
+        AND t.date = y.date)
+
+      SELECT
+        t.code,
+        t.closePrice AS price,
+        t.prev AS day,
+        t.month,
+        t.year,
+        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
+        ${sort_1}
+      FROM temp_1 t
+      INNER JOIN max_date_1 m
+        ON t.date = m.date
+        AND t.code = m.code
+      INNER JOIN ytd_price_1 y
+        ON t.code = y.code
+
+      UNION ALL
+      SELECT
+        t.name AS code,
+        t.closePrice AS price,
+        t.prev AS day,
+        t.month,
+        t.year,
+        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
+        ${sort}
+      FROM temp t
+      INNER JOIN max_date m
+        ON t.date = m.date
+        AND t.name = m.name
+      INNER JOIN ytd_price y
+        ON t.name = y.name
+      ORDER BY row_num ASC
+      `
       const data = await this.mssqlService.query<StockMarketResponse[]>(query)
       const dataMapped = StockMarketResponse.mapToList(data)
       return dataMapped
