@@ -276,7 +276,7 @@ export class ReportService {
   async stockMarket(){
     try {
       const name = `
-      'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX'
+      'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
       `
       const index = `
       'VNINDEX', 'VN30', 'HNX', 'UPCOM'
