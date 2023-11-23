@@ -100,6 +100,14 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Lãi suất bình quân liên ngân hàng'})
+  @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateResponse})
+  @Get('lai-suat')
+  async interestRate(@Res() res: Response){
+    const data = await this.reportService.interestRate()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Thị trường chứng khoán Việt Nam và Quốc tế'})
   @ApiOkResponse({status: HttpStatus.OK, type: MerchandiseResponse})
   @Get('thi-truong-chung-khoan')

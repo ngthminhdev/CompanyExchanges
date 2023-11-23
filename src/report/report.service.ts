@@ -13,6 +13,7 @@ import { MerchandiseResponse } from './response/merchandise.response';
 import { ITop, MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
+import { StockMarketResponse } from './response/stockMarket.response';
 
 @Injectable()
 export class ReportService {
@@ -179,7 +180,6 @@ export class ReportService {
         ([${now}] - [${year}]) / [${year}] * 100 AS year
       FROM temp AS source PIVOT (SUM(bySell) FOR date IN ([${now}], [${prev}], [${year}], [${month}])) AS chuyen
       `
-      console.log();
       
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
@@ -227,26 +227,77 @@ export class ReportService {
     }
   }
 
+  async interestRate(){
+    try {
+      const code = `N'Qua đêm', N'1 tuần', N'2 tuần', N'1 tháng', N'3 tháng'`
+      const sort = `case ${code.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.EconomicVN_byTriVo order by date desc`))[0].date).format('YYYY-MM-DD')
+      const date = await this.mssqlService.query(
+        `with date_ranges as (
+          select
+              max(case when date <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
+              max(case when date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
+              min(case when date >= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd
+          from macroEconomic.dbo.EconomicVN_byTriVo
+      )
+      select prev, month, ytd
+      from date_ranges;`
+      )
+      const prev = moment(date[0].prev).format('YYYY-MM-DD')
+      const month = moment(date[0].month).format('YYYY-MM-DD')
+      const ytd = moment(date[0].ytd).format('YYYY-MM-DD')
+
+      const query = `
+      WITH temp
+      AS (SELECT
+        date,
+        code,
+        value,
+        ${sort}
+      FROM macroEconomic.dbo.EconomicVN_byTriVo
+      WHERE date IN ('${now}', '${prev}', '${month}', '${ytd}')
+      AND code IN (N'Qua đêm', N'1 tuần', N'2 tuần', N'1 tháng', N'3 tháng'))
+      SELECT
+        code,
+        [${now}] AS price,
+        ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
+        ([${now}] - [${month}]) / [${month}] * 100 AS month,
+        ([${now}] - [${ytd}]) / [${ytd}] * 100 AS year
+      FROM temp PIVOT (SUM(value) FOR date IN ([${now}], [${prev}], [${month}], [${ytd}])) AS chuyen
+      `
+      const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
+      const dataMapped = ExchangeRateResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   async stockMarket(){
     try {
       const name = `
       'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX'
       `
       const sort = `case ${name.split(',').map((item, index) => `when name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.WorldIndices order by date desc`))[0].date).format('YYYY-MM-DD')
 
       const date = await this.mssqlService.query(
         `with date_ranges as (
           select
-              max(case when date <= '${moment().format('YYYY-MM-DD')}' then date else null end) as now,
-              max(case when date <= '${moment().subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
-              max(case when date <= '${moment().subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
-              max(case when date <= '${moment().startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd,
-              max(case when date <= '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year
+              max(case when date <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
+              max(case when date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
+              max(case when date <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd,
+              max(case when date <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' then date else null end) as year
           from macroEconomic.dbo.WorldIndices
       )
-      select now, month, ytd, year
+      select prev, month, ytd, year
       from date_ranges;`
       )
+      
+      const prev = moment(date[0].prev).format('YYYY-MM-DD')
+      const month = moment(date[0].month).format('YYYY-MM-DD')
+      const year = moment(date[0].year).format('YYYY-MM-DD')
+      const ytd = moment(date[0].ytd).format('YYYY-MM-DD')
 
       const query = `
       WITH temp
@@ -257,20 +308,20 @@ export class ReportService {
         ${sort}
       FROM macroEconomic.dbo.WorldIndices
       WHERE name IN (${name})
-      AND date IN ('${date[0].now}', '${date[0].prev}', '${date[0].year}', '${date[0].month}', '${date[0].ytd}'))
+      AND date IN ('${now}', '${prev}', '${year}', '${month}', '${ytd}'))
       SELECT
-        code,
-        [${date[0].now}] AS price,
-        ([${date[0].now}] - [${date[0].prev}]) / [${date[0].prev}] * 100 AS day,
-        ([${date[0].now}] - [${date[0].month}]) / [${date[0].month}] * 100 AS date[0].month,
-        ([${date[0].now}] - [${date[0].year}]) / [${date[0].year}] * 100 AS year,
-        ([${date[0].now}] - [${date[0].ytd}]) / [${date[0].ytd}] * 100 AS year,
-      FROM temp AS source PIVOT (SUM(bySell) FOR date IN ([${date[0].now}], [${date[0].prev}], [${date[0].year}], [${date[0].month}], [${date[0].ytd}])) AS chuyen
+        name,
+        [${now}] AS price,
+        ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
+        ([${now}] - [${month}]) / [${month}] * 100 AS month,
+        ([${now}] - [${year}]) / [${year}] * 100 AS year,
+        ([${now}] - [${ytd}]) / [${ytd}] * 100 AS ytd
+      FROM temp AS source PIVOT (SUM(closePrice) FOR date IN ([${now}], [${prev}], [${year}], [${month}], [${ytd}])) AS chuyen
       `
-      console.log(query);
-      
-      const data = await this.mssqlService.query(query)
-      return data
+
+      const data = await this.mssqlService.query<StockMarketResponse[]>(query)
+      const dataMapped = StockMarketResponse.mapToList(data)
+      return dataMapped
     } catch (e) {
       throw new CatchException(e)
     }
