@@ -294,7 +294,7 @@ export class ReportService {
         (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS month,
         (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS year
       FROM macroEconomic.dbo.WorldIndices
-      WHERE name IN ('Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX')),
+      WHERE name IN ('Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100')),
       max_date
       AS (SELECT
         MAX(date) AS date,
