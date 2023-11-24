@@ -132,6 +132,14 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Nhận định thị trường'})
+  @ApiOkResponse({status: HttpStatus.OK})
+  @Get('nhan-dinh-thi-truong')
+  async identifyMarket(@Res() res: Response){
+    const data = await this.reportService.identifyMarket()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'lấy link hình cổ phiếu'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
   @Get('stock-image')

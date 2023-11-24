@@ -10,6 +10,7 @@ import { UtilCommonTemplate } from '../utils/utils.common';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
 import { MerchandiseResponse } from './response/merchandise.response';
+import { MorningResponse } from './response/morning.response';
 import { ITop, MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
@@ -410,6 +411,7 @@ export class ReportService {
       AND time <= '11:30:00'
       ORDER BY code ASC, timeInday DESC
       `
+      
       const data = await this.mssqlService.query<any[]>(query)
       
       const reduceData = data.reduce((result, cur) => {
@@ -421,7 +423,8 @@ export class ReportService {
         }
         return result
       }, [])
-      return reduceData
+      const dataMapped = MorningResponse.mapToList(reduceData)
+      return dataMapped
     } catch (e) {
       throw new CatchException(e)
     }
@@ -491,6 +494,25 @@ export class ReportService {
         buy: data_3
       })
       return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async identifyMarket(){
+    try {
+      const promise_1 = this.mssqlService.query(`
+      select Text1 as text_1, Text2 as text_2 from [PHANTICH].[dbo].[morningReport]
+      `)
+
+      const promise_2 = this.mssqlService.query(`
+      select code, giaKhuyenNghi as gia_khuyen_nghi, giaMucTieu as gia_muc_tieu, giaNgungLo as Gia_ngung_lo, laiSuatSinhLoiKyVong as lai_suat, thoiGianNamGiu as thoi_gian from PHANTICH.dbo.morningReportStock
+      `)
+
+      const [data_1, data_2] = await Promise.all([promise_1, promise_2]) as any
+      const floor: any = await this.mssqlService.query(`select code, floor from marketInfor.dbo.info where code in (${data_2.map(item => `'${item.code}'`).join(`,`)})`)
+      
+      return {text: [data_1[0].text_1, data_1[0].text_2], stock: data_2.map(item => ({...item, img: `/resources/stock/${item.code}_${(floor.find(fl => fl.code == item.code)).floor}.jpg`}))}
     } catch (e) {
       throw new CatchException(e)
     }
