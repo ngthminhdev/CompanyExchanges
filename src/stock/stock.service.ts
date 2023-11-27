@@ -559,7 +559,7 @@ export class StockService {
       );
       if (redisData) return redisData;
       const query = `
-                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTuc]
+                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTuc] WHERE Img != ''
                 ORDER BY Date DESC
             `;
       const data = new StockNewsResponse().mapToList(
