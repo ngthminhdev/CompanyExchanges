@@ -11,6 +11,7 @@ import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
+import { TopScoreResponse } from './response/topScore.response';
 
 @Controller('report')
 @ApiTags('Report')
@@ -132,19 +133,19 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Top đóng góp điểm số'})
+  @ApiOkResponse({status: HttpStatus.OK, type: TopScoreResponse})
+  @Get('top-dong-gop-diem-so')
+  async topScore(@Res() res: Response){
+    const data = await this.reportService.topScore()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Nhận định thị trường'})
   @ApiOkResponse({status: HttpStatus.OK})
   @Get('nhan-dinh-thi-truong')
   async identifyMarket(@Res() res: Response){
     const data = await this.reportService.identifyMarket()
-    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
-  }
-
-  @ApiOperation({summary: 'lấy link hình cổ phiếu'})
-  @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
-  @Get('stock-image')
-  async stockImage(@Query() q: StockImageDto,@Res() res: Response){
-    const data = await this.reportService.getImageStock(q.code)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }

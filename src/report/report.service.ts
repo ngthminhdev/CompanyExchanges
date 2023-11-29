@@ -15,6 +15,7 @@ import { ITop, MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 import { StockMarketResponse } from './response/stockMarket.response';
+import { TopScoreResponse } from './response/topScore.response';
 
 @Injectable()
 export class ReportService {
@@ -394,22 +395,26 @@ export class ReportService {
 
   async morning(){
     try {
+      const index = `'VNINDEX', 'HNX', 'UPCOM', 'VN30'`
+      const sort = `case ${index.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index + 4}`).join(' ')} end as row_num`
+
       const query = `
       SELECT
         code,
         timeInday AS time,
         closePrice as price,
         change,
-        perChange
+        perChange,
+        ${sort}
       FROM tradeIntraday.dbo.indexTradeVNDIntraday
-      WHERE code IN ('VNINDEX', 'HNX', 'UPCOM', 'VN30')
+      WHERE code IN (${index})
       AND date = (SELECT TOP 1
         date
       FROM tradeIntraday.dbo.indexTradeVNDIntraday
       ORDER BY date DESC)
-      AND time >= '09:00:00'
-      AND time <= '11:30:00'
-      ORDER BY code ASC, timeInday DESC
+      AND time >= '09:10:00'
+      AND time <= '11:33:00'
+      ORDER BY row_num ASC, timeInday DESC
       `
       
       const data = await this.mssqlService.query<any[]>(query)
@@ -441,7 +446,7 @@ export class ReportService {
         advance,
         'HOSE' AS code
       FROM WEBSITE_SERVER.dbo.MarketBreadth
-      WHERE time >= '10:30:00'),
+      WHERE time >= '11:30:00'),
       net
       AS (SELECT TOP 1
         netVal,
@@ -499,6 +504,71 @@ export class ReportService {
     }
   }
 
+  async topScore(){
+    try {
+      //Top tăng
+      const promise_1 = this.mssqlService.query(`
+      SELECT TOP 4
+        c.symbol AS code,
+        c.point
+      FROM WEBSITE_SERVER.dbo.CPAH c
+      WHERE c.date = (SELECT
+        MAX(date)
+      FROM WEBSITE_SERVER.dbo.CPAH)
+      AND c.floor = 'HSX'
+      ORDER BY c.point DESC
+      `)
+      //Top giảm
+      const promise_2 = this.mssqlService.query(`
+      SELECT TOP 4
+        c.symbol AS code,
+        c.point
+      FROM WEBSITE_SERVER.dbo.CPAH c
+      WHERE c.date = (SELECT
+        MAX(date)
+      FROM WEBSITE_SERVER.dbo.CPAH)
+      AND c.floor = 'HSX'
+      ORDER BY c.point ASC
+      `)
+      const promise_3 = this.mssqlService.query(`
+      WITH temp_1
+      AS (SELECT TOP 1
+        noChange,
+        decline,
+        advance,
+        'VNINDEX' AS code
+      FROM WEBSITE_SERVER.dbo.MarketBreadth
+      WHERE time >= '11:30:00'),
+      temp
+      AS (SELECT
+        code,
+        date,
+        change,
+        perChange,
+        totalVal,
+        (totalVal - LEAD(totalVal) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(totalVal) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS perChangeVal
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code = 'VNINDEX')
+      SELECT
+        *
+      FROM temp t
+      LEFT JOIN temp_1 t1
+        ON t1.code = t.code
+      WHERE date = (SELECT
+        MAX(date)
+      FROM temp)
+      `)
+      const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3])
+      return new TopScoreResponse({
+        stock_advance: data_1,
+        stock_decline: data_2,
+        ...data_3[0]
+      })
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   async identifyMarket(){
     try {
       const promise_1 = this.mssqlService.query(`
@@ -513,26 +583,6 @@ export class ReportService {
       const floor: any = await this.mssqlService.query(`select code, floor from marketInfor.dbo.info where code in (${data_2.map(item => `'${item.code}'`).join(`,`)})`)
       
       return {text: [data_1[0].text_1, data_1[0].text_2], stock: data_2.map(item => ({...item, img: `/resources/stock/${item.code}_${(floor.find(fl => fl.code == item.code)).floor}.png`}))}
-    } catch (e) {
-      throw new CatchException(e)
-    }
-  }
-
-  async getImageStock(stock: string){
-    try {
-      const arr_stock = stock.split(',')
-      const code = arr_stock.map(item => {
-        if(item.length > 5) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Stock length invalid')
-        return `'${item}'`
-      }).join(',')
-      const data: any[] = await this.mssqlService.query(`
-      SELECT
-        code,
-        floor
-      FROM marketInfor.dbo.info
-      WHERE code IN (${code})
-      `)
-      return data.map(item => `/resources/stock/${item.code.toUpperCase()}_${item.floor}.jpg`)
     } catch (e) {
       throw new CatchException(e)
     }
