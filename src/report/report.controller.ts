@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagg
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { QueryNewsDto } from './dto/queryNews.dto';
 import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
@@ -56,24 +57,24 @@ export class ReportController {
   @ApiOperation({summary: 'Tin quốc tế'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('tin-quoc-te')
-  async newsInternational(@Res() res: Response){
-    const data = await this.reportService.newsInternational()
+  async newsInternational(@Query() q: QueryNewsDto, @Res() res: Response){
+    const data = await this.reportService.newsInternational(+q.quantity)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
   @ApiOperation({summary: 'Tin trong nước'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('tin-trong-nuoc')
-  async newsDomestic(@Res() res: Response){
-    const data = await this.reportService.newsDomestic()
+  async newsDomestic(@Query() q: QueryNewsDto, @Res() res: Response){
+    const data = await this.reportService.newsDomestic(+q.quantity)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
   @ApiOperation({summary: 'Tin doanh nghiệp'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
   @Get('tin-doanh-nghiep')
-  async newsEnterprise(@Res() res: Response){
-    const data = await this.reportService.newsEnterprise()
+  async newsEnterprise(@Query() q: QueryNewsDto, @Res() res: Response){
+    const data = await this.reportService.newsEnterprise(+q.quantity)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 

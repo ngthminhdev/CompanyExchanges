@@ -106,10 +106,10 @@ export class ReportService {
     return
   }
 
-  async newsInternational() {
+  async newsInternational(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top 7 Title as title, Href as href, Date from macroEconomic.dbo.TinTucQuocTe order by Date desc
+      select distinct top ${quantity} Title as title, Href as href, Date from macroEconomic.dbo.TinTucQuocTe order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -118,10 +118,10 @@ export class ReportService {
     }
   }
 
-  async newsDomestic() {
+  async newsDomestic(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top 6 Title as title, Href as href, Date from macroEconomic.dbo.TinTucViMo order by Date desc
+      select distinct top ${quantity} Title as title, Href as href, Date from macroEconomic.dbo.TinTucViMo order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -130,10 +130,10 @@ export class ReportService {
     }
   }
 
-  async newsEnterprise() {
+  async newsEnterprise(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`
-      select distinct top 9 TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerTitle != '' order by Date desc
+      select distinct top ${quantity} TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerTitle != '' order by Date desc
       `)
       const dataMapped = NewsEnterpriseResponse.mapToList(data)
       return dataMapped
@@ -446,7 +446,7 @@ export class ReportService {
         advance,
         'HOSE' AS code
       FROM WEBSITE_SERVER.dbo.MarketBreadth
-      WHERE time >= '11:30:00'),
+      ORDER BY time DESC),
       net
       AS (SELECT TOP 1
         netVal,
@@ -539,7 +539,7 @@ export class ReportService {
         advance,
         'VNINDEX' AS code
       FROM WEBSITE_SERVER.dbo.MarketBreadth
-      WHERE time >= '11:30:00'),
+      ORDER BY time DESC),
       temp
       AS (SELECT
         code,
