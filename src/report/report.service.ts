@@ -109,7 +109,7 @@ export class ReportService {
   async newsInternational(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity} Title as title, Href as href, Date from macroEconomic.dbo.TinTucQuocTe order by Date desc
+      select distinct top ${quantity || 7} Title as title, Href as href, Date from macroEconomic.dbo.TinTucQuocTe order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -121,7 +121,7 @@ export class ReportService {
   async newsDomestic(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity} Title as title, Href as href, Date from macroEconomic.dbo.TinTucViMo order by Date desc
+      select distinct top ${quantity || 6} Title as title, Href as href, Date from macroEconomic.dbo.TinTucViMo order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -133,7 +133,7 @@ export class ReportService {
   async newsEnterprise(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`
-      select distinct top ${quantity} TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerTitle != '' order by Date desc
+      select distinct top ${quantity || 9} TickerTitle as ticker, Title as title, Href as href, Date from macroEconomic.dbo.TinTuc where TickerTitle != '' order by Date desc
       `)
       const dataMapped = NewsEnterpriseResponse.mapToList(data)
       return dataMapped
