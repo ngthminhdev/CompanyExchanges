@@ -490,11 +490,12 @@ export class ReportService {
       `)
 
       const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3])
+      
       const dataMapped = new MorningHoseResponse({
-        noChange: data_1[0].noChange,
-        decline: data_1[0].decline,
-        advance: data_1[0].advance,
-        netVal: data_1[0].netVal,
+        noChange: data_1[0]?.noChange,
+        decline: data_1[0]?.decline,
+        advance: data_1[0]?.advance,
+        netVal: data_1[0]?.netVal,
         sell: data_2,
         buy: data_3
       })
