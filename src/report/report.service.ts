@@ -496,8 +496,8 @@ export class ReportService {
         decline: data_1[0]?.decline,
         advance: data_1[0]?.advance,
         netVal: data_1[0]?.netVal,
-        sell: data_2,
-        buy: data_3
+        sell: data_3,
+        buy: data_2
       })
       return dataMapped
     } catch (e) {
