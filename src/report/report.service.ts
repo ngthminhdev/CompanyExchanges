@@ -412,7 +412,7 @@ export class ReportService {
         date
       FROM tradeIntraday.dbo.indexTradeVNDIntraday
       ORDER BY date DESC)
-      AND timeInday >= '09:10:00'
+      AND timeInday >= '09:15:00'
       AND timeInday <= '11:33:00'
       ORDER BY row_num ASC, timeInday DESC
       `
