@@ -4,11 +4,6 @@ export class NewsEnterpriseResponse {
     @ApiProperty({
         type: String
     })
-    ticker: string
-
-    @ApiProperty({
-        type: String
-    })
     title: string
 
     @ApiProperty({
@@ -16,9 +11,9 @@ export class NewsEnterpriseResponse {
     })
     href: string
 
+    ticker: string
     constructor(data?: NewsEnterpriseResponse){
-        this.ticker = data?.ticker || ''
-        this.title = data?.title || ''
+        this.title = data?.title ? data?.ticker + ': ' + data?.title : ''
         this.href = data?.href || ''
     }
 
