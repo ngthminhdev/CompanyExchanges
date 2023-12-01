@@ -7,6 +7,7 @@ import { CatchException, ExceptionResponse } from '../exceptions/common.exceptio
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
 import { MerchandiseResponse } from './response/merchandise.response';
@@ -145,7 +146,7 @@ export class ReportService {
   async event() {
     try {
       const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`select distinct top 15 ticker, NoiDungSuKien as title, NgayDKCC as date from PHANTICH.dbo.LichSukien order by NgayDKCC desc`)
-      const dataMapped = NewsEnterpriseResponse.mapToList(data)
+      const dataMapped = EventResponse.mapToList(data)
       return dataMapped
     } catch (e) {
       throw new CatchException(e)

@@ -7,6 +7,7 @@ import { BaseResponse } from '../utils/utils.response';
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
+import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
@@ -79,7 +80,7 @@ export class ReportController {
   }
 
   @ApiOperation({summary: 'Lịch sự kiện'})
-  @ApiOkResponse({status: HttpStatus.OK, type: NewsEnterpriseResponse})
+  @ApiOkResponse({status: HttpStatus.OK, type: EventResponse})
   @Get('lich-su-kien')
   async event(@Res() res: Response){
     const data = await this.reportService.event()
