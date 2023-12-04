@@ -582,9 +582,8 @@ export class ReportService {
       `)
 
       const [data_1, data_2] = await Promise.all([promise_1, promise_2]) as any
-      const floor: any = await this.mssqlService.query(`select code, floor from marketInfor.dbo.info where code in (${data_2.map(item => `'${item.code}'`).join(`,`)})`)
       
-      return {text: [data_1[0].text_1, data_1[0].text_2], stock: data_2.map(item => ({...item, img: `/resources/stock/${item.code}_${(floor.find(fl => fl.code == item.code)).floor}.png`}))}
+      return {text: [data_1[0].text_1, data_1[0].text_2], stock: data_2}
     } catch (e) {
       throw new CatchException(e)
     }
