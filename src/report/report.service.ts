@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, Catch, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import { TimeToLive } from '../enums/common.enum';
@@ -7,6 +7,7 @@ import { CatchException, ExceptionResponse } from '../exceptions/common.exceptio
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
+import { INews } from './dto/save-news.dto';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
@@ -153,7 +154,7 @@ export class ReportService {
     }
   }
 
-  async exchangeRate(){
+  async exchangeRate() {
     try {
       const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.exchangeRateVCB order by date desc`))[0].date).format('YYYY-MM-DD')
       const prev = moment(now).subtract(1, 'day').format('YYYY-MM-DD')
@@ -183,7 +184,7 @@ export class ReportService {
         ([${now}] - [${year}]) / [${year}] * 100 AS year
       FROM temp AS source PIVOT (SUM(bySell) FOR date IN ([${now}], [${prev}], [${year}], [${month}])) AS chuyen
       `
-      
+
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
       return dataMapped
@@ -192,7 +193,7 @@ export class ReportService {
     }
   }
 
-  async merchandise(){
+  async merchandise() {
     try {
       const query = `
       WITH temp
@@ -230,7 +231,7 @@ export class ReportService {
     }
   }
 
-  async interestRate(){
+  async interestRate() {
     try {
       const code = `N'Qua đêm', N'1 tuần', N'2 tuần', N'1 tháng', N'3 tháng'`
       const sort = `case ${code.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
@@ -276,7 +277,7 @@ export class ReportService {
     }
   }
 
-  async stockMarket(){
+  async stockMarket() {
     try {
       const name = `
       'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
@@ -394,7 +395,7 @@ export class ReportService {
     }
   }
 
-  async morning(){
+  async morning() {
     try {
       const index = `'VNINDEX', 'HNX', 'UPCOM', 'VN30'`
       const sort = `case ${index.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index + 4}`).join(' ')} end as row_num`
@@ -417,15 +418,15 @@ export class ReportService {
       AND timeInday <= '11:33:00'
       ORDER BY row_num ASC, timeInday DESC
       `
-      
+
       const data = await this.mssqlService.query<any[]>(query)
-      
+
       const reduceData = data.reduce((result, cur) => {
         const index = result.findIndex(item => item.code == cur.code)
-        if(index == -1){
-          result.push({code: cur.code, change: cur.change, perChange: cur.perChange, chart: [{time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price}]})
-        }else{
-          result[index].chart.unshift({time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price})
+        if (index == -1) {
+          result.push({ code: cur.code, change: cur.change, perChange: cur.perChange, chart: [{ time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price }] })
+        } else {
+          result[index].chart.unshift({ time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price })
         }
         return result
       }, [])
@@ -436,7 +437,7 @@ export class ReportService {
     }
   }
 
-  async morningHose(){
+  async morningHose() {
     try {
       //Độ rộng vs khối ngoại
       const promise_1 = this.mssqlService.query(`
@@ -491,7 +492,7 @@ export class ReportService {
       `)
 
       const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3])
-      
+
       const dataMapped = new MorningHoseResponse({
         noChange: data_1[0]?.noChange,
         decline: data_1[0]?.decline,
@@ -506,7 +507,7 @@ export class ReportService {
     }
   }
 
-  async topScore(){
+  async topScore() {
     try {
       //Top tăng
       const promise_1 = this.mssqlService.query(`
@@ -571,7 +572,7 @@ export class ReportService {
     }
   }
 
-  async identifyMarket(){
+  async identifyMarket() {
     try {
       const promise_1 = this.mssqlService.query(`
       select Text1 as text_1, Text2 as text_2 from [PHANTICH].[dbo].[morningReport]
@@ -582,8 +583,81 @@ export class ReportService {
       `)
 
       const [data_1, data_2] = await Promise.all([promise_1, promise_2]) as any
-      
-      return {text: [data_1[0].text_1, data_1[0].text_2], stock: data_2}
+      return { text: [data_1[0].text_1, data_1[0].text_2], stock: data_2 }
+     
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async identifyMarketRedis(){
+    try {
+      const [data_1, data_2] = await Promise.all([
+        this.redis.get(RedisKeys.saveIdentifyMarket), 
+        this.redis.get(RedisKeys.saveStockRecommend)
+      ])
+      return {text: data_1, stock: data_2}
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async saveNews(id: number, value: INews[]) {
+    try {
+      let name_redis = ''
+      switch (+id) {
+        case 0:
+          name_redis = RedisKeys.morningNewsInternational
+          break;
+        case 1:
+          name_redis = RedisKeys.morningNewsDomestic
+          break
+        case 2:
+          name_redis = RedisKeys.morningNewsEnterprise
+          break
+        default:
+          break;
+      }
+      await this.redis.set(name_redis, value, {ttl: TimeToLive.OneYear})
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async getNews(id: number){
+    try {
+      let name_redis = ''
+      switch (+id) {
+        case 0:
+          name_redis = RedisKeys.morningNewsInternational
+          break;
+        case 1:
+          name_redis = RedisKeys.morningNewsDomestic
+          break
+        case 2:
+          name_redis = RedisKeys.morningNewsEnterprise
+          break
+        default:
+          break;
+      }
+      const data = await this.redis.get(name_redis) || []
+      return data
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
+
+  async saveIdentifyMarket(text: string[]){
+    try {
+      await this.redis.set(RedisKeys.saveIdentifyMarket, text, {ttl: TimeToLive.OneYear})
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async saveStockRecommend(stock: any[]){
+    try {
+      await this.redis.set(RedisKeys.saveStockRecommend, stock, {ttl: TimeToLive.OneYear})
     } catch (e) {
       throw new CatchException(e)
     }

@@ -199,5 +199,12 @@ export enum RedisKeys {
   canslimPrefilter = 'canslim-prefilter',
 
   //Công cụ đầu tư
-  minMaxFilter = 'min-max-filter'
+  minMaxFilter = 'min-max-filter',
+
+  //Tin sáng
+  morningNewsInternational = 'morning-news-international',
+  morningNewsDomestic = 'morning-news-domestic',
+  morningNewsEnterprise = 'morning-news-enterprise',
+  saveIdentifyMarket = 'save-identify-market',
+  saveStockRecommend = 'save-stock-recommend'
 }
