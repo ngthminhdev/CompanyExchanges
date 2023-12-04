@@ -33,7 +33,7 @@ export class CashFlowService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
-    @InjectDataSource() private readonly db: DataSource,
+    // @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly stockService: StockService,
   ) {}
@@ -370,7 +370,7 @@ export class CashFlowService {
     const redisData = await this.redis.get(
       `${RedisKeys.InvestorTransactionCashFlowRatio}:${type}:${ex}`,
     );
-    if (redisData) return redisData;
+    // if (redisData) return redisData;
 
     const floor = ex == 'ALL' ? ` ('HOSE', 'HNX', 'UPCOM') ` : ` ('${ex}') `;
 

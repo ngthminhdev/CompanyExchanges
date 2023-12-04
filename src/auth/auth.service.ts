@@ -23,22 +23,23 @@ import { SmsService } from '../sms/sms.service';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { Cache } from 'cache-manager';
 import { RegisterResponse } from './responses/Register.response';
+import { DB_SERVER } from '../constants';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(DeviceEntity)
+    @InjectRepository(DeviceEntity, DB_SERVER)
     private readonly deviceRepo: Repository<DeviceEntity>,
-    @InjectRepository(UserEntity)
+    @InjectRepository(UserEntity, DB_SERVER)
     private readonly userRepo: Repository<UserEntity>,
-    @InjectRepository(VerifyEntity)
+    @InjectRepository(VerifyEntity, DB_SERVER)
     private readonly verifyRepo: Repository<VerifyEntity>,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     private readonly jwtService: JwtService,
     private readonly smsService: SmsService,
     private readonly queueService: QueueService,
-  ) {}
+  ) { }
 
   generateAccessToken(
     userId: number,
@@ -147,9 +148,13 @@ export class AuthService {
         userAgent,
       );
 
-    // Lưu cookie refreshToken
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
+    res.cookie('rt', refreshToken, {
+      // httpOnly: true,
+      path: '/',
+    });
+
+    res.cookie('at', accessToken, {
+      // httpOnly: true,
       path: '/',
     });
 
@@ -157,6 +162,7 @@ export class AuthService {
     return new UserResponse({
       ...userByPhone,
       access_token: accessToken,
+      refresh_token: refreshToken,
       expired_at: expiredAt,
     });
   }
@@ -232,10 +238,16 @@ export class AuthService {
       );
     }
 
-    res.cookie('refreshToken', '', {
+    res.cookie('rt', '', {
       maxAge: -1,
       path: '/',
-      httpOnly: true,
+      // httpOnly: true,
+    });
+
+    res.cookie('at', '', {
+      maxAge: -1,
+      path: '/',
+      // httpOnly: true,
     });
 
     await this.deviceRepo.delete({ device_id: deviceId });
@@ -409,13 +421,13 @@ export class AuthService {
     const verifyOTP: string = UtilCommonTemplate.generateOTP();
 
     // Gửi tin nhắn SMS chứa mã OTP đến số điện thoại của người dùng (có thời hạn 5 phút)
-    const response_incom = await this.smsService.sendSMSV2(
+    const response_incom = await this.smsService.sendSMS(
       user.phone,
       `Your OTP is: ${verifyOTP} (5 minutes)`,
     );
-    
-    if(response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'send otp fail')
-    
+      
+    if (response_incom.StatusCode != 1) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Lỗi khi gửi OTP vui lòng thử lại sau')
+
     // Lưu mã OTP vào cơ sở dữ liệu và đặt một công việc trong hàng đợi để xóa mã OTP sau 5 phút
     const verifyData: VerifyEntity = await this.verifyRepo.save({
       user_id: user.user_id,

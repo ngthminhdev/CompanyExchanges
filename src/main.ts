@@ -23,7 +23,8 @@ async function bootstrap() {
   //   credentials: true,
   //   allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
   // });
-  app.enableCors({ origin: ['http://localhost:3000', 'http://192.168.15.187:3000', 'http://192.168.12.243:3000', '*'], credentials: true});
+  // 'http://localhost:3000', 'http://192.168.9.146:3000', 'http://192.168.17.24:3001', 'https://morning-new-beta.vercel.app', 'http://resource1.bsi.com.vn'
+  app.enableCors({ origin: process.env.WHITELIST_IPS.split(','), credentials: true});
   app.use(cookieParser());
   app.setGlobalPrefix(process.env.API_PREFIX);
   app.useGlobalInterceptors(new HttpLoggerInterceptor());
@@ -55,8 +56,8 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  // app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
-  // await app.startAllMicroservices().catch((e) => console.log(e));
+  app.connectMicroservice(app.get(CONFIG_SERVICE).createKafkaConfig());
+  await app.startAllMicroservices().catch((e) => console.log(e));
 
   await app.listen(parseInt(process.env.SERVER_PORT)).then(() => {
     console.log(

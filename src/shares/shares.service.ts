@@ -210,8 +210,9 @@ export class SharesService {
       ON t.date = v.date
     LEFT JOIN fo f
       ON f.date = t.date
+    ORDER BY t.date desc  
     `
-
+    
     const data = await this.mssqlService.query<TransactionStatisticsResponse[]>(query)
     const dataMapped = TransactionStatisticsResponse.mapToList(data)
     await this.redis.set(`${RedisKeys.transactionStatistics}:${stock.toUpperCase()}`, dataMapped, { ttl: TimeToLive.HaftHour })

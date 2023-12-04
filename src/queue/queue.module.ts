@@ -7,10 +7,11 @@ import { QueueProcessor } from "./queue.processor";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { VerifyEntity } from "../auth/entities/verify.entity";
 import {QueueEnum} from "../enums/queue.enum";
+import { DB_SERVER } from "../constants";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([VerifyEntity]),
+    TypeOrmModule.forFeature([VerifyEntity], DB_SERVER),
     //queue
     BullModule.forRootAsync({
       imports: [ConfigModuleModule],

@@ -39,8 +39,8 @@ export class KafkaService {
   private logger = new Logger(KafkaService.name);
 
   constructor(
-    @InjectDataSource()
-    private readonly db: DataSource,
+    // @InjectDataSource()
+    // private readonly db: DataSource,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
@@ -89,7 +89,7 @@ export class KafkaService {
   getTickerInEx = async (ex: string): Promise<any> => {
     let data = await this.redis.get(RedisKeys[ex]);
     if (!data) {
-      data = await this.db.query(`
+      data = await this.dbServer.query(`
                     select distinct ticker from [COPHIEUANHHUONG].[dbo].[${ex}] ORDER BY ticker;
                 `);
       await this.redis.set(RedisKeys[ex], data, TimeToLive.Forever);
@@ -700,7 +700,7 @@ export class KafkaService {
   public async getSessionDate(
     table: string,
     column: string = 'date_time',
-    instance: any = this.db,
+    instance: any = this.dbServer,
   ): Promise<SessionDatesInterface> {
     const redisData = await this.redis.get<SessionDatesInterface>(
       `${RedisKeys.SessionDate}:${table}:${column}`,

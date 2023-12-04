@@ -196,6 +196,7 @@ export class NewsService {
     ${code ? `where TickerTitle in (${code.map(item => `'${item}'`).join(',')})` : `where TickerTitle != ''`}
     AND Href NOT LIKE 'https://cafef.vn%'
     AND Href NOT LIKE 'https://ndh.vn%'
+    AND Img != ''
     ORDER BY Date DESC
     OFFSET ${(page - 1) * limit} ROWS
     FETCH NEXT ${limit} ROWS ONLY;

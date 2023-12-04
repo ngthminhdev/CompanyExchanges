@@ -35,7 +35,6 @@ import { StockEventsInterface } from './interfaces/stock-events.interface';
 import { TopNetForeignByExInterface } from './interfaces/top-net-foreign-by-ex.interface';
 import { TopNetForeignInterface } from './interfaces/top-net-foreign.interface';
 import { TopRocInterface } from './interfaces/top-roc-interface';
-import { isDecrease, isEqual, isHigh, isIncrease, isLow } from './processes/industry-data-child';
 import { DomesticIndexResponse } from './responses/DomesticIndex.response';
 import { IndustryResponse } from './responses/Industry.response';
 import { InternationalIndexResponse } from './responses/InternationalIndex.response';
@@ -60,7 +59,7 @@ export class StockService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
-    @InjectDataSource() private readonly db: DataSource,
+    // @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly mssqlService: MssqlService,
   ) { }
@@ -149,7 +148,7 @@ export class StockService {
   public async getSessionDate(
     table: string,
     column: string = 'date_time',
-    instance: any = this.db,
+    instance: any = this.dbServer,
   ): Promise<SessionDatesInterface> {
     const redisData = await this.redis.get<SessionDatesInterface>(
       `${RedisKeys.SessionDate}:${table}:${column}`,
@@ -560,7 +559,7 @@ export class StockService {
       );
       if (redisData) return redisData;
       const query = `
-                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTuc]
+                SELECT TOP 80 * FROM [macroEconomic].[dbo].[TinTuc] WHERE Img != ''
                 ORDER BY Date DESC
             `;
       const data = new StockNewsResponse().mapToList(
@@ -724,15 +723,12 @@ export class StockService {
       const { exchange } = q;
       let ex =
         exchange.toUpperCase() === 'UPCOM' ? 'UPCoM' : exchange.toUpperCase();
-      ex = exchange.toUpperCase() === 'HSX' ? 'HOSE' : exchange.toUpperCase();
+      ex = exchange.toUpperCase() === 'HOSE' ? 'HSX' : exchange.toUpperCase();
 
       const redisData: TopRocResponse[] = await this.redis.get(
         `${RedisKeys.TopRoc5}:${ex}`,
       );
       if (redisData) return redisData;
-
-      const { latestDate, weekDate }: SessionDatesInterface =
-        await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
 
       const query = (order: string): string => `
                 SELECT TOP 10 t1.ticker, ((t1.gia - t2.gia) / t2.gia) * 100 AS ROC_5
@@ -743,10 +739,13 @@ export class StockService {
                 ORDER BY ROC_5 ${order}
             `;
 
+      const { latestDate, weekDate }: SessionDatesInterface =
+        await this.getSessionDate(`[COPHIEUANHHUONG].[dbo].[${ex}]`, 'date');
+
       const [dataTop, dataBot]: [TopRocInterface[], TopRocInterface[]] =
         await Promise.all([
-          this.db.query(query('DESC'), [latestDate, weekDate]),
-          this.db.query(query('ASC'), [latestDate, weekDate]),
+          this.dbServer.query(query('DESC'), [latestDate, weekDate]),
+          this.dbServer.query(query('ASC'), [latestDate, weekDate]),
         ]);
 
       const mappedData: TopRocResponse[] = new TopRocResponse().mapToList([

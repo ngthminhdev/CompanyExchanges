@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsString } from "class-validator";
+import { IsEnum, IsString, Length } from "class-validator";
 import { StockDto } from "./stock.dto";
 
 export class StockOrderDto extends StockDto {
@@ -11,6 +11,7 @@ export class StockOrderDto extends StockDto {
     order: number
 
     @IsString()
+    @Length(1, 5)
     @ApiProperty({
         type: String,
         example: 'CTCP'

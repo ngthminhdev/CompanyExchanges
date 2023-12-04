@@ -28,7 +28,7 @@ export class ChartService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
-    @InjectDataSource() private readonly db: DataSource,
+    // @InjectDataSource() private readonly db: DataSource,
     @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
     private readonly stockService: StockService,
     private readonly mssqlService: MssqlService,

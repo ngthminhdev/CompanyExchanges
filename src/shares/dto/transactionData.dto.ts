@@ -1,9 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
+import { IsDateString, IsString } from "class-validator";
 import { StockDto } from "./stock.dto";
 
 export class TransactionDataDto extends StockDto {
     @IsString()
+    @IsDateString()
     @ApiProperty({
         type: String,
         example: '2023-07-22'
@@ -11,6 +12,7 @@ export class TransactionDataDto extends StockDto {
     from: string
 
     @IsString()
+    @IsDateString()
     @ApiProperty({
         type: String,
         example: '2023-07-27'

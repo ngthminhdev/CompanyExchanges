@@ -1,7 +1,10 @@
 import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
 import * as calTech from 'technicalindicators';
+import { Repository } from 'typeorm';
+import { DB_SERVER } from '../constants';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { CatchException, ExceptionResponse } from '../exceptions/common.exception';
@@ -9,7 +12,10 @@ import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { EmulatorInvestmentDto } from './dto/emulator.dto';
 import { InvestmentFilterDto } from './dto/investment-filter.dto';
+import { SaveFilterDto, ValueSaveFilter } from './dto/save-filter.dto';
+import { FilterUserEntity } from './entities/filter.entity';
 import { EmulatorInvestmentResponse } from './response/emulatorInvestment.response';
+import { FilterUserResponse } from './response/filterUser.response';
 import { InvestmentFilterResponse } from './response/investmentFilter.response';
 import { KeyFilterResponse } from './response/keyFilter.response';
 import { InvestmentSearchResponse } from './response/searchStockInvestment.response';
@@ -19,7 +25,8 @@ export class InvestmentService {
   constructor(
     private readonly mssqlService: MssqlService,
     @Inject(CACHE_MANAGER)
-    private readonly redis: Cache
+    private readonly redis: Cache,
+    @InjectRepository(FilterUserEntity, DB_SERVER) private readonly filterUserRepo: Repository<FilterUserEntity>
   ) { }
 
 
@@ -65,6 +72,50 @@ export class InvestmentService {
     const dataMapped = KeyFilterResponse.mapToList(data[0])
     await this.redis.set(RedisKeys.minMaxFilter, dataMapped, { ttl: TimeToLive.OneHour })
     return dataMapped
+  }
+
+  async saveFilter(user_id: number, b: SaveFilterDto) {
+    try {
+
+      const new_filter = this.filterUserRepo.create({...b, value: JSON.stringify(b.value), user: {user_id}})
+      await this.filterUserRepo.save(new_filter)
+
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
+
+  async getFilterUser(user_id: number){
+    try {
+      const data = await this.filterUserRepo.find({where: {user: {user_id}}, order: {created_at: 'ASC'}})
+      const dataMapped = FilterUserResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+  
+  async updateFilter(filter_id: number, user_id: number, b: SaveFilterDto){
+    try {
+      const filter = await this.filterUserRepo.findOne({where: {user: {user_id}, filter_id}})
+      if(!filter) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Filter not found')
+
+      await this.filterUserRepo.update({filter_id}, {...b, value: JSON.stringify(b.value)})
+
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async deleteFilter(filter_id: number, user_id: number){
+    try {
+      const filter = await this.filterUserRepo.findOne({where: {user: {user_id}, filter_id}})
+      if(!filter) throw new ExceptionResponse(HttpStatus.BAD_REQUEST, 'Filter not found') 
+
+      await this.filterUserRepo.delete({filter_id})
+    } catch (e) {
+      throw new CatchException(e)
+    }
   }
 
   async emulatorInvestment(b: EmulatorInvestmentDto) {

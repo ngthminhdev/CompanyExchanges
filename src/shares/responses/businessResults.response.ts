@@ -41,7 +41,7 @@ export class BusinessResultsResponse {
                 break;
         }
         this.value = data?.value || 0
-        this.date = data?.date || ''
+        this.date = data?.date.toString() || ''
     }
 
     static mapToList(data?: BusinessResultsResponse[]) {
