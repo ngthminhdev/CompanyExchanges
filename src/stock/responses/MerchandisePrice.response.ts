@@ -46,7 +46,7 @@ export class MerchandisePriceResponse {
         this.name = data?.name || '';
         this.price = data?.price || 0;
         this.unit = data?.unit || '';
-        this.Day = data?.Day ? (+type ? data?.Day: data?.Day.split(' (')[1].slice(0, data?.Day.split(' (')[1].length - 1)) : '';
+        this.Day = data?.Day ? (+type ? parseInt(data?.Day).toFixed(2) + '%': data?.Day.split(' (')[1].slice(0, data?.Day.split(' (')[1].length - 1)) : '0%';
         this.MTD = data?.MTD ? data?.MTD.split(' (')[1].slice(0, data?.MTD.split(' (')[1].length - 1) : '';
         this.YTD = data?.YTD ? data?.YTD.split(' (')[1].slice(0, data?.YTD.split(' (')[1].length - 1) : '';
     }
