@@ -899,15 +899,30 @@ export class StockService {
       const redisData: MerchandisePriceResponse[] = await this.redis.get(
         `${RedisKeys.MerchandisePrice}:${type}`,
       );
-      if (redisData) return redisData;
-
-      const query: string = `
+      // if (redisData) return redisData;
+          
+      const query: string = +type ? `
+            WITH temp
+            AS (SELECT
+              code + '/VND' as name,
+              bySell AS price,
+              date,
+              (bySell - LEAD(bySell) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(bySell) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS Day
+            FROM macroEconomic.dbo.exchangeRateVCB)
+            SELECT
+              *
+            FROM temp
+            WHERE date IN (SELECT TOP 1
+              date
+            FROM macroEconomic.dbo.exchangeRateVCB
+            ORDER BY date DESC) 
+      ` : `
       WITH temp
       AS (SELECT
         name,
         MAX(lastUpdated) AS lastUpdated
       FROM [macroEconomic].[dbo].[HangHoa]
-      WHERE unit ${+type ? '=' : '!='} ''
+      WHERE unit != ''
       GROUP BY name)
       SELECT
         h.name,
@@ -920,14 +935,14 @@ export class StockService {
       INNER JOIN temp t
         ON t.lastUpdated = h.lastUpdated
         AND t.name = h.name
-      WHERE unit ${+type ? '=' : '!='} ''
+      WHERE unit != ''
+      AND id IS NOT NULL
             `;
-        
       const data: MerchandisePriceInterface[] = await this.dbServer.query(
         query
       );
       const mappedData: MerchandisePriceResponse[] =
-        new MerchandisePriceResponse().mapToList(data);
+        MerchandisePriceResponse.mapToList(data, type);
       await this.redis.set(`${RedisKeys.MerchandisePrice}:${type}`, mappedData);
       return mappedData;
     } catch (e) {
