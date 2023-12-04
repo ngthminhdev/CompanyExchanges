@@ -1,10 +1,13 @@
-import { Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { getNewsDto } from './dto/get-news.dto';
+import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.dto';
 import { QueryNewsDto } from './dto/queryNews.dto';
+import { SaveNewsDto } from './dto/save-news.dto';
 import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
 import { EventResponse } from './response/event.response';
@@ -150,4 +153,45 @@ export class ReportController {
     const data = await this.reportService.identifyMarket()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
+
+  @ApiOperation({summary: 'Lưu tin'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-tin')
+  async saveNewsInternational(@Body() b: SaveNewsDto, @Res() res: Response){
+    const data = await this.reportService.saveNews(+b.id, b.value)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Tin tức redis'})
+  @ApiOkResponse({status: HttpStatus.OK})
+  @Get('tin-tuc-redis')
+  async newsRedis(@Query() q: getNewsDto, @Res() res: Response){
+    const data = await this.reportService.getNews(+q.id)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Lưu nhận định thị trường'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-nhan-dinh-thi-truong')
+  async saveIdentifyMarket(@Body() b: IdentifyMarketDto, @Res() res: Response){
+    const data = await this.reportService.saveIdentifyMarket(b.text)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Lưu cổ phiếu khuyến nghị'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-co-phieu-khuyen-nghi')
+  async saveStockRecommend(@Body() b: SaveStockRecommendDto, @Res() res: Response){
+    const data = await this.reportService.saveStockRecommend(b.stock)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Nhận định thị trường redis'})
+  @ApiOkResponse({status: HttpStatus.OK})
+  @Get('nhan-dinh-thi-truong-redis')
+  async identifyMarketReis(@Res() res: Response){
+    const data = await this.reportService.identifyMarketRedis()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
 }
