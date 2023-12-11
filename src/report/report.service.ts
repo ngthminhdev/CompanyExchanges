@@ -418,13 +418,28 @@ export class ReportService {
       AND timeInday <= '11:33:00'
       ORDER BY row_num ASC, timeInday DESC
       `
+      const query_2 = `
+      WITH temp
+      AS (SELECT
+        LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) AS prevClosePrice,
+        code,
+        date
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code IN ('VNINDEX', 'HNX', 'UPCOM', 'VN30'))
+      SELECT
+        *
+      FROM temp
+      WHERE date = (SELECT
+        MAX(date)
+      FROM temp)
+      `  
 
-      const data = await this.mssqlService.query<any[]>(query)
-
+      const [data, data_2] = await Promise.all([this.mssqlService.query<any[]>(query), this.mssqlService.query<any[]>(query_2)]) 
+        
       const reduceData = data.reduce((result, cur) => {
         const index = result.findIndex(item => item.code == cur.code)
         if (index == -1) {
-          result.push({ code: cur.code, change: cur.change, perChange: cur.perChange, chart: [{ time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price }] })
+          result.push({ code: cur.code, change: cur.change, perChange: cur.perChange, prevClosePrice: (data_2.find(item => item.code == cur.code)).prevClosePrice, chart: [{ time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price }] })
         } else {
           result[index].chart.unshift({ time: UtilCommonTemplate.changeDateUTC(cur.time), value: cur.price })
         }
