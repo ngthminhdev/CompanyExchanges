@@ -563,8 +563,7 @@ export class ReportService {
         date,
         change,
         perChange,
-        totalVal,
-        (totalVal - LEAD(totalVal) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(totalVal) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS perChangeVal
+        totalVal
       FROM marketTrade.dbo.indexTradeVND
       WHERE code = 'VNINDEX')
       SELECT
@@ -576,11 +575,49 @@ export class ReportService {
         MAX(date)
       FROM temp)
       `)
-      const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3])
+      const promise_4 = this.mssqlService.query(`
+      WITH date
+      AS (SELECT DISTINCT TOP 2
+        date
+      FROM tradeIntraday.dbo.indexTradeVNDIntraday
+      WHERE code = 'VNINDEX'
+      ORDER BY date DESC),
+      prev
+      AS (SELECT TOP 1
+        totalVal,
+        code
+      FROM tradeIntraday.dbo.indexTradeVNDIntraday
+      WHERE code = 'VNINDEX'
+      AND date = (SELECT TOP 1
+        date
+      FROM date
+      ORDER BY date ASC)
+      AND timeInday <= '11:33:00'
+      ORDER BY timeInday DESC),
+      now
+      AS (SELECT TOP 1
+        totalVal,
+        code
+      FROM tradeIntraday.dbo.indexTradeVNDIntraday
+      WHERE code = 'VNINDEX'
+      AND date = (SELECT TOP 1
+        date
+      FROM date
+      ORDER BY date DESC)
+      AND timeInday <= '11:33:00'
+      ORDER BY timeInday DESC)
+      SELECT
+        (n.totalVal - p.totalVal) / p.totalVal * 100 AS perChangeVal
+      FROM prev p
+      INNER JOIN now n
+        ON p.code = n.code
+      `)
+      const [data_1, data_2, data_3, data_4] = await Promise.all([promise_1, promise_2, promise_3, promise_4])
       return new TopScoreResponse({
         stock_advance: data_1,
         stock_decline: data_2,
-        ...data_3[0]
+        ...data_3[0],
+        ...data_4[0]
       })
     } catch (e) {
       throw new CatchException(e)
