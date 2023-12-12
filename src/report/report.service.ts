@@ -483,7 +483,7 @@ export class ReportService {
       SELECT TOP 4
         code, netVal
       FROM marketTrade.dbo.[foreign]
-      WHERE type = 'STOCK'
+      WHERE type IN ('STOCK', 'ETF')
       AND date = (SELECT
         MAX(date)
       FROM marketTrade.dbo.[foreign])
@@ -497,7 +497,7 @@ export class ReportService {
       SELECT TOP 4
         code, netVal
       FROM marketTrade.dbo.[foreign]
-      WHERE type = 'STOCK'
+      WHERE type IN ('STOCK', 'ETF')
       AND date = (SELECT
         MAX(date)
       FROM marketTrade.dbo.[foreign])
