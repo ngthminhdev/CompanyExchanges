@@ -634,8 +634,13 @@ export class ReportService {
       select code, giaKhuyenNghi as gia_khuyen_nghi, giaMucTieu as gia_muc_tieu, giaNgungLo as Gia_ngung_lo, laiSuatSinhLoiKyVong as lai_suat, thoiGianNamGiu as thoi_gian from PHANTICH.dbo.morningReportStock
       `)
 
-      const [data_1, data_2] = await Promise.all([promise_1, promise_2]) as any
-      return { text: [data_1[0].text_1, data_1[0].text_2], stock: data_2 }
+      const promise_3 = this.mssqlService.query(`
+      select * from PHANTICH.dbo.morningReportStockSell
+      `)
+
+      const [data_1, data_2, data_3] = await Promise.all([promise_1, promise_2, promise_3]) as any
+      
+      return { text: [data_1[0].text_1, data_1[0].text_2], stock: data_2, stock_sell: data_3}
      
     } catch (e) {
       throw new CatchException(e)
