@@ -48,7 +48,7 @@ export class InternationalIndexResponse {
 
     constructor(data?: InternationalIndexInterface) {
         this.ticker = data?.ticker ? data?.ticker.replace('^', '') : '';
-        this.diemso = data?.diemso || 0;
+        this.diemso = +data?.diemso || 0;
         this.date_time = data?.date_time || "";
         this.percent_d = +data?.percent_d || 0;
         this.percent_w = +data?.percent_w || 0;
