@@ -869,6 +869,135 @@ export class StockService {
     }
   }
 
+  async getMaterialPriceV2(){
+    try {
+      const query = `
+      WITH mx_date_h
+      AS (SELECT
+        MAX(lastUpdated) AS date,
+        name AS code
+      FROM macroEconomic.dbo.HangHoa
+      WHERE unit != ''
+      AND id IS NOT NULL
+      GROUP BY name),
+      temp
+      AS (SELECT
+        name,
+        closePrice,
+        date,
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS prev,
+        (closePrice - LEAD(closePrice, 5) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 5) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS week,
+        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS month
+      FROM macroEconomic.dbo.WorldIndices),
+      max_date
+      AS (SELECT
+        MAX(date) AS date,
+        name
+      FROM temp
+      GROUP BY name),
+      ytd_date
+      AS (SELECT
+        MIN(date) AS date,
+        name
+      FROM macroEconomic.dbo.WorldIndices
+      WHERE YEAR(date) = YEAR(GETDATE())
+      GROUP BY name),
+      ytd_price
+      AS (SELECT
+        t.name,
+        t.date,
+        t.closePrice
+      FROM temp t
+      INNER JOIN ytd_date y
+        ON t.name = y.name
+        AND t.date = y.date),
+
+      temp_1
+      AS (SELECT
+        code,
+        closePrice,
+        date,
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS prev,
+        (closePrice - LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS week,
+        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS month
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code IN ('VNINDEX', 'HNX', 'UPCOM', 'VN30')),
+      max_date_1
+      AS (SELECT
+        MAX(date) AS date,
+        code
+      FROM temp_1
+      GROUP BY code),
+      ytd_date_1
+      AS (SELECT
+        MIN(date) AS date,
+        code
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE YEAR(date) = YEAR(GETDATE())
+      GROUP BY code),
+      ytd_price_1
+      AS (SELECT
+        t.code,
+        t.date,
+        t.closePrice
+      FROM temp_1 t
+      INNER JOIN ytd_date_1 y
+        ON t.code = y.code
+        AND t.date = y.date)
+
+      SELECT
+        t.code AS ticker,
+        t.date AS date_time,
+        t.closePrice AS diemso,
+        t.prev AS percent_d,
+        t.week AS percent_w,
+        t.month AS percent_m,
+        (t.closePrice - y.closePrice) / y.closePrice * 100 AS percent_ytd
+      FROM temp_1 t
+      INNER JOIN max_date_1 m
+        ON t.date = m.date
+        AND t.code = m.code
+      INNER JOIN ytd_price_1 y
+        ON t.code = y.code
+
+      UNION ALL
+      SELECT
+        t.name AS ticker,
+        t.date AS date_time,
+        t.closePrice AS diemso,
+        t.prev AS percent_d,
+        t.week AS percent_w,
+        t.month AS percent_m,
+        (t.closePrice - y.closePrice) / y.closePrice * 100 AS percent_ytd
+      FROM temp t
+      INNER JOIN max_date m
+        ON t.date = m.date
+        AND t.name = m.name
+      INNER JOIN ytd_price y
+        ON t.name = y.name
+
+      UNION ALL
+      SELECT
+        name AS ticker,
+        lastUpdated AS date_time,
+        price AS diemso,
+        CAST(SUBSTRING(change1D, CHARINDEX('(', change1D) + 1, CHARINDEX(')', change1D) - CHARINDEX('(', change1D) - 2) AS float) AS percent_d,
+        CAST(SUBSTRING(change5D, CHARINDEX('(', change5D) + 1, CHARINDEX(')', change5D) - CHARINDEX('(', change5D) - 2) AS float) AS percent_w,
+        CAST(SUBSTRING(change1M, CHARINDEX('(', change1M) + 1, CHARINDEX(')', change1M) - CHARINDEX('(', change1M) - 2) AS float) AS percent_m,
+        CAST(SUBSTRING(changeYTD, CHARINDEX('(', changeYTD) + 1, CHARINDEX(')', changeYTD) - CHARINDEX('(', changeYTD) - 2) AS float) AS percent_ytd
+      FROM macroEconomic.dbo.HangHoa h
+      INNER JOIN mx_date_h m
+        ON h.lastUpdated = m.date
+        AND h.name = m.code
+      `
+      const data = await this.mssqlService.query<InternationalIndexResponse[]>(query)
+      const dataMapped = new InternationalIndexResponse().mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   //Sự kiện thị trường
   async getStockEvents() {
     try {

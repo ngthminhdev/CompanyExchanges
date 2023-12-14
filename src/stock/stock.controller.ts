@@ -161,7 +161,7 @@ export class StockController {
   })
   @ApiOkResponse({ type: InternationalIndexSwagger })
   async getMaterialPrice(@Res() res: Response) {
-    const data = await this.stockService.getMaterialPrice();
+    const data = await this.stockService.getMaterialPriceV2();
     return res.status(HttpStatus.OK).send(new BaseResponse({ data }));
   }
 
