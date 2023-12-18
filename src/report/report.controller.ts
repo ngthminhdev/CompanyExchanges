@@ -10,6 +10,7 @@ import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
 import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
+import { AfternoonReport1 } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { MerchandiseResponse } from './response/merchandise.response';
@@ -194,4 +195,11 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Bản tin chiều trang 1'})
+  @ApiOkResponse({status: HttpStatus.OK, type: AfternoonReport1})
+  @Get('ban-tin-chieu-1')
+  async afternoonReport1(@Res() res: Response){
+    const data = await this.reportService.afternoonReport1()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
 }

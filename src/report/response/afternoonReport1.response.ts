@@ -1,0 +1,217 @@
+import { ApiProperty } from "@nestjs/swagger"
+
+class IStockContribute {
+    @ApiProperty({
+        type: String
+    })
+    code: string
+
+    @ApiProperty({
+        type: Number
+    })
+    value: number
+}
+
+class IChart {
+    @ApiProperty({
+        type: Number
+    })
+    time: number
+
+    @ApiProperty({
+        type: Number
+    })
+    value: number
+}
+
+export class AfternoonReport1 {
+    @ApiProperty({
+        type: Number,
+        description: `Giá đóng cửa VNINDEX`
+    })
+    closePrice: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    change: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    perChange: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Tổng giá trị giao dịch`
+    })
+    totalVal: number
+
+    @ApiProperty({
+        type: Number,
+        description: `% thay đổi giá trị giao dịch`
+    })
+    perChangeTotalVal: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Giá trị giao dịch ròng khối ngoại`
+    })
+    netVal: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Mã tăng`
+    })
+    advances: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Mã giảm`
+    })
+    declines: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Không đổi`
+    })
+    noChange: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Mã trần`
+    })
+    ceilingStocks: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Mã sàn`
+    })
+    floorStocks: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Giá cao`
+    })
+    highPrice: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Giá thấp`
+    })
+    lowPrice: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Giá đóng cửa HNX`
+    })
+    hnxClosePrice: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    hxnChange: number
+
+    @ApiProperty({
+        type: Number,
+    })
+    hxnPerChange: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Ngành đóng góp tăng nổi bật`
+    })
+    industryAdvance: IStockContribute
+
+    @ApiProperty({
+        type: Number,
+        description: `Ngành đóng góp giảm nổi bật`
+    })
+    industryDecline: IStockContribute
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Cổ phiếu đóng góp tăng`
+    })
+    stockAdvance: IStockContribute[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Cổ phiếu đóng góp giảm`
+    })
+    stockDecline: IStockContribute[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Top cổ phiếu mua ròng`
+    })
+    topBuy: IStockContribute[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Top cổ phiếu bán ròng`
+    })
+    topSell: IStockContribute[]
+
+    @ApiProperty({
+        type: IChart,
+        isArray: true,
+        description: `Chart biến động chỉ số VNINDEX`
+    })
+    chart: IChart[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Chart Nhóm dẫn dắt thị trường sàn HOSE`
+    })
+    chartTopMarket: IStockContribute[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Chart Top Khối ngoại giao dịch ròng sàn HOSE`
+    })
+    chartTopForeign: IStockContribute[]
+
+    @ApiProperty({
+        type: IStockContribute,
+        isArray: true,
+        description: `Chart Top giá trị giao dịch sàn HOSE`
+    })
+    chartTopTotalVal: IStockContribute[]
+
+    constructor(data?: AfternoonReport1) {
+        this.closePrice = data?.closePrice || 0
+        this.change = data?.change || 0
+        this.perChange = data?.perChange || 0
+        this.totalVal = data?.totalVal || 0
+        this.perChangeTotalVal = data?.perChangeTotalVal || 0
+        this.netVal = data?.netVal || 0
+        this.advances = data?.advances || 0
+        this.declines = data?.declines || 0
+        this.noChange = data?.noChange || 0
+        this.ceilingStocks = data?.ceilingStocks || 0
+        this.floorStocks = data?.floorStocks || 0
+        this.highPrice = data?.highPrice || 0
+        this.lowPrice = data?.lowPrice || 0
+        this.hnxClosePrice = data?.hnxClosePrice || 0
+        this.hxnChange = data?.hxnChange || 0
+        this.hxnPerChange = data?.hxnPerChange || 0
+        this.industryAdvance = data?.industryAdvance
+        this.industryDecline = data?.industryDecline
+        this.stockAdvance = data?.stockAdvance || []
+        this.stockDecline = data?.stockDecline || []
+        this.topBuy = data?.topBuy || []
+        this.topSell = data?.topSell || []
+        this.chart = data?.chart || []
+        this.chartTopMarket = data?.chartTopMarket || []
+        this.chartTopForeign = data?.chartTopForeign || []
+        this.chartTopTotalVal = data?.chartTopTotalVal || []
+    }
+
+}
