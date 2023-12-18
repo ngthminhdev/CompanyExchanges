@@ -183,7 +183,7 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Post('luu-co-phieu-khuyen-nghi')
   async saveStockRecommend(@Body() b: SaveStockRecommendDto, @Res() res: Response){
-    const data = await this.reportService.saveStockRecommend(b.stock)
+    const data = await this.reportService.saveStockRecommend(b.stock_buy, b.stock_sell)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
