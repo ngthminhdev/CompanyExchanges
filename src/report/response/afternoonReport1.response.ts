@@ -27,6 +27,12 @@ class IChart {
 export class AfternoonReport1 {
     @ApiProperty({
         type: Number,
+        description: `Diễn biến thị trường`
+    })
+    text: string
+
+    @ApiProperty({
+        type: Number,
         description: `Giá đóng cửa VNINDEX`
     })
     closePrice: number
@@ -186,6 +192,7 @@ export class AfternoonReport1 {
     chartTopTotalVal: IStockContribute[]
 
     constructor(data?: AfternoonReport1) {
+        this.text = data?.text || ''
         this.closePrice = data?.closePrice || 0
         this.change = data?.change || 0
         this.perChange = data?.perChange || 0

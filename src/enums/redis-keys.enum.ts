@@ -207,5 +207,8 @@ export enum RedisKeys {
   morningNewsEnterprise = 'morning-news-enterprise',
   saveIdentifyMarket = 'save-identify-market',
   saveStockRecommend = 'save-stock-recommend',
-  saveStockSellRecommend = 'save-stock-sell-recommend'
+  saveStockSellRecommend = 'save-stock-sell-recommend',
+
+  //Tin chiều
+  saveMarketMovements = 'save-market-movements'
 }
