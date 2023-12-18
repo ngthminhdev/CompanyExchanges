@@ -46,5 +46,12 @@ export class SaveStockRecommendDto {
         type: IStockRecommend,
         isArray: true
     })
-    stock: IStockRecommend[]
+    stock_buy: IStockRecommend[]
+
+
+    @ApiProperty({
+        type: IStockRecommend,
+        isArray: true
+    })
+    stock_sell: any[]
 }

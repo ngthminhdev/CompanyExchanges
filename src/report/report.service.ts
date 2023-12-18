@@ -650,11 +650,12 @@ export class ReportService {
 
   async identifyMarketRedis(){
     try {
-      const [data_1, data_2] = await Promise.all([
+      const [data_1, data_2, data_3] = await Promise.all([
         this.redis.get(RedisKeys.saveIdentifyMarket), 
-        this.redis.get(RedisKeys.saveStockRecommend)
+        this.redis.get(RedisKeys.saveStockRecommend),
+        this.redis.get(RedisKeys.saveStockSellRecommend),
       ])
-      return {text: data_1, stock: data_2}
+      return {text: data_1, stock_buy: data_2, stock_sell: data_3}
     } catch (e) {
       throw new CatchException(e)
     }
@@ -713,9 +714,10 @@ export class ReportService {
     }
   }
 
-  async saveStockRecommend(stock: any[]){
+  async saveStockRecommend(stock: any[], stock_sell: any[]){
     try {
       await this.redis.set(RedisKeys.saveStockRecommend, stock, {ttl: TimeToLive.OneYear})
+      await this.redis.set(RedisKeys.saveStockSellRecommend, stock_sell, {ttl: TimeToLive.OneYear})
     } catch (e) {
       throw new CatchException(e)
     }
