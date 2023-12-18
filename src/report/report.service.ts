@@ -8,6 +8,7 @@ import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { INews } from './dto/save-news.dto';
+import { AfternoonReport1 } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
@@ -715,6 +716,126 @@ export class ReportService {
   async saveStockRecommend(stock: any[]){
     try {
       await this.redis.set(RedisKeys.saveStockRecommend, stock, {ttl: TimeToLive.OneYear})
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async afternoonReport1(){
+    try {
+      //chart vnindex
+      const promise_1 = this.mssqlService.query(`
+      select closePrice as value, timeInday as time from tradeIntraday.dbo.indexTradeVNDIntraday where code = 'VNINDEX' and date = (select max(date) from tradeIntraday.dbo.indexTradeVNDIntraday)
+      `)
+
+      //thong tin vnindex
+      const promise_2 = this.mssqlService.query(`
+      with temp as (
+        select i.date, f.netVal, closePrice, change, perChange, totalVal, (totalVal - lead(totalVal) over (partition by i.code order by i.date desc)) / lead(totalVal) over (partition by i.code order by i.date desc) * 100 as perTotalVal, advances, declines, noChange, ceilingStocks, floorStocks, highPrice, lowPrice from marketTrade.dbo.indexTradeVND i
+        inner join marketTrade.dbo.[foreign] f on f.code = i.code and f.date = i.date
+         where i.code = 'VNINDEX')
+              select top 1 * from temp
+      `)
+
+      //thong tin hnx
+      const promise_3 = this.mssqlService.query(`
+      select closePrice, change, perChange from marketTrade.dbo.indexTradeVND where code = 'HNX' and date = (select max(date) from marketTrade.dbo.indexTradeVND)
+      `)
+
+      //Top dong gop nganh
+      const promise_4 = this.mssqlService.query(`
+      select sum(point) as value, i.LV2 as code from WEBSITE_SERVER.dbo.CPAH c
+      inner join marketInfor.dbo.info i on i.code = c.symbol
+              where c.floor = 'HSX' and date = (select max(date) from WEBSITE_SERVER.dbo.CPAH)
+      group by i.LV2
+      order by value desc
+      `)
+
+      //Co phieu dong gop
+      const promise_5 = this.mssqlService.query(`
+      with giam as (select top 5 point as value, symbol as code
+        from WEBSITE_SERVER.dbo.CPAH
+        where date = '2023-12-18' and floor = 'HSX'
+        order by point asc),
+        tang as (
+            select top 5 point as value, symbol as code
+        from WEBSITE_SERVER.dbo.CPAH
+        where date = '2023-12-18' and floor = 'HSX'
+        order by point desc
+        )
+        select * from tang
+        union all
+        select * from giam
+      `)
+
+      //Top giao dich rong khoi ngoai
+      const promise_6 = this.mssqlService.query(`
+      with giam as (SELECT TOP 5
+              code, netVal as value
+            FROM marketTrade.dbo.[foreign]
+            WHERE type IN ('STOCK', 'ETF')
+            AND date = (SELECT
+              MAX(date)
+            FROM marketTrade.dbo.[foreign])
+            AND floor = 'HOSE'
+            AND netVal < 0
+            ORDER BY netVal ASC),
+          tang as (
+              SELECT TOP 5
+              code, netVal as value
+            FROM marketTrade.dbo.[foreign]
+            WHERE type IN ('STOCK', 'ETF')
+            AND date = (SELECT
+              MAX(date)
+            FROM marketTrade.dbo.[foreign])
+            AND floor = 'HOSE'
+            AND netVal > 0
+            ORDER BY netVal DESC
+          )
+      select * from tang union all select * from giam
+      `)
+
+      //Top gia tri giao dich 
+      const promise_7 = this.mssqlService.query(`
+      select top 10 code, totalVal as value from marketTrade.dbo.tickerTradeVND where floor = 'HOSE' and date = (select max(date) from marketTrade.dbo.tickerTradeVND) order by totalVal desc
+      `)
+
+      const [data_1, data_2, data_3, data_4, data_5, data_6, data_7] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7]) as any
+
+      return new AfternoonReport1({
+        closePrice: data_2[0].closePrice,
+        change: data_2[0].change,
+        perChange: data_2[0].perChange,
+        totalVal: data_2[0].totalVal,
+        perChangeTotalVal: data_2[0].perTotalVal,
+        netVal: data_2[0].netVal,
+        advances: data_2[0].advances,
+        declines: data_2[0].declines,
+        noChange: data_2[0].noChange,
+        ceilingStocks: data_2[0].ceilingStocks, 
+        floorStocks: data_2[0].floorStocks,
+        highPrice: data_2[0].highPrice,
+        lowPrice: data_2[0].lowPrice,
+        hnxClosePrice: data_3[0].closePrice,
+        hxnChange: data_3[0].change,
+        hxnPerChange: data_3[0].perChange,
+        industryAdvance: {
+          code: data_4[0].code,
+          value: data_4[0].value
+        },
+        industryDecline: {
+          code: data_4[data_4.length - 1].code,
+          value: data_4[data_4.length - 1].value
+        },
+        stockAdvance: data_5.slice(0, 5),
+        stockDecline: data_5.slice(5, 10),
+        topBuy: data_6.slice(0, 3),
+        topSell: data_6.slice(5, 8),
+        chart: data_1.map(item => ({time: UtilCommonTemplate.changeDateUTC(item.time), value: item.value})),
+        chartTopMarket: [...data_5.slice(0, 5), ...data_5.slice(5, 10).reverse()],
+        chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(5, 10).reverse()],
+        chartTopTotalVal: data_7
+      })
     } catch (e) {
       throw new CatchException(e)
     }
