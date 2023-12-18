@@ -8,6 +8,7 @@ import { getNewsDto } from './dto/get-news.dto';
 import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.dto';
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
+import { SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
 import { StockImageDto } from './dto/stock-image.dto';
 import { ReportService } from './report.service';
 import { AfternoonReport1 } from './response/afternoonReport1.response';
@@ -17,6 +18,7 @@ import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
+import { AfterNoonReport2Response } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
 
 @Controller('report')
@@ -195,11 +197,40 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  //Bản tin chiều
+  @ApiOperation({summary: 'Lưu diễn biến thị trường bản tin chiều trang 1'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-dien-bien-thi-truong')
+  async saveMarketMovements(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
+    const data = await this.reportService.saveMarketMovements(b.text)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Bản tin chiều trang 1'})
   @ApiOkResponse({status: HttpStatus.OK, type: AfternoonReport1})
   @Get('ban-tin-chieu-1')
   async afternoonReport1(@Res() res: Response){
     const data = await this.reportService.afternoonReport1()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @Post('upload-image-report')
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({summary: 'Up hình report chiều trang 2', description: 'Truyền lên file jpg, tên gì cũng được'})
+  async uploadReportAfternoon(@UploadedFiles() file: any, @Res() res: Response){
+    try {
+      await this.reportService.uploadImageReport(file)
+      return res.status(HttpStatus.OK).send(new BaseResponse({}))
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
+
+  @ApiOperation({summary: 'Bản tin chiều trang 2'})
+  @ApiOkResponse({status: HttpStatus.OK, type: AfterNoonReport2Response})
+  @Get('ban-tin-chieu-2')
+  async afternoonReport2(@Res() res: Response){
+    const data = await this.reportService.afternoonReport2()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }

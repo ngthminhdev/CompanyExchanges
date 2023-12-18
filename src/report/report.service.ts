@@ -17,7 +17,7 @@ import { MorningResponse } from './response/morning.response';
 import { ITop, MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
-import { StockMarketResponse } from './response/stockMarket.response';
+import { AfterNoonReport2Response, StockMarketResponse } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
 
 @Injectable()
@@ -723,6 +723,14 @@ export class ReportService {
     }
   }
 
+  async saveMarketMovements(text: string){
+    try {
+      await this.redis.set(RedisKeys.saveMarketMovements, text, {ttl: TimeToLive.OneYear})
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   async afternoonReport1(){
     try {
       //chart vnindex
@@ -802,9 +810,12 @@ export class ReportService {
       select top 10 code, totalVal as value from marketTrade.dbo.tickerTradeVND where floor = 'HOSE' and date = (select max(date) from marketTrade.dbo.tickerTradeVND) order by totalVal desc
       `)
 
-      const [data_1, data_2, data_3, data_4, data_5, data_6, data_7] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7]) as any
+      const promise_8 = this.redis.get(RedisKeys.saveMarketMovements)
+
+      const [data_1, data_2, data_3, data_4, data_5, data_6, data_7, data_8] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7, promise_8]) as any
 
       return new AfternoonReport1({
+        text: data_8 || '',
         closePrice: data_2[0].closePrice,
         change: data_2[0].change,
         perChange: data_2[0].perChange,
@@ -841,5 +852,86 @@ export class ReportService {
     } catch (e) {
       throw new CatchException(e)
     }
+  }
+
+  async afternoonReport2(){
+    try {
+      const index = `'VNINDEX', 'HNX', 'UPCOM', 'VN30', 'HNX30'`
+      const sort_1 = `case ${index.split(',').map((item, index) => `when t.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+
+      const query = `
+      with temp_1
+      AS (SELECT
+        code,
+        closePrice,
+        date,
+        totalVal,
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS prev,
+        (closePrice - LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS week,
+        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS month,
+        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS year
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code IN (${index})),
+      max_date_1
+      AS (SELECT
+        MAX(date) AS date,
+        code
+      FROM temp_1
+      GROUP BY code),
+      ytd_date_1
+      AS (SELECT
+        MIN(date) AS date,
+        code
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE YEAR(date) = YEAR(GETDATE())
+      GROUP BY code),
+      ytd_price_1
+      AS (SELECT
+        t.code,
+        t.date,
+        t.closePrice
+      FROM temp_1 t
+      INNER JOIN ytd_date_1 y
+        ON t.code = y.code
+        AND t.date = y.date)
+
+      SELECT
+        t.code,
+        t.closePrice AS price,
+        t.prev AS day,
+        t.week,
+        t.month,
+        t.year,
+        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
+        totalVal,
+        ${sort_1}
+      FROM temp_1 t
+      INNER JOIN max_date_1 m
+        ON t.date = m.date
+        AND t.code = m.code
+      INNER JOIN ytd_price_1 y
+        ON t.code = y.code
+      ORDER BY row_num ASC  
+      `
+      const data = await this.mssqlService.query(query)
+      return new AfterNoonReport2Response({
+        table: data, 
+        image: `/resources/report/${moment().format('YYYYMMDD')}.jpg`
+      })
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async uploadImageReport(file: any[]) {
+    const now = moment().format('YYYYMMDD')
+
+    for (const item of file) {
+      await this.minio.put(`resources`, `report/${now}.jpg`, item.buffer, {
+        'Content-Type': item.mimetype,
+        'X-Amz-Meta-Testing': 1234,
+      })
+    }
+    return
   }
 }
