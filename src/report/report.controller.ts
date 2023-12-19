@@ -284,4 +284,12 @@ export class ReportController {
     const data = await this.reportService.cashFlow(+q.type)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
+
+  @ApiOperation({summary: 'Phân ngành'})
+  @ApiOkResponse({status: HttpStatus.OK})
+  @Get('phan-nganh')
+  async industry(@Res() res: Response){
+    const data = await this.reportService.industry()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
 }
