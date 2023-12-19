@@ -82,8 +82,15 @@ export class AfterNoonReport2Response {
     })
     image: string
 
+    @ApiProperty({
+        type: String,
+        isArray: true
+    })
+    text: string[]
+
     constructor(data: any){
         this.table = data?.table ? StockMarketAfternoon.mapToList(data.table) : []
         this.image = data?.image || ''
+        this.text = data?.text || []
     }
 }

@@ -8,18 +8,21 @@ import { getNewsDto } from './dto/get-news.dto';
 import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.dto';
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
-import { SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
+import { SaveMarketCommentDto, SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
 import { StockImageDto } from './dto/stock-image.dto';
+import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
-import { AfternoonReport1 } from './response/afternoonReport1.response';
+import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
+import { LiquidityMarketResponse } from './response/liquidityMarket.response';
 import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 import { AfterNoonReport2Response } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
+import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
 
 @Controller('report')
 @ApiTags('Report')
@@ -226,11 +229,59 @@ export class ReportController {
     }
   }
 
+  @ApiOperation({summary: 'Lưu nhận định thị trường bản tin chiều trang 2'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-nhan-dinh-thi-truong-chieu')
+  async saveMarketComment(@Body() b: SaveMarketCommentDto, @Res() res: Response){
+    const data = await this.reportService.saveMarketComment(b.text)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Bản tin chiều trang 2'})
   @ApiOkResponse({status: HttpStatus.OK, type: AfterNoonReport2Response})
   @Get('ban-tin-chieu-2')
   async afternoonReport2(@Res() res: Response){
     const data = await this.reportService.afternoonReport2()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Biến động GTGD một số ngành quan trọng'})
+  @ApiOkResponse({status: HttpStatus.OK, type: TransactionValueFluctuationsResponse})
+  @Get('bien-dong-gtgd')
+  async transactionValueFluctuations(@Res() res: Response){
+    const data = await this.reportService.transactionValueFluctuations()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Thanh khoản thị trường qua 60 phiên gần nhất'})
+  @ApiOkResponse({status: HttpStatus.OK, type: LiquidityMarketResponse})
+  @Get('thanh-khoan-thi-truong')
+  async liquidityMarket(@Res() res: Response){
+    const data = await this.reportService.liquidityMarket()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Tỷ trọng dòng tiền các nhóm NĐT qua 60 phiên gần nhất'})
+  @ApiOkResponse({status: HttpStatus.OK, type: LiquidityMarketResponse})
+  @Get('ty-trong-dong-tien')
+  async cashFlowRatio(@Res() res: Response){
+    const data = await this.reportService.cashFlowRatio()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Top ngành mua bán ròng khối ngoại, tự doanh'})
+  @ApiOkResponse({status: HttpStatus.OK, type: IStockContribute})
+  @Get('top-mua-ban-rong')
+  async topNetBuyingAndSelling(@Query() q: TopNetBuyingAndSellingDto, @Res() res: Response){
+    const data = await this.reportService.topNetBuyingAndSelling(+q.type)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Dòng tiền ròng khối ngoại, tự doanh qua 20 phiên gần nhất'})
+  @ApiOkResponse({status: HttpStatus.OK, type: LiquidityMarketResponse})
+  @Get('dong-tien-rong')
+  async cashFlow(@Query() q: TopNetBuyingAndSellingDto, @Res() res: Response){
+    const data = await this.reportService.cashFlow(+q.type)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }
