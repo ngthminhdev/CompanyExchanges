@@ -6,3 +6,11 @@ export class SaveMarketMovementsDto {
     })
     text: string
 }
+
+export class SaveMarketCommentDto {
+    @ApiProperty({
+        type: String,
+        isArray: true
+    })
+    text: string[]
+}

@@ -6,12 +6,14 @@ import { RedisKeys } from '../enums/redis-keys.enum';
 import { CatchException, ExceptionResponse } from '../exceptions/common.exception';
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
+import { InvestorTransactionRatioResponse } from '../stock/responses/InvestorTransactionRatio.response';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { INews } from './dto/save-news.dto';
-import { AfternoonReport1 } from './response/afternoonReport1.response';
+import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ReportIndexResponse } from './response/index.response';
+import { LiquidityMarketResponse } from './response/liquidityMarket.response';
 import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningResponse } from './response/morning.response';
 import { ITop, MorningHoseResponse } from './response/morningHose.response';
@@ -19,6 +21,7 @@ import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 import { AfterNoonReport2Response, StockMarketResponse } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
+import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
 
 @Injectable()
 export class ReportService {
@@ -196,6 +199,9 @@ export class ReportService {
 
   async merchandise() {
     try {
+      const name = `N'Dầu Brent', N'Dầu Thô', N'Vàng', N'Cao su', N'Đường', N'Khí Gas', N'Thép', N'Xăng'`
+      const sort = `case ${name.split(',').map((item, index) => `when h.name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+
       const query = `
       WITH temp
       AS (SELECT
@@ -211,19 +217,16 @@ export class ReportService {
         change3M AS month,
         change1Y AS year,
         changeYTD AS ytd,
-        CASE
-          WHEN h.name = N'Dầu Brent' THEN 1
-          WHEN h.name = N'Dầu Thô' THEN 2
-          WHEN h.name = N'Vàng' THEN 3
-          ELSE 4
-        END AS row_num
+        ${sort}
       FROM macroEconomic.dbo.HangHoa h
       INNER JOIN temp t
         ON t.name = h.name
         AND t.date = h.lastUpdated
       WHERE h.id IS NOT NULL
+      AND h.name IN (${name})
       ORDER BY row_num ASC, h.name ASC
       `
+      
       const data = await this.mssqlService.query<MerchandiseResponse[]>(query)
       const dataMapped = MerchandiseResponse.mapToList(data)
       return dataMapped
@@ -731,6 +734,14 @@ export class ReportService {
     }
   }
 
+  async saveMarketComment(text: string[]){
+    try {
+      await this.redis.set(RedisKeys.saveMarketComment, text, {ttl: TimeToLive.OneYear})
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
   async afternoonReport1(){
     try {
       //chart vnindex
@@ -915,8 +926,9 @@ export class ReportService {
       `
       const data = await this.mssqlService.query(query)
       return new AfterNoonReport2Response({
-        table: data, 
-        image: `/resources/report/${moment().format('YYYYMMDD')}.jpg`
+        table: data,
+        text: await this.redis.get(RedisKeys.saveMarketComment) || [],
+        image: `/resources/report/${moment().format('YYYYMMDD')}.jpg`,
       })
     } catch (e) {
       throw new CatchException(e)
@@ -933,5 +945,154 @@ export class ReportService {
       })
     }
     return
+  }
+
+  async transactionValueFluctuations(){
+    try {
+      const industry = `N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ'`
+      const sort = `case ${industry.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      const query = `
+      with temp as (select code,
+              date,
+              totalVal,
+              lead(totalVal) over (partition by code order by date desc) as prevTotalVal,
+              AVG(totalVal) OVER (partition by code order by date ROWS BETWEEN 19 preceding AND current row) AS avgTotalVal,
+              ${sort}
+      from marketTrade.dbo.inDusTrade
+      where floor = 'HOSE'
+      and code in (${industry}))
+      select * from temp where date = (select max(date) from temp) order by row_num asc
+      `
+      const data = await this.mssqlService.query<TransactionValueFluctuationsResponse[]>(query)
+      const dataMapped = TransactionValueFluctuationsResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async liquidityMarket(){
+    try {
+      const query = `
+      select top 60 totalVal as value, date from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' order by date desc
+      `
+      const data = await this.mssqlService.query<LiquidityMarketResponse[]>(query)
+      const dataMapped = LiquidityMarketResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async cashFlowRatio(){
+    try {
+      const query = `
+      with date as (
+        select distinct top 60 date from [marketTrade].[dbo].[proprietary] order by date desc
+    ),
+    market AS (
+            SELECT
+                [date],
+                SUM(totalVal) AS marketTotalVal
+            FROM [marketTrade].[dbo].[tickerTradeVND]
+            WHERE [date] >= (select top 1 date from date order by date asc) and [date] <= (select top 1 date from date order by date desc)
+                AND [type] IN ('STOCK', 'ETF')
+                AND [floor] = 'HOSE'
+            GROUP BY [date]
+        ),
+        data AS (
+            SELECT
+                p.[date],
+                SUM(p.netVal) AS netVal,
+                SUM(p.buyVal) AS buyVal,
+                SUM(p.sellVal) AS sellVal,
+                SUM(p.buyVal) + SUM(p.sellVal) AS totalVal,
+                MAX(m.marketTotalVal) AS marketTotalVal,
+                (SUM(p.buyVal) + SUM(p.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+                1 AS type
+            FROM [marketTrade].[dbo].[proprietary] AS p
+            INNER JOIN market AS m ON p.[date] = m.[date]
+            WHERE p.[date] >= (select top 1 date from date order by date asc) and p.[date] <= (select top 1 date from date order by date desc)
+                AND p.type IN ('STOCK', 'ETF')
+                AND p.[floor] = 'HOSE'
+            GROUP BY p.[date]
+            UNION ALL
+            SELECT
+                f.[date],
+                SUM(f.netVal) AS netVal,
+                SUM(f.buyVal) AS buyVal,
+                SUM(f.sellVal) AS sellVal,
+                SUM(f.buyVal) + SUM(f.sellVal) AS totalVal,
+                MAX(m.marketTotalVal) AS marketTotalVal,
+                (SUM(f.buyVal) + SUM(f.sellVal)) / MAX(m.marketTotalVal) * 100 AS [percent],
+                0 AS type
+            FROM [marketTrade].[dbo].[foreign] AS f
+            INNER JOIN market AS m ON f.[date] = m.[date]
+            WHERE f.[date] >= (select top 1 date from date order by date asc) and f.[date] <= (select top 1 date from date order by date desc)
+                AND f.type IN ('STOCK', 'ETF')
+                AND f.[floor] = 'HOSE'
+            GROUP BY f.[date]
+        )
+        SELECT
+            [date], netVal, buyVal, sellVal,
+            totalVal, marketTotalVal, [percent],
+            1 AS type
+        FROM data
+        WHERE type = 1
+        UNION ALL
+        SELECT
+            [date], netVal, buyVal, sellVal,
+            totalVal, marketTotalVal, [percent],
+            0 AS type
+        FROM data
+        WHERE type = 0
+        UNION ALL
+        SELECT
+          [date],
+          -(-SUM(CASE WHEN type = 0 THEN netVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN netVal ELSE 0 END)) AS netVal,
+          marketTotalVal - (SUM(CASE WHEN type = 0 THEN buyVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN buyVal ELSE 0 END)) AS buyVal,
+          marketTotalVal - (SUM(CASE WHEN type = 0 THEN sellVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN sellVal ELSE 0 END)) AS sellVal,
+          (marketTotalVal * 2) - (SUM(CASE WHEN type = 0 THEN totalVal ELSE 0 END) + SUM(CASE WHEN type = 1 THEN totalVal ELSE 0 END)) AS totalVal,
+          marketTotalVal,
+          100 - SUM(CASE WHEN type = 0 THEN [percent] ELSE 0 END) - SUM(CASE WHEN type = 1 THEN [percent] ELSE 0 END) AS [percent],
+          2 AS type
+        FROM data
+        GROUP BY marketTotalVal, [date]
+        ORDER BY [date]
+      `
+      const data = await this.mssqlService.query<InvestorTransactionRatioResponse[]>(query)
+      const dataMapped = new InvestorTransactionRatioResponse().mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async topNetBuyingAndSelling(type: number){
+    try {
+      const query = `
+      select netVal as value, code, date from marketTrade.dbo.${type == 0 ? 'inDusForeign' : 'inDusProprietary'} where floor = 'HOSE' and date = (select max(date) from marketTrade.dbo.${type == 0 ? 'inDusForeign' : 'inDusProprietary'}) order by netVal desc
+      `
+      
+      const data: any[] = await this.mssqlService.query(query)
+      const dataMapped = IStockContribute.mapToList([...data.slice(0, 3), ...data.slice(-3)])
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async cashFlow(type: number){
+    try {
+      const query = `
+      with temp as (select top 20 date, netVal as value from marketTrade.dbo.[${type == 0 ? 'foreign' : 'proprietary'}] where code = 'VNINDEX' order by date desc)
+      select * from temp order by date asc
+      `
+      const data = await this.mssqlService.query<LiquidityMarketResponse[]>(query)
+      const dataMapped = LiquidityMarketResponse.mapToList(data)
+      return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
   }
 }

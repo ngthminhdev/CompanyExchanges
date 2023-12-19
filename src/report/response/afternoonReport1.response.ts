@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger"
 
-class IStockContribute {
+export class IStockContribute {
     @ApiProperty({
         type: String
     })
@@ -10,6 +10,15 @@ class IStockContribute {
         type: Number
     })
     value: number
+
+    constructor(data: any) {
+        this.code = data?.code || ''
+        this.value = data?.value || 0
+    }
+
+    static mapToList(data: any[]){
+        return data.map(item => new IStockContribute(item))
+    }
 }
 
 class IChart {
