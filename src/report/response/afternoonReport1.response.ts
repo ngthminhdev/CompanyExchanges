@@ -35,10 +35,11 @@ class IChart {
 
 export class AfternoonReport1 {
     @ApiProperty({
-        type: Number,
+        type: String,
+        isArray: true,
         description: `Diễn biến thị trường`
     })
-    text: string
+    text: string[]
 
     @ApiProperty({
         type: Number,
@@ -201,7 +202,7 @@ export class AfternoonReport1 {
     chartTopTotalVal: IStockContribute[]
 
     constructor(data?: AfternoonReport1) {
-        this.text = data?.text || ''
+        this.text = data?.text || []
         this.closePrice = data?.closePrice || 0
         this.change = data?.change || 0
         this.perChange = data?.perChange || 0
