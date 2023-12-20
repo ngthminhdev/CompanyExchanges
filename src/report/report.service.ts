@@ -755,7 +755,7 @@ export class ReportService {
     try {
       //chart vnindex
       const promise_1 = this.mssqlService.query(`
-      select closePrice as value, timeInday as time from tradeIntraday.dbo.indexTradeVNDIntraday where code = 'VNINDEX' and date = (select max(date) from tradeIntraday.dbo.indexTradeVNDIntraday)
+      select closePrice as value, CONCAT(date, ' ', timeInday) as time from tradeIntraday.dbo.indexTradeVNDIntraday where code = 'VNINDEX' and date = (select max(date) from tradeIntraday.dbo.indexTradeVNDIntraday) order by time asc
       `)
 
       //thong tin vnindex
@@ -865,7 +865,13 @@ export class ReportService {
         stockDecline: data_5.slice(5, 10),
         topBuy: data_6.slice(0, 3),
         topSell: data_6.slice(5, 8),
-        chart: data_1.map(item => ({time: UtilCommonTemplate.changeDateUTC(item.time), value: item.value})),
+        chart: data_1.map(item => ({time: Date.UTC(
+          new Date().getFullYear(),
+          new Date().getMonth(),
+          new Date().getDate(),
+          new Date(item?.time)?.getHours(),
+          new Date(item?.time)?.getMinutes(),
+        ).valueOf(), value: item.value})),
         chartTopMarket: [...data_5.slice(0, 5), ...data_5.slice(5, 10).reverse()],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(5, 10).reverse()],
         chartTopTotalVal: data_7
