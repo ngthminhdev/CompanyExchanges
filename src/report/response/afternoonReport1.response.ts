@@ -49,6 +49,12 @@ export class AfternoonReport1 {
 
     @ApiProperty({
         type: Number,
+        description: `Giá đóng cửa phiên trước VNINDEX`
+    })
+    prevClosePrice: number
+
+    @ApiProperty({
+        type: Number,
     })
     change: number
 
@@ -204,6 +210,7 @@ export class AfternoonReport1 {
     constructor(data?: AfternoonReport1) {
         this.text = data?.text || []
         this.closePrice = data?.closePrice || 0
+        this.prevClosePrice = data?.prevClosePrice || 0
         this.change = data?.change || 0
         this.perChange = data?.perChange || 0
         this.totalVal = data?.totalVal || 0
