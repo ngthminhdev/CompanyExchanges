@@ -835,7 +835,7 @@ export class ReportService {
       const [data_1, data_2, data_3, data_4, data_5, data_6, data_7, data_8] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7, promise_8]) as any
 
       return new AfternoonReport1({
-        text: data_8 || '',
+        text: data_8 || [],
         closePrice: data_2[0].closePrice,
         change: data_2[0].change,
         perChange: data_2[0].perChange,
