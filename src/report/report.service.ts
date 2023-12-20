@@ -1,12 +1,19 @@
 import { CACHE_MANAGER, Catch, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import * as moment from 'moment';
+import { DataSource } from 'typeorm';
+import { DB_SERVER } from '../constants';
 import { TimeToLive } from '../enums/common.enum';
 import { RedisKeys } from '../enums/redis-keys.enum';
 import { CatchException, ExceptionResponse } from '../exceptions/common.exception';
 import { MinioOptionService } from '../minio/minio.service';
 import { MssqlService } from '../mssql/mssql.service';
+import { SessionDatesInterface } from '../stock/interfaces/session-dates.interface';
+import { isDecrease, isEqual, isHigh, isIncrease, isLow } from '../stock/processes/industry-data-child';
+import { IndustryResponse } from '../stock/responses/Industry.response';
 import { InvestorTransactionRatioResponse } from '../stock/responses/InvestorTransactionRatio.response';
+import { StockService } from '../stock/stock.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { INews } from './dto/save-news.dto';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
@@ -29,7 +36,9 @@ export class ReportService {
     private readonly mssqlService: MssqlService,
     @Inject(CACHE_MANAGER)
     private readonly redis: Cache,
-    private readonly minio: MinioOptionService
+    private readonly minio: MinioOptionService,
+    private readonly stockService: StockService,
+    @InjectDataSource(DB_SERVER) private readonly dbServer: DataSource,
   ) { }
   async getIndex() {
     const redisData = await this.redis.get(RedisKeys.reportIndex)
@@ -1091,6 +1100,139 @@ export class ReportService {
       const data = await this.mssqlService.query<LiquidityMarketResponse[]>(query)
       const dataMapped = LiquidityMarketResponse.mapToList(data)
       return dataMapped
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async industry(){
+    try {
+      const {
+        latestDate,
+        previousDate,
+        weekDate,
+        monthDate,
+        firstDateYear,
+      }: SessionDatesInterface = await this.stockService.getSessionDate(
+        '[RATIO].[dbo].[ratioInday]',
+        'date',
+        this.dbServer
+      );
+      const marketCapQuery = `
+          SELECT
+          i.date AS date_time,
+          sum(i.closePrice * i.shareout)  AS total_market_cap,
+          f.LV2 as industry
+          FROM RATIO.dbo.ratioInday i
+          inner join marketInfor.dbo.info f on f.code = i.code
+          WHERE i.date IN ('${UtilCommonTemplate.toDate(latestDate)}', 
+          '${UtilCommonTemplate.toDate(previousDate)}', 
+          '${UtilCommonTemplate.toDate(weekDate)}', 
+          '${UtilCommonTemplate.toDate(monthDate)}', 
+          '${UtilCommonTemplate.toDate(
+        firstDateYear,
+      )}')
+          AND f.floor = 'HOSE'  
+          AND f.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
+          GROUP BY f.LV2, i.date
+          ORDER BY i.date DESC
+          `
+      const marketCap = await this.dbServer.query(marketCapQuery)
+      const groupByIndustry = marketCap.reduce((result, item) => {
+        (result[item.industry] || (result[item.industry] = [])).push(item);
+        return result;
+      }, {});
+  
+      //Calculate change percent per day, week, month
+      const industryChanges = Object.entries(groupByIndustry).map(
+        ([industry, values]: any) => {
+          return {
+            industry,
+            day_change_percent: !values[1]?.total_market_cap ? 0 :
+              ((values[0].total_market_cap - values[1].total_market_cap) /
+                values[1].total_market_cap) *
+              100,
+            week_change_percent: !values[2]?.total_market_cap ? 0 :
+              ((values[0].total_market_cap - values[2].total_market_cap) /
+                values[2].total_market_cap) *
+              100,
+            month_change_percent: !values[3]?.total_market_cap ? 0 :
+              ((values[0].total_market_cap - values[3].total_market_cap) /
+                values[3].total_market_cap) *
+              100,
+            ytd: !values[4]?.total_market_cap ? 0 :
+              ((values[0].total_market_cap - values[4]?.total_market_cap) /
+                values[4].total_market_cap) *
+              100,
+          };
+        },
+      );
+  
+      const query = (date): string => `
+            SELECT
+              i.LV2 AS industry,
+              t.code AS ticker,
+              t.closePrice AS close_price,
+              t.highPrice AS high,
+              t.lowPrice AS low,
+              t.date AS date_time
+            FROM marketTrade.dbo.tickerTradeVND t
+            INNER JOIN marketInfor.dbo.info i
+              ON t.code = i.code
+            WHERE t.date = '${date}'
+            AND i.floor = 'HOSE'
+            AND i.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
+            `
+      const dataToday = await this.dbServer.query(query(latestDate))
+      const dataYesterday = await this.dbServer.query(query(previousDate))
+  
+      const result = dataToday.map((item) => {
+        const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
+        if (!yesterdayItem) return;
+        return {
+          industry: item.industry,
+          equal: isEqual(yesterdayItem, item),
+          increase: isIncrease(yesterdayItem, item),
+          decrease: isDecrease(yesterdayItem, item),
+          high: isHigh(yesterdayItem, item),
+          low: isLow(yesterdayItem, item),
+        };
+      });
+  
+      const final = result.reduce((stats, record) => {
+        const existingStats = stats.find(
+          (s) => s?.industry === record?.industry,
+        );
+        const industryChange = industryChanges.find(
+          (i) => i?.industry == record?.industry,
+        );
+        if (!industryChange) return stats;
+  
+        if (existingStats) {
+          existingStats.equal += record.equal;
+          existingStats.increase += record.increase;
+          existingStats.decrease += record.decrease;
+          existingStats.high += record.high;
+          existingStats.low += record.low;
+        } else {
+          stats.push({
+            industry: record.industry,
+            equal: record.equal,
+            increase: record.increase,
+            decrease: record.decrease,
+            high: record.high,
+            low: record.low,
+            ...industryChange,
+          });
+        }
+        return stats;
+      }, []);
+      
+      const mappedData: IndustryResponse[] = [
+        ...new IndustryResponse().mapToList(final),
+      ].sort((a, b) => (a.industry > b.industry ? 1 : -1));
+  
+      return mappedData
     } catch (e) {
       throw new CatchException(e)
     }
