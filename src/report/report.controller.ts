@@ -204,7 +204,7 @@ export class ReportController {
   @ApiOperation({summary: 'Lưu diễn biến thị trường bản tin chiều trang 1'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Post('luu-dien-bien-thi-truong')
-  async saveMarketMovements(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
+  async saveMarketMovements(@Body() b: SaveMarketCommentDto, @Res() res: Response){
     const data = await this.reportService.saveMarketMovements(b.text)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }

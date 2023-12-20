@@ -735,7 +735,7 @@ export class ReportService {
     }
   }
 
-  async saveMarketMovements(text: string){
+  async saveMarketMovements(text: string[]){
     try {
       await this.redis.set(RedisKeys.saveMarketMovements, text, {ttl: TimeToLive.OneYear})
     } catch (e) {
