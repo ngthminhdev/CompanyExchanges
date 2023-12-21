@@ -761,7 +761,7 @@ export class ReportService {
       //thong tin vnindex
       const promise_2 = this.mssqlService.query(`
       with temp as (
-        select i.date, f.netVal, closePrice, lead(closePrice) over (partition by i.code order by i.date desc) as prevClosePrice, perChange, totalVal, (totalVal - lead(totalVal) over (partition by i.code order by i.date desc)) / lead(totalVal) over (partition by i.code order by i.date desc) * 100 as perTotalVal, advances, declines, noChange, ceilingStocks, floorStocks, highPrice, lowPrice from marketTrade.dbo.indexTradeVND i
+        select i.date, f.netVal, closePrice, lead(closePrice) over (partition by i.code order by i.date desc) as prevClosePrice, change, perChange, totalVal, (totalVal - lead(totalVal) over (partition by i.code order by i.date desc)) / lead(totalVal) over (partition by i.code order by i.date desc) * 100 as perTotalVal, advances, declines, noChange, ceilingStocks, floorStocks, highPrice, lowPrice from marketTrade.dbo.indexTradeVND i
         inner join marketTrade.dbo.[foreign] f on f.code = i.code and f.date = i.date
          where i.code = 'VNINDEX')
               select top 1 * from temp
