@@ -851,8 +851,8 @@ export class ReportService {
         highPrice: data_2[0].highPrice,
         lowPrice: data_2[0].lowPrice,
         hnxClosePrice: data_3[0].closePrice,
-        hxnChange: data_3[0].change,
-        hxnPerChange: data_3[0].perChange,
+        hnxChange: data_3[0].change,
+        hnxPerChange: data_3[0].perChange,
         industryAdvance: {
           code: data_4[0].code,
           value: data_4[0].value

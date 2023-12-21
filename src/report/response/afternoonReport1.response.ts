@@ -132,12 +132,12 @@ export class AfternoonReport1 {
     @ApiProperty({
         type: Number,
     })
-    hxnChange: number
+    hnxChange: number
 
     @ApiProperty({
         type: Number,
     })
-    hxnPerChange: number
+    hnxPerChange: number
 
     @ApiProperty({
         type: Number,
@@ -224,8 +224,8 @@ export class AfternoonReport1 {
         this.highPrice = data?.highPrice || 0
         this.lowPrice = data?.lowPrice || 0
         this.hnxClosePrice = data?.hnxClosePrice || 0
-        this.hxnChange = data?.hxnChange || 0
-        this.hxnPerChange = data?.hxnPerChange || 0
+        this.hnxChange = data?.hnxChange || 0
+        this.hnxPerChange = data?.hnxPerChange || 0
         this.industryAdvance = data?.industryAdvance
         this.industryDecline = data?.industryDecline
         this.stockAdvance = data?.stockAdvance || []
