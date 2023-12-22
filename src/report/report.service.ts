@@ -159,7 +159,7 @@ export class ReportService {
 
   async event() {
     try {
-      const data = await this.mssqlService.query<NewsEnterpriseResponse[]>(`select distinct top 15 ticker, NoiDungSuKien as title, NgayDKCC as date from PHANTICH.dbo.LichSukien order by NgayDKCC desc`)
+      const data = await this.mssqlService.query<EventResponse[]>(`select distinct top 15 ticker, NoiDungSuKien as title, NgayGDKHQ as date from PHANTICH.dbo.LichSukien order by NgayGDKHQ desc`)
       const dataMapped = EventResponse.mapToList(data)
       return dataMapped
     } catch (e) {

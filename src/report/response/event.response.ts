@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger"
+import { UtilCommonTemplate } from "../../utils/utils.common"
 
 export class EventResponse {
     @ApiProperty({
@@ -16,10 +17,16 @@ export class EventResponse {
     })
     ticker: string
 
+    @ApiProperty({
+        type: String
+    })
+    date: string
+
     constructor(data?: EventResponse){
         this.ticker = data?.ticker || ''
         this.title = data?.title || ''
         this.href = data?.href || ''
+        this.date = data?.date ? UtilCommonTemplate.toDate(data.date) : ''
     }
 
     static mapToList(data?: EventResponse[]){
