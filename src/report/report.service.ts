@@ -944,7 +944,7 @@ export class ReportService {
       return new AfterNoonReport2Response({
         table: data,
         text: await this.redis.get(RedisKeys.saveMarketComment) || [],
-        image: await this.redis.get('iamge-report'),
+        image: await this.redis.get('image-report'),
       })
     } catch (e) {
       throw new CatchException(e)
@@ -953,7 +953,7 @@ export class ReportService {
 
   async uploadImageReport(file: any[]) {
     const now = moment().format('YYYYMMDDHHmmss')
-    await this.redis.set('image-report', `resources/report/${now}.jpg`)
+    await this.redis.set('image-report', `/resources/report/${now}.jpg`)
     for (const item of file) {
       await this.minio.put(`resources`, `report/${now}.jpg`, item.buffer, {
         'Content-Type': item.mimetype,
