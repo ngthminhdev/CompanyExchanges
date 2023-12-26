@@ -785,12 +785,12 @@ export class ReportService {
       const promise_5 = this.mssqlService.query(`
       with giam as (select top 5 point as value, symbol as code
         from WEBSITE_SERVER.dbo.CPAH
-        where date = '2023-12-18' and floor = 'HSX'
+        where date = (select max(date) from WEBSITE_SERVER.dbo.CPAH) and floor = 'HSX'
         order by point asc),
         tang as (
             select top 5 point as value, symbol as code
         from WEBSITE_SERVER.dbo.CPAH
-        where date = '2023-12-18' and floor = 'HSX'
+        where date = (select max(date) from WEBSITE_SERVER.dbo.CPAH) and floor = 'HSX'
         order by point desc
         )
         select * from tang
@@ -953,7 +953,7 @@ export class ReportService {
 
   async uploadImageReport(file: any[]) {
     const now = moment().format('YYYYMMDDHHmmss')
-    await this.redis.set('image-report', `/resources/report/${now}.jpg`)
+    await this.redis.set('image-report', `resources/report/${now}.jpg`, {ttl: TimeToLive.OneDay})
     for (const item of file) {
       await this.minio.put(`resources`, `report/${now}.jpg`, item.buffer, {
         'Content-Type': item.mimetype,
