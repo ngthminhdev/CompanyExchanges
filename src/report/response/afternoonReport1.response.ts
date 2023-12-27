@@ -77,6 +77,24 @@ export class AfternoonReport1 {
 
     @ApiProperty({
         type: Number,
+        description: `Giá trị giao dịch khớp lệnh`
+    })
+    omVal: number
+
+    @ApiProperty({
+        type: Number,
+        description: `% thay đổi giá trị giao dịch khớp lệnh`
+    })
+    perOmVal: number
+
+    @ApiProperty({
+        type: Number,
+        description: `Giá trị giao dịch thoả thuận`
+    })
+    ptVal: number
+
+    @ApiProperty({
+        type: Number,
         description: `Giá trị giao dịch ròng khối ngoại`
     })
     netVal: number
@@ -215,6 +233,9 @@ export class AfternoonReport1 {
         this.perChange = data?.perChange || 0
         this.totalVal = data?.totalVal || 0
         this.perChangeTotalVal = data?.perChangeTotalVal || 0
+        this.omVal = data?.omVal || 0
+        this.perOmVal = data?.perOmVal || 0
+        this.ptVal = data?.ptVal || 0
         this.netVal = data?.netVal || 0
         this.advances = data?.advances || 0
         this.declines = data?.declines || 0

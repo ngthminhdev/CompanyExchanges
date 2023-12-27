@@ -761,7 +761,14 @@ export class ReportService {
       //thong tin vnindex
       const promise_2 = this.mssqlService.query(`
       with temp as (
-        select i.date, f.netVal, closePrice, lead(closePrice) over (partition by i.code order by i.date desc) as prevClosePrice, change, perChange, totalVal, (totalVal - lead(totalVal) over (partition by i.code order by i.date desc)) / lead(totalVal) over (partition by i.code order by i.date desc) * 100 as perTotalVal, advances, declines, noChange, ceilingStocks, floorStocks, highPrice, lowPrice from marketTrade.dbo.indexTradeVND i
+        select i.date, f.netVal, closePrice, lead(closePrice) over (partition by i.code order by i.date desc) as prevClosePrice, change, perChange, 
+               totalVal, 
+               (totalVal - lead(totalVal) over (partition by i.code order by i.date desc)) / lead(totalVal) over (partition by i.code order by i.date desc) * 100 as perTotalVal, 
+               advances, declines, noChange, ceilingStocks, floorStocks, highPrice, lowPrice,
+               omVal,
+               (omVal - lead(omVal) over (partition by i.code order by i.date desc)) / lead(omVal) over (partition by i.code order by i.date desc) * 100 as perOmVal, 
+               ptVal
+               from marketTrade.dbo.indexTradeVND i
         inner join marketTrade.dbo.[foreign] f on f.code = i.code and f.date = i.date
          where i.code = 'VNINDEX')
               select top 1 * from temp
@@ -874,7 +881,10 @@ export class ReportService {
         ).valueOf(), value: item.value})),
         chartTopMarket: [...data_5.slice(0, 5), ...data_5.slice(5, 10).reverse()],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(5, 10).reverse()],
-        chartTopTotalVal: data_7
+        chartTopTotalVal: data_7,
+        omVal: data_2[0].omVal,
+        perOmVal: data_2[0].perOmVal,
+        ptVal: data_2[0].ptVal,
       })
     } catch (e) {
       throw new CatchException(e)
@@ -990,7 +1000,7 @@ export class ReportService {
   async liquidityMarket(){
     try {
       const query = `
-      select top 60 totalVal as value, date from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' order by date desc
+      select top 60 omVal as value, date from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' order by date desc
       `
       const data = await this.mssqlService.query<LiquidityMarketResponse[]>(query)
       const dataMapped = LiquidityMarketResponse.mapToList(data)
