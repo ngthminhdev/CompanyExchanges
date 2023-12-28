@@ -950,7 +950,45 @@ export class ReportService {
         ON t.code = y.code
       ORDER BY row_num ASC  
       `
-      const data = await this.mssqlService.query(query)
+      const query_1 = `
+      with temp as (select code, closePrice,
+              date, 
+              DATEADD(MONTH, -1, date) as month, 
+              DATEADD(WEEK, -1, date) as week, 
+              DATEADD(YEAR, -1, date) as year,
+              DATEFROMPARTS(YEAR(date) - 1, 12, 31) AS ytd
+      from marketTrade.dbo.indexTradeVND),
+      temp_2 as (SELECT
+          code,
+        closePrice,
+        date,
+        lead(closePrice) over (partition by code order by date desc) as day,
+        lead(date) over (partition by code order by date desc) as day_d,
+        (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= week) and code = temp.code) as week,
+        (select max(date) from marketTrade.dbo.indexTradeVND where date <= week) as week_d,
+        (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= month) and code = temp.code) as month,
+        (select max(date) from marketTrade.dbo.indexTradeVND where date <= month) as month_d,
+        (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= year) and code = temp.code) as year,
+        (select max(date) from marketTrade.dbo.indexTradeVND where date <= year) as year_d,
+        (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd) and code = temp.code) as ytd,
+        (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd) as year_to_date_d
+      FROM
+        temp)
+      select
+          code,
+          date,
+          closePrice as price,
+              (closePrice - day) / day * 100 as day,
+              (closePrice - week) / week * 100 as week,
+              (closePrice - month) / month * 100 as month,
+              (closePrice - year) / year * 100 as year,
+              (closePrice - ytd) / ytd * 100 as ytd,
+              ${sort_1}
+              from temp_2 t
+              where date = (select max(date) from temp_2)
+              and code IN (${index})
+      `
+      const data = await this.mssqlService.query(query_1)
       return new AfterNoonReport2Response({
         table: data,
         text: await this.redis.get(RedisKeys.saveMarketComment) || [],
