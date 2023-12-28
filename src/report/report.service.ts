@@ -223,7 +223,7 @@ export class ReportService {
         h.name + ' (' + h.unit + ')' AS name,
         price,
         change1D AS day,
-        change3M AS month,
+        change1M AS month,
         change1Y AS year,
         changeYTD AS ytd,
         ${sort}
