@@ -952,7 +952,8 @@ export class ReportService {
       `
       const query_1 = `
       with temp as (select code, closePrice,
-              date, 
+              date,
+              totalVal,
               DATEADD(MONTH, -1, date) as month, 
               DATEADD(WEEK, -1, date) as week, 
               DATEADD(YEAR, -1, date) as year,
@@ -962,6 +963,7 @@ export class ReportService {
           code,
         closePrice,
         date,
+        totalVal,
         lead(closePrice) over (partition by code order by date desc) as day,
         lead(date) over (partition by code order by date desc) as day_d,
         (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= week) and code = temp.code) as week,
@@ -977,6 +979,7 @@ export class ReportService {
       select
           code,
           date,
+          totalVal,
           closePrice as price,
               (closePrice - day) / day * 100 as day,
               (closePrice - week) / week * 100 as week,
@@ -987,6 +990,7 @@ export class ReportService {
               from temp_2 t
               where date = (select max(date) from temp_2)
               and code IN (${index})
+              order by row_num asc
       `
       const data = await this.mssqlService.query(query_1)
       return new AfterNoonReport2Response({
