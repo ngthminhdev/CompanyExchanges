@@ -172,8 +172,8 @@ export class ReportService {
       const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.exchangeRateVCB order by date desc`))[0].date).format('YYYY-MM-DD')
       const prev = moment(now).subtract(1, 'day').format('YYYY-MM-DD')
       const month = moment(now).subtract(1, 'month').format('YYYY-MM-DD')
-      const year = moment(now).startOf('year').format('YYYY-MM-DD')
-
+      const year = moment(now).subtract(1, 'year').endOf('year').format('YYYY-MM-DD')
+      
       const code = `
       'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'SGD', 'CAD', 'HKD'
       `
@@ -254,7 +254,7 @@ export class ReportService {
           select
               max(case when date <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
               max(case when date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
-              min(case when date >= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd
+              max(case when date <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd
           from macroEconomic.dbo.EconomicVN_byTriVo
       )
       select prev, month, ytd
