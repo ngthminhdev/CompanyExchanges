@@ -342,114 +342,84 @@ export class ReportService {
 
   async stockMarket() {
     try {
-      const name = `
-      'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
-      `
       const index = `
-      'VNINDEX', 'VN30', 'HNX', 'UPCOM'
+      'VNINDEX', 'VN30', 'HNX', 'UPCOM', 'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
       `
-      const sort = `case ${name.split(',').map((item, index) => `when t.name = ${item.replace(/\n/g, "").trim()} then ${index + 4}`).join(' ')} end as row_num`
-      const sort_1 = `case ${index.split(',').map((item, index) => `when t.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-
+      const sort = `case ${index.split(',').map((item, index) => `when t2.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
       const query = `
-      WITH temp
-      AS (SELECT
-        name,
+      with temp as (select name as code, closePrice,
+        date,
+        DATEADD(MONTH, -1, date) as month,
+        DATEADD(WEEK, -1, date) as week,
+        DATEADD(YEAR, -1, date) as year,
+        DATEFROMPARTS(YEAR(date) - 1, 12, 31) AS ytd,
+        1 as id
+      from macroEconomic.dbo.WorldIndices
+      union all
+      select code, closePrice,
+              date,
+              DATEADD(MONTH, -1, date) as month,
+              DATEADD(WEEK, -1, date) as week,
+              DATEADD(YEAR, -1, date) as year,
+              DATEFROMPARTS(YEAR(date) - 1, 12, 31) AS ytd,
+              0 as id
+      from marketTrade.dbo.indexTradeVND
+      ),
+      temp_2 as (SELECT
+          code,
         closePrice,
         date,
-        (closePrice - LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS prev,
-        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS month,
-        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY name ORDER BY date DESC) * 100 AS year
-      FROM macroEconomic.dbo.WorldIndices
-      WHERE name IN ('Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100')),
-      max_date
-      AS (SELECT
-        MAX(date) AS date,
-        name
-      FROM temp
-      GROUP BY name),
-      ytd_date
-      AS (SELECT
-        MIN(date) AS date,
-        name
-      FROM macroEconomic.dbo.WorldIndices
-      WHERE YEAR(date) = YEAR(GETDATE())
-      GROUP BY name),
-      ytd_price
-      AS (SELECT
-        t.name,
-        t.date,
-        t.closePrice
-      FROM temp t
-      INNER JOIN ytd_date y
-        ON t.name = y.name
-        AND t.date = y.date),
-
-      temp_1
-      AS (SELECT
-        code,
-        closePrice,
-        date,
-        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS prev,
-        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS month,
-        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS year
-      FROM marketTrade.dbo.indexTradeVND
-      WHERE code IN ('VNINDEX', 'HNX', 'UPCOM', 'VN30')),
-      max_date_1
-      AS (SELECT
-        MAX(date) AS date,
-        code
-      FROM temp_1
-      GROUP BY code),
-      ytd_date_1
-      AS (SELECT
-        MIN(date) AS date,
-        code
-      FROM marketTrade.dbo.indexTradeVND
-      WHERE YEAR(date) = YEAR(GETDATE())
-      GROUP BY code),
-      ytd_price_1
-      AS (SELECT
-        t.code,
-        t.date,
-        t.closePrice
-      FROM temp_1 t
-      INNER JOIN ytd_date_1 y
-        ON t.code = y.code
-        AND t.date = y.date)
-
-      SELECT
-        t.code,
-        t.closePrice AS price,
-        t.prev AS day,
-        t.month,
-        t.year,
-        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
-        ${sort_1}
-      FROM temp_1 t
-      INNER JOIN max_date_1 m
-        ON t.date = m.date
-        AND t.code = m.code
-      INNER JOIN ytd_price_1 y
-        ON t.code = y.code
-
-      UNION ALL
-      SELECT
-        t.name AS code,
-        t.closePrice AS price,
-        t.prev AS day,
-        t.month,
-        t.year,
-        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
-        ${sort}
-      FROM temp t
-      INNER JOIN max_date m
-        ON t.date = m.date
-        AND t.name = m.name
-      INNER JOIN ytd_price y
-        ON t.name = y.name
-      ORDER BY row_num ASC
+        lead(closePrice) over (partition by code order by date desc) as day,
+        lead(date) over (partition by code order by date desc) as day_d,
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= week) and name = temp.code)
+            when id = 0 then
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= week) and code = temp.code)
+            end as week,
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= week)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= week)
+            end as week_d,
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= month) and name = temp.code)
+            when id = 0 then
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= month) and code = temp.code)
+            end as month,
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= month)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= month)
+            end as month_d,
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= year) and name = temp.code)
+            when id = 0 then
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= year) and code = temp.code)
+            end as year,
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= year)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= year)
+            end as year_d,
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd) and name = temp.code)
+            when id = 0 then
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd) and code = temp.code)
+            end as ytd,
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd)
+            end as year_to_date_d
+      FROM
+        temp),
+        temp_3 as (
+          select max(date) as date, code from temp_2 group by code
+      )
+      select
+          t2.code,
+          t2.date,
+          closePrice as price,
+              (closePrice - day) / day * 100 as day,
+              (closePrice - week) / week * 100 as week,
+              (closePrice - month) / month * 100 as month,
+              (closePrice - year) / year * 100 as year,
+              (closePrice - ytd) / ytd * 100 as ytd,
+              ${sort}
+              from temp_2 t2
+              inner join temp_3 t3 on t3.code = t2.code and t3.date = t2.date
+              where t2.code in (${index})
+              order by row_num asc
       `
+      
       const data = await this.mssqlService.query<StockMarketResponse[]>(query)
       const dataMapped = StockMarketResponse.mapToList(data)
       return dataMapped
@@ -1042,6 +1012,8 @@ export class ReportService {
               and code IN (${index})
               order by row_num asc
       `
+      console.log(query_1);
+      
       const data = await this.mssqlService.query(query_1)
       return new AfterNoonReport2Response({
         table: data,
