@@ -915,62 +915,7 @@ export class ReportService {
     try {
       const index = `'VNINDEX', 'HNX', 'UPCOM', 'VN30', 'HNX30'`
       const sort_1 = `case ${index.split(',').map((item, index) => `when t.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-
       const query = `
-      with temp_1
-      AS (SELECT
-        code,
-        closePrice,
-        date,
-        totalVal,
-        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS prev,
-        (closePrice - LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 5) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS week,
-        (closePrice - LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 19) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS month,
-        (closePrice - LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice, 249) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS year
-      FROM marketTrade.dbo.indexTradeVND
-      WHERE code IN (${index})),
-      max_date_1
-      AS (SELECT
-        MAX(date) AS date,
-        code
-      FROM temp_1
-      GROUP BY code),
-      ytd_date_1
-      AS (SELECT
-        MIN(date) AS date,
-        code
-      FROM marketTrade.dbo.indexTradeVND
-      WHERE YEAR(date) = YEAR(GETDATE())
-      GROUP BY code),
-      ytd_price_1
-      AS (SELECT
-        t.code,
-        t.date,
-        t.closePrice
-      FROM temp_1 t
-      INNER JOIN ytd_date_1 y
-        ON t.code = y.code
-        AND t.date = y.date)
-
-      SELECT
-        t.code,
-        t.closePrice AS price,
-        t.prev AS day,
-        t.week,
-        t.month,
-        t.year,
-        (t.closePrice - y.closePrice) / y.closePrice * 100 AS ytd,
-        totalVal,
-        ${sort_1}
-      FROM temp_1 t
-      INNER JOIN max_date_1 m
-        ON t.date = m.date
-        AND t.code = m.code
-      INNER JOIN ytd_price_1 y
-        ON t.code = y.code
-      ORDER BY row_num ASC  
-      `
-      const query_1 = `
       with temp as (select code, closePrice,
               date,
               totalVal,
@@ -1012,9 +957,7 @@ export class ReportService {
               and code IN (${index})
               order by row_num asc
       `
-      console.log(query_1);
-      
-      const data = await this.mssqlService.query(query_1)
+      const data = await this.mssqlService.query(query)
       return new AfterNoonReport2Response({
         table: data,
         text: await this.redis.get(RedisKeys.saveMarketComment) || [],
