@@ -209,7 +209,7 @@ export class ReportService {
   async merchandise() {
     try {
       const name = `N'Dầu Brent', N'Dầu Thô', N'Vàng', N'Cao su', N'Đường', N'Khí Gas', N'Thép', N'Xăng'`
-      const sort = `case ${name.split(',').map((item, index) => `when h.name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      const sort = `case ${name.split(',').map((item, index) => `when t2.name = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
 
       const query = `
       WITH temp
@@ -235,8 +235,58 @@ export class ReportService {
       AND h.name IN (${name})
       ORDER BY row_num ASC, h.name ASC
       `
-      
-      const data = await this.mssqlService.query<MerchandiseResponse[]>(query)
+
+      const query_1 = `
+      with temp as (select name, price,
+              date,
+              unit,
+              DATEADD(MONTH, -1, date) as month,
+              DATEADD(WEEK, -1, date) as week,
+              DATEADD(YEAR, -1, date) as year,
+              DATEFROMPARTS(YEAR(date) - 1, 12, 31) AS ytd
+      from macroEconomic.dbo.HangHoa
+      where name in (${name}) and id is not null
+      ),
+      temp_2 as (SELECT
+          name,
+        price,
+        unit,
+        date,
+        lead(price) over (partition by name order by date desc) as day,
+        lead(date) over (partition by name order by date desc) as day_d,
+        (select top 1 price from macroEconomic.dbo.HangHoa where date = (select max(date) from macroEconomic.dbo.HangHoa where date <= week) and name = temp.name) as week,
+        (select max(date) from macroEconomic.dbo.HangHoa where date <= week) as week_d,
+        (select top 1 price from macroEconomic.dbo.HangHoa where date = (select max(date) from macroEconomic.dbo.HangHoa where date <= month) and name = temp.name) as month,
+        (select max(date) from macroEconomic.dbo.HangHoa where date <= month) as month_d,
+        (select top 1 price from macroEconomic.dbo.HangHoa where date = (select max(date) from macroEconomic.dbo.HangHoa where date <= year) and name = temp.name) as year,
+        (select max(date) from macroEconomic.dbo.HangHoa where date <= year) as year_d,
+        (select top 1 price from macroEconomic.dbo.HangHoa where date = (select max(date) from macroEconomic.dbo.HangHoa where date <= ytd) and name = temp.name) as ytd,
+        (select max(date) from macroEconomic.dbo.HangHoa where date <= ytd) as year_to_date_d
+      FROM
+        temp),
+      temp_3 as (
+        SELECT
+        MAX(date) AS date,
+        name
+      FROM macroEconomic.dbo.HangHoa
+      WHERE unit != ''
+      GROUP BY name
+      )
+      select
+          t2.name + ' (' + t2.unit + ')' AS name,
+          t2.date,
+          price,
+              (price - day) / day * 100 as day,
+              (price - week) / week * 100 as week,
+              (price - month) / month * 100 as month,
+              (price - year) / year * 100 as year,
+              (price - ytd) / ytd * 100 as ytd,
+              ${sort}
+              from temp_2 t2
+              inner join temp_3 t3 on t3.name = t2.name and t3.date = t2.date
+      order by row_num
+      `
+      const data = await this.mssqlService.query<MerchandiseResponse[]>(query_1)
       const dataMapped = MerchandiseResponse.mapToList(data)
       return dataMapped
     } catch (e) {

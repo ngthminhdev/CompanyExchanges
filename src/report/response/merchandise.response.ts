@@ -39,10 +39,10 @@ export class MerchandiseResponse {
     constructor(data?: any) {
         this.name = data?.name || ''
         this.price = data?.price || 0
-        this.day = data?.day ? MerchandiseResponse.getPercent(data?.day) : 0
-        this.month = data?.month ? MerchandiseResponse.getPercent(data?.month) : 0
-        this.year = data?.year ? MerchandiseResponse.getPercent(data?.year) : 0
-        this.ytd = data?.ytd ? MerchandiseResponse.getPercent(data?.ytd) : 0
+        this.day = data?.day || 0
+        this.month = data?.month || 0
+        this.year = data?.year || 0
+        this.ytd = data?.ytd || 0
     }
 
     static mapToList(data?: MerchandiseResponse[]) {
