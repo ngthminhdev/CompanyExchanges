@@ -541,7 +541,7 @@ export class SharesService {
     const week_52 = moment().subtract('52', 'week').format('YYYY-MM-DD')
 
     //Xoá những ngày trùng nhau
-    const same_day = this.checkSameDate([now, week, month, year, quarter_end, quarter_start, week_52]) 
+    const same_day = UtilCommonTemplate.checkSameDate([now, week, month, year, quarter_end, quarter_start, week_52]) 
     const pivot = same_day.map(item => `[${item}]`).join(',')
 
     const query = `
@@ -588,19 +588,7 @@ export class SharesService {
     return dataMapped
   }
 
-  private checkSameDate(arr: string[]) {
-    let same_day_index = 0
-    for (let i = 0; i < arr.length; i++) {
-      for (let j = i + 1; j < arr.length; j++) {
-        if (arr[i] == arr[j]) {
-          same_day_index = j
-          break
-        }
-      }
-    }
-    if(same_day_index != 0) arr.splice(same_day_index, 1)
-    return arr
-  }
+  
 
   async averageTradingVolume(stock: string) {
     const redisData = await this.redis.get(`${RedisKeys.averageTradingVolume}:${stock.toUpperCase()}`)

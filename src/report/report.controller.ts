@@ -292,4 +292,20 @@ export class ReportController {
     const data = await this.reportService.industry()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
+
+  @ApiOperation({summary: 'Lưu diễn biến thị trường bản tin tuần trang 1'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-dien-bien-thi-truong-tuan')
+  async saveMarketWeekComment(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
+    const data = await this.reportService.saveMarketWeekComment(b.text)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Bản tin tuần trang 1'})
+  @ApiOkResponse({status: HttpStatus.OK, type: AfternoonReport1})
+  @Get('ban-tin-tuan-1')
+  async weekReport1(@Res() res: Response){
+    const data = await this.reportService.weekReport1()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
 }
