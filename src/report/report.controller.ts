@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
+import { CommodityPriceFluctuationsDto } from './dto/commodityPriceFluctuations.dto';
 import { getNewsDto } from './dto/get-news.dto';
 import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.dto';
 import { QueryNewsDto } from './dto/queryNews.dto';
@@ -15,6 +16,7 @@ import { ReportService } from './report.service';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
+import { ExchangeRateUSDEURResponse } from './response/exchangeRateUSDEUR.response';
 import { LiquidityMarketResponse } from './response/liquidityMarket.response';
 import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
@@ -352,11 +354,27 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
-  @ApiOperation({summary: 'GTGD ròng của các nhóm nhà đầu tư (tỷ VNĐ)'})
-  @ApiOkResponse({status: HttpStatus.OK, type: IStockContribute})
-  @Get('gtgd')
-  async netTradingValueOfInvestor(@Res() res: Response){
-    const data = await this.reportService.netTradingValueOfInvestor()
+  @ApiOperation({summary: 'Tỷ giá USD và EUR'})
+  @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateUSDEURResponse})
+  @Get('ty-gia-usd-eur')
+  async exchangeRateUSDEUR(@Res() res: Response){
+    const data = await this.reportService.exchangeRateUSDEUR()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Lãi suất BQ liên Ngân hàng (%/năm)'})
+  @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateUSDEURResponse})
+  @Get('lai-suat-binh-quan-lien-ngan-hang')
+  async averageInterbankInterestRate(@Res() res: Response){
+    const data = await this.reportService.averageInterbankInterestRate()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Biến động giá cả hàng hóa'})
+  @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateUSDEURResponse})
+  @Get('bien-dong-gia-ca-hang-hoa')
+  async commodityPriceFluctuations(@Query() q: CommodityPriceFluctuationsDto, @Res() res: Response){
+    const data = await this.reportService.commodityPriceFluctuations(+q.type)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }

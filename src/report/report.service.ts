@@ -19,6 +19,7 @@ import { INews } from './dto/save-news.dto';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
+import { ExchangeRateUSDEURResponse } from './response/exchangeRateUSDEUR.response';
 import { ReportIndexResponse } from './response/index.response';
 import { LiquidityMarketResponse } from './response/liquidityMarket.response';
 import { MerchandiseResponse } from './response/merchandise.response';
@@ -998,8 +999,8 @@ export class ReportService {
     try {
       const industry = `N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ'`
       const sort = `case ${industry.split(',').map((item, index) => `when n.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-      const {now, prev, prev_4} = this.get2WeekNow()
-      
+      const { now, prev, prev_4 } = this.get2WeekNow()
+
       const query = type == 0 ? `
       with temp as (select code,
               date,
@@ -1037,7 +1038,7 @@ export class ReportService {
       where n.code in (${industry})
       order by row_num      
       `
-      
+
       const data = await this.mssqlService.query<TransactionValueFluctuationsResponse[]>(query)
       const dataMapped = TransactionValueFluctuationsResponse.mapToList(data)
       return dataMapped
@@ -1587,18 +1588,89 @@ export class ReportService {
       const promise_2 = this.stockMarket(2)
 
       const [data_1, data_2] = await Promise.all([promise_1, promise_2])
-      return [...data_1.map(item => ({code: item.industry, value: item.week_change_percent})), ...data_2.map(item => ({code: item.name, value: item.week}))].sort((a, b) => b.value - a.value)
-            
+      return [...data_1.map(item => ({ code: item.industry, value: item.week_change_percent })), ...data_2.map(item => ({ code: item.name, value: item.week }))].sort((a, b) => b.value - a.value)
+
     } catch (e) {
       throw new CatchException(e)
     }
   }
 
-  async netTradingValueOfInvestor(){
+  async exchangeRateUSDEUR() {
     try {
-      const query = ``
-      const data = await this.mssqlService.query(query)
-      return data
+      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.exchangeRateVCB order by date desc`))[0].date).format('YYYY-MM-DD')
+      const query = `
+      select code as name, date, bySell as value from macroEconomic.dbo.exchangeRateVCB where code in ('USD', 'EUR')
+      and date between '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' and '${now}' order by date, code
+      `
+      const data = await this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query)
+      return ExchangeRateUSDEURResponse.mapToList(data)
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async averageInterbankInterestRate() {
+    try {
+      const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.EconomicVN_byTriVo order by date desc`))[0].date).format('YYYY-MM-DD')
+      const query = `
+      select code as name, date, value from macroEconomic.dbo.EconomicVN_byTriVo where code in (N'Qua đêm', N'1 tuần', N'2 tuần', N'1 tháng')
+      and date between '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' and '${now}' order by date, code
+      `
+      const data = await this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query)
+      return ExchangeRateUSDEURResponse.mapToList(data)
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async commodityPriceFluctuations(type: number) {
+    try {
+      let name = ''
+      let table = 'macroEconomic.dbo.HangHoa'
+      switch (type) {
+        case 0: //brent và khí gas
+          name = `N'Dầu Brent', N'Khí Gas'`
+          break;
+        case 1: //Đồng và vàng
+          name = `N'Đồng', N'Vàng'`
+          break
+        case 2: //HRC và thép
+          name = `N'Thép HRC', N'Thép'`
+          break
+        case 3: //cotton và đường
+          name = `N'Bông', N'Đường'`
+          break
+        case 4: //cao su và ure
+          name = `N'Cao su', N'Ure'`
+          break
+        case 5: //dxy và us10y
+          name = `N'Dollar Index', N'U.S.10Y'`
+          table = 'macroEconomic.dbo.WorldIndices'
+          break
+        default:
+          break;
+      }
+      const query = `
+      WITH temp
+      AS (SELECT
+        date,
+        ${type == 5 ? 'name' : `name + ' (' + unit + ')' AS name`},
+        ${type == 5 ? 'closePrice as value' : 'price as value'}
+      FROM ${table}
+      WHERE name IN (${name})
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 2)
+      ORDER BY date, name
+      `
+      const data = await this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query)
+      return ExchangeRateUSDEURResponse.mapToList(data)
     } catch (e) {
       throw new CatchException(e)
     }
