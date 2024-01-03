@@ -200,6 +200,7 @@ export class ReportService {
         ([${now}] - [${year}]) / [${year}] * 100 AS year
       FROM temp AS source PIVOT (SUM(bySell) FOR date IN (${pivot})) AS chuyen
       `
+      
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
       return dataMapped
@@ -1453,10 +1454,11 @@ export class ReportService {
 
        //Top 
       const promise_9 = this.mssqlService.query(`
-      select netVal, date from marketTrade.dbo.[foreign] where date between '2023-12-25' and '2023-12-29' and code = 'VNINDEX' order by date asc
+      select netVal, date from marketTrade.dbo.[foreign] where date between '${now.from}' and '${now.to}' and code = 'VNINDEX' order by date asc
       `)
 
       const [data_1, data_2, data_3, data_4, data_5, data_6, data_7, data_8, data_9] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7, promise_8, promise_9]) as any
+
       const vnindex = data_1.find(item => item.code == 'VNINDEX')
       const hnx = data_1.find(item => item.code == 'HNX')
       return {
@@ -1489,8 +1491,9 @@ export class ReportService {
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
         chartTopTotalVal: data_8,
-        chartTopForeignTotalVal: data_9.reduce((acc, cur) => {}, [])
+        chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, {...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date)}], [])
       }
+      
     } catch (e) {
       throw new CatchException(e)
     }
