@@ -348,33 +348,33 @@ export class ReportService {
         date,
         lead(closePrice) over (partition by code order by date desc) as day,
         lead(date) over (partition by code order by date desc) as day_d,
-        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= week) and name = temp.code)
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= week and name = temp.code) and name = temp.code)
             when id = 0 then
-            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= week) and code = temp.code)
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= week and code = temp.code) and code = temp.code)
             end as week,
-        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= week)
-            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= week)
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= week and name = temp.code)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= week and code = temp.code)
             end as week_d,
-        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= month) and name = temp.code)
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= month and name = temp.code) and name = temp.code)
             when id = 0 then
-            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= month) and code = temp.code)
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= month and code = temp.code) and code = temp.code)
             end as month,
-        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= month)
-            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= month)
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= month and name = temp.code)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= month and code = temp.code)
             end as month_d,
-        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= year) and name = temp.code)
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= year and name = temp.code) and name = temp.code)
             when id = 0 then
-            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= year) and code = temp.code)
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= year and code = temp.code) and code = temp.code)
             end as year,
-        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= year)
-            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= year)
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= year and name = temp.code)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= year and code = temp.code)
             end as year_d,
-        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd) and name = temp.code)
+        case when id = 1 then (select top 1 closePrice from macroEconomic.dbo.WorldIndices where date = (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd and name = temp.code) and name = temp.code)
             when id = 0 then
-            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd) and code = temp.code)
+            (select top 1 closePrice from marketTrade.dbo.indexTradeVND where date = (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd and code = temp.code) and code = temp.code)
             end as ytd,
-        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd)
-            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd)
+        case when id = 1 then (select max(date) from macroEconomic.dbo.WorldIndices where date <= ytd and name = temp.code)
+            when id = 0 then (select max(date) from marketTrade.dbo.indexTradeVND where date <= ytd and code = temp.code)
             end as year_to_date_d
       FROM
         temp),
@@ -396,7 +396,6 @@ export class ReportService {
               where t2.code in (${index})
               order by row_num asc
       `
-
       const data = await this.mssqlService.query<StockMarketResponse[]>(query)
       const dataMapped = StockMarketResponse.mapToList(data)
       return dataMapped
@@ -1148,6 +1147,8 @@ export class ReportService {
           GROUP BY f.LV2, i.date
           ORDER BY i.date DESC
           `
+          console.log(marketCapQuery);
+          
       const marketCap = await this.dbServer.query(marketCapQuery)
       const groupByIndustry = marketCap.reduce((result, item) => {
         (result[item.industry] || (result[item.industry] = [])).push(item);
@@ -1275,8 +1276,6 @@ export class ReportService {
   async weekReport1() {
     try {
       const { now, prev } = this.get2WeekNow()
-      // const prev_date = moment((await this.mssqlService.query(`select top 1 date from marketTrade.dbo.tickerTradeVND where date <= '${prev.to}' order by date desc`))[0].date).format('YYYY-MM-DD')
-
       const date = await this.mssqlService.query(`with date_ranges as (
         select
             max(case when date <= '${moment(now.to).format('YYYY-MM-DD')}' then date else null end) as now,
@@ -1422,7 +1421,7 @@ export class ReportService {
       //text dien bien thi truong
       const promise_7 = this.redis.get(RedisKeys.saveMarketWeekComment)
 
-      //Top gia tri giao dich
+      //Top gia tri giao dich hose qua 1 tuần
       const promise_8 = this.mssqlService.query(`
       WITH temp
       AS (SELECT TOP 10
@@ -1452,7 +1451,12 @@ export class ReportService {
         AND t.date = v.date
        `)
 
-      const [data_1, data_2, data_3, data_4, data_5, data_6, data_7, data_8] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7, promise_8]) as any
+       //Top 
+      const promise_9 = this.mssqlService.query(`
+      select netVal, date from marketTrade.dbo.[foreign] where date between '2023-12-25' and '2023-12-29' and code = 'VNINDEX' order by date asc
+      `)
+
+      const [data_1, data_2, data_3, data_4, data_5, data_6, data_7, data_8, data_9] = await Promise.all([promise_1, promise_2, promise_3, promise_4, promise_5, promise_6, promise_7, promise_8, promise_9]) as any
       const vnindex = data_1.find(item => item.code == 'VNINDEX')
       const hnx = data_1.find(item => item.code == 'HNX')
       return {
@@ -1484,7 +1488,8 @@ export class ReportService {
         topSell: data_6.slice(-3).reverse(),
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
-        // chartTopTotal
+        chartTopTotalVal: data_8,
+        chartTopForeignTotalVal: data_9.reduce((acc, cur) => {}, [])
       }
     } catch (e) {
       throw new CatchException(e)
