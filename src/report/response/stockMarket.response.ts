@@ -19,6 +19,11 @@ export class StockMarketResponse {
     @ApiProperty({
         type: Number
     })
+    week: number    
+
+    @ApiProperty({
+        type: Number
+    })
     month: number
 
     @ApiProperty({
@@ -37,6 +42,7 @@ export class StockMarketResponse {
         this.name = data?.code || ''
         this.price = data?.price || 0
         this.day = +data?.day.toFixed(2) || 0
+        this.week = +data?.week.toFixed(2) || 0
         this.month = +data?.month.toFixed(2) || 0
         this.year = +data?.year.toFixed(2) || 0
         this.ytd = +data?.ytd.toFixed(2) || 0

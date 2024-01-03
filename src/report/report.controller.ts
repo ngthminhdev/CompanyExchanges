@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
@@ -9,7 +9,7 @@ import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.d
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
 import { SaveMarketCommentDto, SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
-import { StockImageDto } from './dto/stock-image.dto';
+import { StockMarketDto } from './dto/stockMarket.dto';
 import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
@@ -23,7 +23,6 @@ import { NewsInternationalResponse } from './response/newsInternational.response
 import { AfterNoonReport2Response } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
 import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
-
 @Controller('report')
 @ApiTags('Report')
 export class ReportController {
@@ -123,8 +122,8 @@ export class ReportController {
   @ApiOperation({summary: 'Thị trường chứng khoán Việt Nam và Quốc tế'})
   @ApiOkResponse({status: HttpStatus.OK, type: MerchandiseResponse})
   @Get('thi-truong-chung-khoan')
-  async stockMarket(@Res() res: Response){
-    const data = await this.reportService.stockMarket()
+  async stockMarket(@Query() q: StockMarketDto, @Res() res: Response){
+    const data = await this.reportService.stockMarket(q.type || 0)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
@@ -222,7 +221,7 @@ export class ReportController {
   @ApiOperation({summary: 'Up hình report chiều trang 2', description: 'Truyền lên file jpg, tên gì cũng được'})
   async uploadReportAfternoon(@UploadedFiles() file: any, @Res() res: Response){
     try {
-      await this.reportService.uploadImageReport(file)
+      await this.reportService.uploadImageReport(file, 0)
       return res.status(HttpStatus.OK).send(new BaseResponse({}))
     } catch (error) {
       throw new CatchException(error)
@@ -248,8 +247,8 @@ export class ReportController {
   @ApiOperation({summary: 'Biến động GTGD một số ngành quan trọng'})
   @ApiOkResponse({status: HttpStatus.OK, type: TransactionValueFluctuationsResponse})
   @Get('bien-dong-gtgd')
-  async transactionValueFluctuations(@Res() res: Response){
-    const data = await this.reportService.transactionValueFluctuations()
+  async transactionValueFluctuations(@Query() q: StockMarketDto, @Res() res: Response){
+    const data = await this.reportService.transactionValueFluctuations(q.type || 0)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
@@ -296,7 +295,7 @@ export class ReportController {
   @ApiOperation({summary: 'Lưu diễn biến thị trường bản tin tuần trang 1'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Post('luu-dien-bien-thi-truong-tuan')
-  async saveMarketWeekComment(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
+  async saveMarketWeekMovements(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
     const data = await this.reportService.saveMarketWeekComment(b.text)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
@@ -306,6 +305,58 @@ export class ReportController {
   @Get('ban-tin-tuan-1')
   async weekReport1(@Res() res: Response){
     const data = await this.reportService.weekReport1()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Lưu nhận định thị trường bản tin tuần trang 2'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-nhan-dinh-thi-truong-tuan-trang-2')
+  async saveMarketWeekPage2(@Body() b: SaveMarketCommentDto, @Res() res: Response){
+    const data = await this.reportService.saveMarketWeekPage2(b.text)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @Post('upload-image-report-2')
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({summary: 'Up hình report tuần trang 2', description: 'Truyền lên file jpg, tên gì cũng được'})
+  async uploadReportWeek(@UploadedFiles() file: any, @Res() res: Response){
+    try {
+      await this.reportService.uploadImageReport(file, 1)
+      return res.status(HttpStatus.OK).send(new BaseResponse({}))
+    } catch (error) {
+      throw new CatchException(error)
+    }
+  }
+
+  @ApiOperation({summary: 'Bản tin tuần trang 2'})
+  @ApiOkResponse({status: HttpStatus.OK, type: AfterNoonReport2Response})
+  @Get('ban-tin-tuan-2')
+  async weekReport2(@Res() res: Response){
+    const data = await this.reportService.weekReport2()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Hiệu suất sinh lời của các chỉ số trong tuần'})
+  @ApiOkResponse({status: HttpStatus.OK, type: IStockContribute})
+  @Get('hieu-suat-sinh-loi-chi-so-theo-tuan')
+  async profitablePerformanceIndex(@Res() res: Response){
+    const data = await this.reportService.profitablePerformanceIndex()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Hiệu suất sinh lời theo các nhóm ngành (Tuần)'})
+  @ApiOkResponse({status: HttpStatus.OK, type: IStockContribute})
+  @Get('hieu-suat-sinh-loi-nhom-nganh-theo-tuan')
+  async profitablePerformanceIndustry(@Res() res: Response){
+    const data = await this.reportService.profitablePerformanceIndustry()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'GTGD ròng của các nhóm nhà đầu tư (tỷ VNĐ)'})
+  @ApiOkResponse({status: HttpStatus.OK, type: IStockContribute})
+  @Get('gtgd')
+  async netTradingValueOfInvestor(@Res() res: Response){
+    const data = await this.reportService.netTradingValueOfInvestor()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }

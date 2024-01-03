@@ -159,7 +159,10 @@ export class ReportService {
 
   async event() {
     try {
-      const data = await this.mssqlService.query<EventResponse[]>(`select distinct top 15 ticker, NoiDungSuKien as title, NgayGDKHQ as date from PHANTICH.dbo.LichSukien order by NgayGDKHQ desc`)
+      const data = await this.mssqlService.query<EventResponse[]>(`
+      select distinct top 15 ticker, i.floor, NoiDungSuKien as title, NgayGDKHQ as date, NgayDKCC, NgayThucHien from PHANTICH.dbo.LichSukien l 
+      inner join marketInfor.dbo.info i on i.code = l.ticker
+       order by NgayGDKHQ desc`)
       const dataMapped = EventResponse.mapToList(data)
       return dataMapped
     } catch (e) {
@@ -200,7 +203,7 @@ export class ReportService {
         ([${now}] - [${year}]) / [${year}] * 100 AS year
       FROM temp AS source PIVOT (SUM(bySell) FOR date IN (${pivot})) AS chuyen
       `
-      
+
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
       return dataMapped
@@ -318,11 +321,27 @@ export class ReportService {
     }
   }
 
-  async stockMarket() {
+  async stockMarket(type: number) { //0 - sáng, 1 - tuần
     try {
-      const index = `
-      'VNINDEX', 'VN30', 'HNX', 'UPCOM', 'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
-      `
+      let index = ''
+      switch (type) {
+        case 0: //sáng
+          index = `
+          'VNINDEX', 'VN30', 'HNX', 'UPCOM', 'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
+          `
+          break;
+        case 1: //tuần
+          index = `
+        'VNINDEX', 'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100', 'DAX', 'STI', 'KLCI', 'IDX', 'SET', 'PSEI', 'Dollar Index', 'Dollar Index', 'U.S.10Y'      
+        `
+          break
+        case 2: //tuần trang 3
+          index = `'VNINDEX', 'VN30', 'VNMID'`
+          break
+        default:
+          break;
+      }
+
       const sort = `case ${index.split(',').map((item, index) => `when t2.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
       const query = `
       with temp as (select name as code, closePrice,
@@ -756,6 +775,14 @@ export class ReportService {
     }
   }
 
+  async saveMarketWeekPage2(text: string[]) {
+    try {
+      await this.redis.set(RedisKeys.saveMarketWeekPage2, text, { ttl: TimeToLive.OneYear })
+    } catch (error) {
+
+    }
+  }
+
   async afternoonReport1() {
     try {
       //chart vnindex
@@ -955,9 +982,9 @@ export class ReportService {
     }
   }
 
-  async uploadImageReport(file: any[]) {
+  async uploadImageReport(file: any[], type: number) {
     const now = moment().format('YYYYMMDDHHmmss')
-    await this.redis.set('image-report', `resources/report/${now}.jpg`, { ttl: TimeToLive.OneDay })
+    await this.redis.set(type ? 'image-report-week' : 'image-report', `resources/report/${now}.jpg`, { ttl: TimeToLive.OneDay })
     for (const item of file) {
       await this.minio.put(`resources`, `report/${now}.jpg`, item.buffer, {
         'Content-Type': item.mimetype,
@@ -967,22 +994,50 @@ export class ReportService {
     return
   }
 
-  async transactionValueFluctuations() {
+  async transactionValueFluctuations(type: number) {
     try {
       const industry = `N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ'`
-      const sort = `case ${industry.split(',').map((item, index) => `when code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
-      const query = `
+      const sort = `case ${industry.split(',').map((item, index) => `when n.code = ${item.replace(/\n/g, "").trim()} then ${index}`).join(' ')} end as row_num`
+      const {now, prev, prev_4} = this.get2WeekNow()
+      
+      const query = type == 0 ? `
       with temp as (select code,
               date,
               totalVal,
               lead(totalVal) over (partition by code order by date desc) as prevTotalVal,
               AVG(totalVal) OVER (partition by code order by date ROWS BETWEEN 19 preceding AND current row) AS avgTotalVal,
               ${sort}
-      from marketTrade.dbo.inDusTrade
+      from marketTrade.dbo.inDusTrade n
       where floor = 'HOSE'
       and code in (${industry}))
       select * from temp where date = (select max(date) from temp) order by row_num asc
+      ` : `
+      with now as (select sum(totalVal) as now, code
+                  from marketTrade.dbo.inDusTrade
+                  where date between '${now.from}' and '${now.to}'
+                    and floor = 'HOSE'
+                  group by code),
+      prev as (
+      select sum(totalVal) as prev, code
+                  from marketTrade.dbo.inDusTrade
+                  where date between '${prev.from}' and '${prev.to}'
+                    and floor = 'HOSE'
+                  group by code
+          ),
+          prev_4 as (
+              select avg(totalVal) as prev_4, code
+              from marketTrade.dbo.inDusTrade
+                  where date between '${prev_4.from}' and '${prev_4.to}'
+                    and floor = 'HOSE'
+                  group by code
+          )
+      select n.code, n.now as totalVal, p.prev as prevTotalVal, p4.prev_4 as avgTotalVal, ${sort} from now n
+      inner join prev p on n.code = p.code
+      inner join prev_4 p4 on n.code = p4.code
+      where n.code in (${industry})
+      order by row_num      
       `
+      
       const data = await this.mssqlService.query<TransactionValueFluctuationsResponse[]>(query)
       const dataMapped = TransactionValueFluctuationsResponse.mapToList(data)
       return dataMapped
@@ -1148,8 +1203,6 @@ export class ReportService {
           GROUP BY f.LV2, i.date
           ORDER BY i.date DESC
           `
-          console.log(marketCapQuery);
-          
       const marketCap = await this.dbServer.query(marketCapQuery)
       const groupByIndustry = marketCap.reduce((result, item) => {
         (result[item.industry] || (result[item.industry] = [])).push(item);
@@ -1262,6 +1315,8 @@ export class ReportService {
     const monday_1 = moment(friday_1).subtract(4, 'day').format('YYYY-MM-DD')
     const monday_2 = moment(friday_2).subtract(4, 'day').format('YYYY-MM-DD')
 
+    const monday_3 = moment(monday_1).subtract(3, 'week').format('YYYY-MM-DD')
+
     return {
       now: {
         from: monday_1,
@@ -1270,6 +1325,10 @@ export class ReportService {
       prev: {
         from: monday_2,
         to: friday_2
+      },
+      prev_4: {
+        from: monday_3,
+        to: friday_1
       }
     }
   }
@@ -1452,7 +1511,7 @@ export class ReportService {
         AND t.date = v.date
        `)
 
-       //Top 
+      //Top 
       const promise_9 = this.mssqlService.query(`
       select netVal, date from marketTrade.dbo.[foreign] where date between '${now.from}' and '${now.to}' and code = 'VNINDEX' order by date asc
       `)
@@ -1461,6 +1520,7 @@ export class ReportService {
 
       const vnindex = data_1.find(item => item.code == 'VNINDEX')
       const hnx = data_1.find(item => item.code == 'HNX')
+
       return {
         text: data_7 || '',
         closePrice: vnindex.closePrice,
@@ -1491,9 +1551,54 @@ export class ReportService {
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
         chartTopTotalVal: data_8,
-        chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, {...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date)}], [])
+        chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, { ...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date) }], [])
       }
-      
+
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async weekReport2() {
+    try {
+      return {
+        table: (await this.afternoonReport2()).table,
+        image: await this.redis.get('image-report-week') || '',
+        text: await this.redis.get(RedisKeys.saveMarketWeekPage2) || []
+      }
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async profitablePerformanceIndex() {
+    try {
+      const arr = ['U.S.10Y', 'Dollar Index']
+      const data = await this.stockMarket(1)
+      return data.filter(item => !arr.includes(item.name)).map(item => ({ name: item.name, value: item.week })).sort((a, b) => b.value - a.value);
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async profitablePerformanceIndustry() {
+    try {
+      const promise_1 = this.industry()
+      const promise_2 = this.stockMarket(2)
+
+      const [data_1, data_2] = await Promise.all([promise_1, promise_2])
+      return [...data_1.map(item => ({code: item.industry, value: item.week_change_percent})), ...data_2.map(item => ({code: item.name, value: item.week}))].sort((a, b) => b.value - a.value)
+            
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async netTradingValueOfInvestor(){
+    try {
+      const query = ``
+      const data = await this.mssqlService.query(query)
+      return data
     } catch (e) {
       throw new CatchException(e)
     }

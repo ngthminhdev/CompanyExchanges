@@ -212,5 +212,6 @@ export enum RedisKeys {
   //Tin chiều
   saveMarketMovements = 'save-market-movements',
   saveMarketWeekComment = 'save-market-week-comment',
-  saveMarketComment = 'save-market-comment'
+  saveMarketComment = 'save-market-comment',
+  saveMarketWeekPage2 = 'save-market-week-comment-page-2'
 }
