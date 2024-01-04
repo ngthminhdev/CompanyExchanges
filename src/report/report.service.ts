@@ -296,6 +296,9 @@ export class ReportService {
       const month = moment(date[0].month).format('YYYY-MM-DD')
       const ytd = moment(date[0].ytd).format('YYYY-MM-DD')
 
+      const same_day = UtilCommonTemplate.checkSameDate([now, prev, month, ytd])
+      const pivot = same_day.map(item => `[${item}]`).join(',')
+
       const query = `
       WITH temp
       AS (SELECT
@@ -312,8 +315,9 @@ export class ReportService {
         ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
         ([${now}] - [${month}]) / [${month}] * 100 AS month,
         ([${now}] - [${ytd}]) / [${ytd}] * 100 AS year
-      FROM temp PIVOT (SUM(value) FOR date IN ([${now}], [${prev}], [${month}], [${ytd}])) AS chuyen
+      FROM temp PIVOT (SUM(value) FOR date IN (${pivot})) AS chuyen
       `
+      
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
       return dataMapped
