@@ -1577,7 +1577,7 @@ export class ReportService {
         topSell: data_6.slice(-3).reverse(),
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
-        chartTopTotalVal: data_8.map((item, index) => ({...item, color: index == (data_8.length - 1) ? `rgba(1, 85, 183, -0.75)` : `rgba(1, 85, 183, ${(1 - (0.2 * index)).toFixed(1)})`})),
+        chartTopTotalVal: data_8.map((item, index) => ({...item, color: index == (data_8.length - 1) ? `rgba(1, 85, 183, 0.15)` : `rgba(1, 85, 183, ${(1 - (0.1 * index)).toFixed(1)})`})),
         chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, { ...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date) }], [])
       }
 
