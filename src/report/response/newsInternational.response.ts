@@ -9,10 +9,16 @@ export class NewsInternationalResponse {
     @ApiProperty({
         type: String
     })
+    sub_title: string
+
+    @ApiProperty({
+        type: String
+    })
     href: string
 
     constructor(data?: NewsInternationalResponse){
         this.title = data?.title || ''
+        this.sub_title = data?.sub_title || ''
         this.href = data?.href || ''
     }
 

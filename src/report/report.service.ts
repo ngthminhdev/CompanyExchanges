@@ -16,6 +16,7 @@ import { InvestorTransactionRatioResponse } from '../stock/responses/InvestorTra
 import { StockService } from '../stock/stock.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { INews } from './dto/save-news.dto';
+import { ISaveStockRecommendWeek } from './dto/saveStockRecommendWeek.dto';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
@@ -125,7 +126,7 @@ export class ReportService {
   async newsInternational(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity || 7} Title as title, Href as href, Date from macroEconomic.dbo.TinTucQuocTe order by Date desc
+      select distinct top ${quantity || 7} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucQuocTe order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -137,7 +138,7 @@ export class ReportService {
   async newsDomestic(quantity: number) {
     try {
       const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity || 6} Title as title, Href as href, Date from macroEconomic.dbo.TinTucViMo order by Date desc
+      select distinct top ${quantity || 6} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucViMo order by Date desc
       `)
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
@@ -317,7 +318,7 @@ export class ReportService {
         ([${now}] - [${ytd}]) / [${ytd}] * 100 AS year
       FROM temp PIVOT (SUM(value) FOR date IN (${pivot})) AS chuyen
       `
-      
+
       const data = await this.mssqlService.query<ExchangeRateResponse[]>(query)
       const dataMapped = ExchangeRateResponse.mapToList(data)
       return dataMapped
@@ -707,6 +708,12 @@ export class ReportService {
         case 2:
           name_redis = RedisKeys.morningNewsEnterprise
           break
+        case 3:
+          name_redis = RedisKeys.weekNewsInternational
+          break
+        case 4:
+          name_redis = RedisKeys.weekNewsDomestic
+          break
         default:
           break;
       }
@@ -728,6 +735,12 @@ export class ReportService {
           break
         case 2:
           name_redis = RedisKeys.morningNewsEnterprise
+          break
+        case 3:
+          name_redis = RedisKeys.weekNewsInternational
+          break
+        case 4:
+          name_redis = RedisKeys.weekNewsDomestic
           break
         default:
           break;
@@ -751,6 +764,14 @@ export class ReportService {
     try {
       await this.redis.set(RedisKeys.saveStockRecommend, stock, { ttl: TimeToLive.OneYear })
       await this.redis.set(RedisKeys.saveStockSellRecommend, stock_sell, { ttl: TimeToLive.OneYear })
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async saveStockRecommendWeek(b: ISaveStockRecommendWeek[]) {
+    try {
+      await this.redis.set(RedisKeys.saveStockRecommendWeek, b, {ttl: TimeToLive.OneYear})
     } catch (e) {
       throw new CatchException(e)
     }
@@ -1555,7 +1576,7 @@ export class ReportService {
         topSell: data_6.slice(-3).reverse(),
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
-        chartTopTotalVal: data_8,
+        chartTopTotalVal: data_8.map((item, index) => ({...item, color: index == (data_8.length - 1) ? `rgba(1, 85, 183, -0.75)` : `rgba(1, 85, 183, ${(1 - (0.2 * index)).toFixed(1)})`})),
         chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, { ...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date) }], [])
       }
 
@@ -1675,6 +1696,19 @@ export class ReportService {
       `
       const data = await this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query)
       return ExchangeRateUSDEURResponse.mapToList(data)
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async getStockRecommendWeek(){
+    try {
+      const data: ISaveStockRecommendWeek[] = await this.redis.get(RedisKeys.saveStockRecommendWeek)
+      if(!data) return []
+
+      const price = await this.mssqlService.query(`select closePrice, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')})`)
+      console.log(price);
+      
     } catch (e) {
       throw new CatchException(e)
     }

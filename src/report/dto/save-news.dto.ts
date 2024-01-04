@@ -17,7 +17,10 @@ export class SaveNewsDto {
     @IsEnum([0, 1, 2])
     @ApiProperty({
         type: Number,
-        description: `0 - Tin quốc tế, 1 - Tin trong nước, 2 - Tin doanh nghiệp`
+        description: `
+        0 - Tin quốc tế, 1 - Tin trong nước, 2 - Tin doanh nghiệp
+        3 - Tin quốc tế bản tin tuần, 4 - Tin trong nước bản tin tuần
+        `
     })
     id: number
 

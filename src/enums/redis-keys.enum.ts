@@ -213,5 +213,10 @@ export enum RedisKeys {
   saveMarketMovements = 'save-market-movements',
   saveMarketWeekComment = 'save-market-week-comment',
   saveMarketComment = 'save-market-comment',
-  saveMarketWeekPage2 = 'save-market-week-comment-page-2'
+  saveMarketWeekPage2 = 'save-market-week-comment-page-2',
+
+  //Tin tuần
+  weekNewsInternational = 'week-news-international',
+  weekNewsDomestic = 'week-news-domestic',
+  saveStockRecommendWeek = 'save-stock-recommend-week',
 }

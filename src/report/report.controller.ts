@@ -10,6 +10,7 @@ import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.d
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
 import { SaveMarketCommentDto, SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
+import { SaveStockRecommendWeekDto } from './dto/saveStockRecommendWeek.dto';
 import { StockMarketDto } from './dto/stockMarket.dto';
 import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
@@ -375,6 +376,22 @@ export class ReportController {
   @Get('bien-dong-gia-ca-hang-hoa')
   async commodityPriceFluctuations(@Query() q: CommodityPriceFluctuationsDto, @Res() res: Response){
     const data = await this.reportService.commodityPriceFluctuations(+q.type)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Lưu danh sách cổ phiếu khuyến nghị bản tin tuần'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-co-phieu-khuyen-nghi-tuan')
+  async saveStockRecommendWeek(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
+    const data = await this.reportService.saveStockRecommendWeek(b.value)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Danh sách cổ phiếu khuyến nghị bản tin tuần'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Get('co-phieu-khuyen-nghi-tuan')
+  async stockRecommendWeek(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
+    const data = await this.reportService.getStockRecommendWeek()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 }
