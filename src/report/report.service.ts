@@ -1495,14 +1495,15 @@ export class ReportService {
       WHERE date IN ('${moment(date[0].week).format('YYYY-MM-DD')}', '${moment(date[0].now).format('YYYY-MM-DD')}')
       AND floor = 'HOSE')
       SELECT
-        netVal,
+        netVal as point,
         t.code,
         v.perChange
       FROM temp t
       INNER JOIN price v
         ON v.date = t.date
         AND v.code = t.code
-      `)
+        order by netVal desc  
+        `)
 
       //text dien bien thi truong
       const promise_7 = this.redis.get(RedisKeys.saveMarketWeekComment)
@@ -1706,8 +1707,18 @@ export class ReportService {
       const data: ISaveStockRecommendWeek[] = await this.redis.get(RedisKeys.saveStockRecommendWeek)
       if(!data) return []
 
-      const price = await this.mssqlService.query(`select closePrice, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')})`)
-      console.log(price);
+      const price: {price: number, code: string}[] = await this.mssqlService.query(`select closePrice as price, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')}) and date = (select max(date) from marketTrade.dbo.tickerTradeVND)`)
+      
+      return data.map(item => {
+        const gia_thi_truong = (price.find(price => price.code == item.code)).price || 0
+        return {
+          ...item,
+          gia_thi_truong,
+          ty_suat_sinh_loi_ky_vong: (item.gia_muc_tieu / item.gia_khuyen_nghi - 1) * 100,
+          ty_suat_loi_nhuan: item.is_buy == 1 ? (gia_thi_truong * 1000 / item.gia_khuyen_nghi - 1) * 100 : 0,
+          ty_suat_sinh_loi_lo: item.gia_ban != 0 ? (item.gia_ban / item.gia_khuyen_nghi - 1) * 100 : 0
+        }
+      })
       
     } catch (e) {
       throw new CatchException(e)
