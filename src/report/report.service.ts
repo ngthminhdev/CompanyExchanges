@@ -331,7 +331,7 @@ export class ReportService {
   async stockMarket(type: number) { //0 - sáng, 1 - tuần
     try {
       let index = ''
-      switch (type) {
+      switch (+type) {
         case 0: //sáng
           index = `
           'VNINDEX', 'VN30', 'HNX', 'UPCOM', 'Dow Jones', 'Nikkei 225', 'Shanghai', 'FTSE 100'
@@ -423,6 +423,7 @@ export class ReportService {
               where t2.code in (${index})
               order by row_num asc
       `
+      
       const data = await this.mssqlService.query<StockMarketResponse[]>(query)
       const dataMapped = StockMarketResponse.mapToList(data)
       return dataMapped
