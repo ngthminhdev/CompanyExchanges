@@ -1537,8 +1537,9 @@ export class ReportService {
       INNER JOIN price v
         ON t.code = v.code
         AND t.date = v.date
+        order by t.totalVal desc
        `)
-
+        
       //Top 
       const promise_9 = this.mssqlService.query(`
       select netVal, date from marketTrade.dbo.[foreign] where date between '${now.from}' and '${now.to}' and code = 'VNINDEX' order by date asc
