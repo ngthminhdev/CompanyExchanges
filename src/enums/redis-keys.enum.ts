@@ -219,4 +219,5 @@ export enum RedisKeys {
   weekNewsInternational = 'week-news-international',
   weekNewsDomestic = 'week-news-domestic',
   saveStockRecommendWeek = 'save-stock-recommend-week',
+  flexiblePage = 'flexible-page-week'
 }

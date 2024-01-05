@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, Use
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { FormDataRequest } from 'nestjs-form-data';
 import { CatchException } from '../exceptions/common.exception';
 import { BaseResponse } from '../utils/utils.response';
 import { CommodityPriceFluctuationsDto } from './dto/commodityPriceFluctuations.dto';
@@ -11,6 +12,7 @@ import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
 import { SaveMarketCommentDto, SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
 import { SaveStockRecommendWeekDto } from './dto/saveStockRecommendWeek.dto';
+import { SetFlexiblePageDto } from './dto/setFlexiblePage.dto';
 import { StockMarketDto } from './dto/stockMarket.dto';
 import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
@@ -394,4 +396,22 @@ export class ReportController {
     const data = await this.reportService.getStockRecommendWeek()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
+
+  @FormDataRequest()
+  @ApiOperation({summary: 'Lưu trang linh động'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-trang-linh-dong')
+  async setFlexiblePage(@Body() b: SetFlexiblePageDto, @Res() res: Response){
+    await this.reportService.setFlexiblePage(b)
+    return res.status(HttpStatus.OK).send(new BaseResponse({}))
+  }
+
+  @ApiOperation({summary: 'Danh sách cổ phiếu khuyến nghị bản tin tuần'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Get('trang-linh-dong')
+  async getFlexiblePage(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
+    const data = await this.reportService.getFlexiblePage()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
 }

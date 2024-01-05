@@ -17,6 +17,7 @@ import { StockService } from '../stock/stock.service';
 import { UtilCommonTemplate } from '../utils/utils.common';
 import { INews } from './dto/save-news.dto';
 import { ISaveStockRecommendWeek } from './dto/saveStockRecommendWeek.dto';
+import { SetFlexiblePageDto } from './dto/setFlexiblePage.dto';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
@@ -771,7 +772,7 @@ export class ReportService {
 
   async saveStockRecommendWeek(b: ISaveStockRecommendWeek[]) {
     try {
-      await this.redis.set(RedisKeys.saveStockRecommendWeek, b, {ttl: TimeToLive.OneYear})
+      await this.redis.set(RedisKeys.saveStockRecommendWeek, b, { ttl: TimeToLive.OneYear })
     } catch (e) {
       throw new CatchException(e)
     }
@@ -1577,7 +1578,7 @@ export class ReportService {
         topSell: data_6.slice(-3).reverse(),
         chartTopMarket: [...data_3.slice(0, 5), ...data_3.slice(-5)],
         chartTopForeign: [...data_6.slice(0, 5), ...data_6.slice(-5)],
-        chartTopTotalVal: data_8.map((item, index) => ({...item, color: index == (data_8.length - 1) ? `rgba(1, 85, 183, 0.15)` : `rgba(1, 85, 183, ${(1 - (0.1 * index)).toFixed(1)})`})),
+        chartTopTotalVal: data_8.map((item, index) => ({ ...item, color: index == (data_8.length - 1) ? `rgba(1, 85, 183, 0.15)` : `rgba(1, 85, 183, ${(1 - (0.1 * index)).toFixed(1)})` })),
         chartTopForeignTotalVal: data_9.reduce((acc, cur) => [...acc, { ...cur, value: (acc[acc.length - 1]?.value || 0) + cur.netVal, date: UtilCommonTemplate.toDate(cur.date) }], [])
       }
 
@@ -1702,13 +1703,13 @@ export class ReportService {
     }
   }
 
-  async getStockRecommendWeek(){
+  async getStockRecommendWeek() {
     try {
       const data: ISaveStockRecommendWeek[] = await this.redis.get(RedisKeys.saveStockRecommendWeek)
-      if(!data) return []
+      if (!data) return []
 
-      const price: {price: number, code: string}[] = await this.mssqlService.query(`select closePrice as price, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')}) and date = (select max(date) from marketTrade.dbo.tickerTradeVND)`)
-      
+      const price: { price: number, code: string }[] = await this.mssqlService.query(`select closePrice as price, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')}) and date = (select max(date) from marketTrade.dbo.tickerTradeVND)`)
+
       return data.map(item => {
         const gia_thi_truong = (price.find(price => price.code == item.code)).price || 0
         return {
@@ -1719,7 +1720,35 @@ export class ReportService {
           ty_suat_sinh_loi_lo: item.gia_ban != 0 ? (item.gia_ban / item.gia_khuyen_nghi - 1) * 100 : 0
         }
       })
-      
+
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async setFlexiblePage(b: SetFlexiblePageDto) {
+    try {
+      const now = moment().format('YYYYMMDDHHmmss')
+      let i = 1
+      for (const item of b.image) {
+        await this.minio.put(`resources`, `report/week/flexible_page/${b.page}/${now}_${i}.jpg`, item.buffer, {
+          'Content-Type': item.mimetype,
+          'X-Amz-Meta-Testing': 1234,
+        })
+        i++
+      }
+      await this.redis.set(`${RedisKeys.flexiblePage}:${b.page}`, { image: b.image.map((item, index) => `resources/week/flexible_page/${b.page}/${now}_${index + 1}`), text: b.text }, { ttl: TimeToLive.OneDay })
+
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async getFlexiblePage(){
+    try {
+      const keys = await this.redis.store.keys(`${RedisKeys.flexiblePage}:*`)
+      const data = await this.redis.store.mget(keys.join(','))
+      return data  
     } catch (e) {
       throw new CatchException(e)
     }
