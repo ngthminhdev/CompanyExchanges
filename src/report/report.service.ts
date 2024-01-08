@@ -1617,7 +1617,7 @@ export class ReportService {
       const promise_2 = this.stockMarket(2)
 
       const [data_1, data_2] = await Promise.all([promise_1, promise_2])
-      return [...data_1.map(item => ({ code: item.industry, value: item.week_change_percent })), ...data_2.map(item => ({ code: item.name, value: item.week }))].sort((a, b) => b.value - a.value)
+      return [...data_1.map(item => ({ name: item.industry, value: item.week_change_percent })), ...data_2.map(item => ({ name: item.name, value: item.week }))].sort((a, b) => b.value - a.value)
 
     } catch (e) {
       throw new CatchException(e)
