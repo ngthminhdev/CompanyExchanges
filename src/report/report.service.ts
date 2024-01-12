@@ -1054,7 +1054,7 @@ export class ReportService {
                   group by code
           ),
           prev_4 as (
-              select avg(totalVal) as prev_4, code
+              select sum(totalVal) / 4 as prev_4, code
               from marketTrade.dbo.inDusTrade
                   where date between '${prev_4.from}' and '${prev_4.to}'
                     and floor = 'HOSE'
