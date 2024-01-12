@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FormDataRequest } from 'nestjs-form-data';
 import { CatchException } from '../exceptions/common.exception';
+import { StockDto } from '../shares/dto/stock.dto';
 import { BaseResponse } from '../utils/utils.response';
 import { CommodityPriceFluctuationsDto } from './dto/commodityPriceFluctuations.dto';
 import { getNewsDto } from './dto/get-news.dto';
@@ -411,6 +412,26 @@ export class ReportController {
   @Get('trang-linh-dong')
   async getFlexiblePage(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
     const data = await this.reportService.getFlexiblePage()
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  /**
+   * Báo cáo phân tích kỹ thuật
+   */
+
+  @ApiOperation({summary: 'Thông tin cổ phiếu'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Get('thong-tin-co-phieu')
+  async stockInfo(@Query() b: StockDto, @Res() res: Response){
+    const data = await this.reportService.stockInfo(b.stock)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Tương quan biến động giá cổ phiếu trong 1 năm'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Get('tuong-quan-bien-dong-gia')
+  async priceFluctuationCorrelation(@Query() b: StockDto, @Res() res: Response){
+    const data = await this.reportService.priceFluctuationCorrelation(b.stock)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 

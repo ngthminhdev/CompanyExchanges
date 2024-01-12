@@ -14,7 +14,7 @@ export class INews {
 }
 
 export class SaveNewsDto {
-    @IsEnum([0, 1, 2])
+    @IsEnum([0, 1, 2, 3, 4])
     @ApiProperty({
         type: Number,
         description: `

@@ -32,6 +32,7 @@ import { NewsInternationalResponse } from './response/newsInternational.response
 import { AfterNoonReport2Response, StockMarketResponse } from './response/stockMarket.response';
 import { TopScoreResponse } from './response/topScore.response';
 import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
+import { InterestRateResponse } from '../macro/responses/interest-rate.response'
 
 @Injectable()
 export class ReportService {
@@ -423,7 +424,7 @@ export class ReportService {
               where t2.code in (${index})
               order by row_num asc
       `
-      
+
       const data = await this.mssqlService.query<StockMarketResponse[]>(query)
       const dataMapped = StockMarketResponse.mapToList(data)
       return dataMapped
@@ -1540,7 +1541,7 @@ export class ReportService {
         AND t.date = v.date
         order by t.totalVal desc
        `)
-        
+
       //Top 
       const promise_9 = this.mssqlService.query(`
       select netVal, date from marketTrade.dbo.[foreign] where date between '${now.from}' and '${now.to}' and code = 'VNINDEX' order by date asc
@@ -1746,13 +1747,119 @@ export class ReportService {
     }
   }
 
-  async getFlexiblePage(){
+  async getFlexiblePage() {
     try {
       const keys = await this.redis.store.keys(`${RedisKeys.flexiblePage}:*`)
       const data = await this.redis.store.mget(keys.join(','))
-      return data  
+      return data
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async stockInfo(code: string) {
+    try {
+      const query = `
+      WITH max_date
+      AS (SELECT
+        MAX(date) AS date,
+        ratioCode
+      FROM [RATIO].[dbo].[ratio]
+      WHERE code = '${code}'
+      GROUP BY ratioCode),
+      nuoc_ngoai
+      AS (SELECT
+        ([result] / [value]) * 100 AS [foreign],
+        '${code}' AS code
+      FROM (SELECT TOP (1) (SELECT TOP 1
+                            [totalRoom] - [currentRoom]
+                          FROM [marketTrade].[dbo].[foreign]
+                          WHERE code = '${code}'
+                          ORDER BY [date] DESC)
+                          AS [result],
+                          [value]
+      FROM [RATIO].[dbo].[ratio]
+      WHERE ratioCode = 'OUTSTANDING_SHARES'
+      AND code = '${code}') AS qw),
+      pi
+      AS (SELECT
+        *
+      FROM (SELECT
+        [code],
+        r.[ratioCode],
+        [value]
+      FROM [RATIO].[dbo].[ratio] r
+      INNER JOIN max_date m
+        ON m.ratioCode = r.ratioCode
+        AND m.date = r.date
+      WHERE (r.ratioCode IN ('PRICE_HIGHEST_CR_52W', 'PRICE_LOWEST_CR_52W', 'NMVALUE_AVG_CR_20D', 'NMVOLUME_AVG_CR_20D', 'STATE_OWNERSHIP'))
+      AND code = '${code}') AS source PIVOT (SUM(value) FOR ratioCode IN ([PRICE_HIGHEST_CR_52W], [PRICE_LOWEST_CR_52W], [NMVALUE_AVG_CR_20D], [NMVOLUME_AVG_CR_20D], [STATE_OWNERSHIP])) AS chuyen)
+      SELECT
+        c.code,
+        marketCap,
+        shareout,
+        [PRICE_HIGHEST_CR_52W] AS high,
+        [PRICE_LOWEST_CR_52W] AS low,
+        [NMVOLUME_AVG_CR_20D] AS kl,
+        [NMVALUE_AVG_CR_20D] AS gia_tri,
+        EPS,
+        PE,
+        BVPS,
+        PB,
+        [STATE_OWNERSHIP] AS nha_nuoc,
+        [foreign] AS nuoc_ngoai,
+        LV2,
+        LV4,
+        companyName
+      FROM RATIO.dbo.ratioInday c
+      INNER JOIN marketInfor.dbo.info i
+        ON i.code = c.code
+      INNER JOIN pi p
+        ON i.code = c.code
+      INNER JOIN nuoc_ngoai n
+        ON n.code = c.code
+      WHERE c.code = '${code}'
+      AND c.date = (SELECT
+        MAX(date)
+      FROM RATIO.dbo.ratioInday
+      WHERE code = '${code}')
+      `
+      const data = await this.mssqlService.query(query)
+      return data
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async priceFluctuationCorrelation(code: string) {
+    try {
+      const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.tickerTradeVND where code = '${code}'`))[0].date).format('YYYY-MM-DD')
+      const year = moment(now).subtract(1, 'year').format('YYYY-MM-DD')
+
+      const query = `
+      select perChange as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
+      union all
+      select perChange as value, date, code from marketTrade.dbo.tickerTradeVND where code = '${code}' and date between '${year}' and '${now}'
+      union all
+      select (closePrice - lead(closePrice) over (order by date desc)) / lead(closePrice) over (order by date desc) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
+      order by date asc, code asc
+      `
+      const data = await this.mssqlService.query<InterestRateResponse[]>(query)
+      data[0].value = data[1].value = data[2].value = 0
+      return data.map(item => ({...item, date: UtilCommonTemplate.toDate(item.date) || ''}))
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async priceChange(code: string){
+    try {
+      
     } catch (e) {
       throw new CatchException(e)
     }
   }
 }
+
+
+
