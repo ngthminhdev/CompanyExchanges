@@ -24,6 +24,14 @@ export class ExchangeRateUSDEURResponse {
     }
 
     static mapToList(data?: ExchangeRateUSDEURResponse[]){
-         return data.map(item => new ExchangeRateUSDEURResponse(item))
+         const dataMapped = data.map(item => new ExchangeRateUSDEURResponse(item))
+         return {
+            data_0: dataMapped.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas')),
+            data_1: dataMapped.filter(item => item.name.includes('Đồng') || item.name.includes('Vàng')),
+            data_2: dataMapped.filter(item => item.name.includes('Thép HRC') || item.name.includes('Thép')),
+            data_3: dataMapped.filter(item => item.name.includes('Bông') || item.name.includes('Đường')),
+            data_4: dataMapped.filter(item => item.name.includes('Cao su') || item.name.includes('Ure')),
+            data_5: dataMapped.filter(item => item.name.includes('Dollar Index') || item.name.includes('U.S.10Y'))
+         }
     }
 }

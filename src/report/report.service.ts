@@ -1686,14 +1686,54 @@ export class ReportService {
         default:
           break;
       }
+      // const query = `
+      // WITH temp
+      // AS (SELECT
+      //   date,
+      //   ${type == 5 ? 'name' : `name + ' (' + unit + ')' AS name`},
+      //   ${type == 5 ? 'closePrice as value' : 'price as value'}
+      // FROM ${table}
+      // WHERE name IN (${name})
+      // AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      // SELECT
+      //   *
+      // FROM temp
+      // WHERE date IN (SELECT
+      //   date
+      // FROM temp
+      // GROUP BY date
+      // HAVING COUNT(date) = 2)
+      // ORDER BY date, name
+      // `
+
       const query = `
       WITH temp
       AS (SELECT
         date,
-        ${type == 5 ? 'name' : `name + ' (' + unit + ')' AS name`},
-        ${type == 5 ? 'closePrice as value' : 'price as value'}
-      FROM ${table}
-      WHERE name IN (${name})
+        name + ' (' + unit + ')' AS name,
+        price as value
+      FROM macroEconomic.dbo.HangHoa
+      WHERE name IN (N'Dầu Brent', N'Khí Gas', N'Đồng', N'Vàng', N'Thép HRC', N'Thép', N'Bông', N'Đường', N'Cao su', N'Ure')
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 10)
+      ORDER BY date, name
+      `
+
+      const query_2 = `
+      WITH temp
+      AS (SELECT
+        date,
+        name,
+        closePrice as value
+      FROM macroEconomic.dbo.WorldIndices
+      WHERE name IN (N'Dollar Index', N'U.S.10Y')
       AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
       SELECT
         *
@@ -1705,8 +1745,13 @@ export class ReportService {
       HAVING COUNT(date) = 2)
       ORDER BY date, name
       `
-      const data = await this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query)
-      return ExchangeRateUSDEURResponse.mapToList(data)
+      const [data, data_1] = await Promise.all([this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2)]) 
+      // return {
+      //   data_0: data.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas'))
+      // }
+      
+      return ExchangeRateUSDEURResponse.mapToList([...data, ...data_1])
+
     } catch (e) {
       throw new CatchException(e)
     }

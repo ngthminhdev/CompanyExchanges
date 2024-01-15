@@ -6,7 +6,7 @@ export class CommodityPriceFluctuationsDto {
     @ApiProperty({
         type: Number,
         description:`
-        0 - Giá dầu Brant và giá khí tự nhiên,
+        0 - Giá dầu Brent và giá khí tự nhiên,
         1 - Giá Đồng và giá Vàng,
         2 - Giá Thép HRC và giá Thép,
         3 - Giá Cotton và giá Đường,
