@@ -20,6 +20,12 @@ export class ExchangeRateResponse {
 
     @ApiProperty({
         type: Number,
+        description: '%W'
+    })
+    week: number
+
+    @ApiProperty({
+        type: Number,
         description: '%M'
     })
     month: number
@@ -40,6 +46,7 @@ export class ExchangeRateResponse {
         this.code = data?.code || ''
         this.price = data?.price || 0
         this.day = +data?.day.toFixed(2) || 0
+        this.week = +data?.week.toFixed(2) || 0
         this.month = +data?.month.toFixed(2) || 0
         this.year = +data?.year.toFixed(2) || 0
         this.img = `/resources/national/${data.code}.png`

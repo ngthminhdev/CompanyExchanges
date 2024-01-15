@@ -178,10 +178,11 @@ export class ReportService {
     try {
       const now = moment((await this.mssqlService.query(`select top 1 date from macroEconomic.dbo.exchangeRateVCB order by date desc`))[0].date).format('YYYY-MM-DD')
       const prev = moment(now).subtract(1, 'day').format('YYYY-MM-DD')
+      const week = moment(now).subtract(1, 'week').format('YYYY-MM-DD')
       const month = moment(now).subtract(1, 'month').format('YYYY-MM-DD')
       const year = moment(now).subtract(1, 'year').endOf('year').format('YYYY-MM-DD')
 
-      const same_day = UtilCommonTemplate.checkSameDate([now, prev, month, year])
+      const same_day = UtilCommonTemplate.checkSameDate([now, prev, month, year, week])
       const pivot = same_day.map(item => `[${item}]`).join(',')
 
       const code = `
@@ -198,11 +199,12 @@ export class ReportService {
         ${sort}
       FROM macroEconomic.dbo.exchangeRateVCB
       WHERE code IN (${code})
-      AND date IN ('${now}', '${prev}', '${year}', '${month}'))
+      AND date IN ('${now}', '${prev}', '${week}', '${year}', '${month}'))
       SELECT
         code,
         [${now}] AS price,
         ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
+        ([${now}] - [${week}]) / [${week}] * 100 AS week,
         ([${now}] - [${month}]) / [${month}] * 100 AS month,
         ([${now}] - [${year}]) / [${year}] * 100 AS year
       FROM temp AS source PIVOT (SUM(bySell) FOR date IN (${pivot})) AS chuyen
@@ -288,18 +290,21 @@ export class ReportService {
         `with date_ranges as (
           select
               max(case when date <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then date else null end) as prev,
+              max(case when date <= '${moment(now).subtract(1, 'week').format('YYYY-MM-DD')}' then date else null end) as week,
               max(case when date <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then date else null end) as month,
               max(case when date <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then date else null end) as ytd
           from macroEconomic.dbo.EconomicVN_byTriVo
       )
-      select prev, month, ytd
+      select prev, week, month, ytd
       from date_ranges;`
       )
+      
       const prev = moment(date[0].prev).format('YYYY-MM-DD')
       const month = moment(date[0].month).format('YYYY-MM-DD')
+      const week = moment(date[0].week).format('YYYY-MM-DD')
       const ytd = moment(date[0].ytd).format('YYYY-MM-DD')
 
-      const same_day = UtilCommonTemplate.checkSameDate([now, prev, month, ytd])
+      const same_day = UtilCommonTemplate.checkSameDate([now, prev, month, ytd, week])
       const pivot = same_day.map(item => `[${item}]`).join(',')
 
       const query = `
@@ -310,12 +315,13 @@ export class ReportService {
         value,
         ${sort}
       FROM macroEconomic.dbo.EconomicVN_byTriVo
-      WHERE date IN ('${now}', '${prev}', '${month}', '${ytd}')
+      WHERE date IN ('${now}', '${prev}', '${week}', '${month}', '${ytd}')
       AND code IN (N'Qua đêm', N'1 tuần', N'2 tuần', N'1 tháng', N'3 tháng'))
       SELECT
         code,
         [${now}] AS price,
         ([${now}] - [${prev}]) / [${prev}] * 100 AS day,
+        ([${now}] - [${week}]) / [${week}] * 100 AS week,
         ([${now}] - [${month}]) / [${month}] * 100 AS month,
         ([${now}] - [${ytd}]) / [${ytd}] * 100 AS year
       FROM temp PIVOT (SUM(value) FOR date IN (${pivot})) AS chuyen
@@ -1279,7 +1285,7 @@ export class ReportService {
             AND i.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
             `
       const dataToday = await this.dbServer.query(query(latestDate))
-      const dataYesterday = await this.dbServer.query(query(previousDate))
+      const dataYesterday = await this.dbServer.query(query(weekDate))
 
       const result = dataToday.map((item) => {
         const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
