@@ -1659,33 +1659,33 @@ export class ReportService {
     }
   }
 
-  async commodityPriceFluctuations(type: number) {
+  async commodityPriceFluctuations() {
     try {
       let name = ''
-      let table = 'macroEconomic.dbo.HangHoa'
-      switch (type) {
-        case 0: //brent và khí gas
-          name = `N'Dầu Brent', N'Khí Gas'`
-          break;
-        case 1: //Đồng và vàng
-          name = `N'Đồng', N'Vàng'`
-          break
-        case 2: //HRC và thép
-          name = `N'Thép HRC', N'Thép'`
-          break
-        case 3: //cotton và đường
-          name = `N'Bông', N'Đường'`
-          break
-        case 4: //cao su và ure
-          name = `N'Cao su', N'Ure'`
-          break
-        case 5: //dxy và us10y
-          name = `N'Dollar Index', N'U.S.10Y'`
-          table = 'macroEconomic.dbo.WorldIndices'
-          break
-        default:
-          break;
-      }
+      // let table = 'macroEconomic.dbo.HangHoa'
+      // switch (type) {
+      //   case 0: //brent và khí gas
+      //     name = `N'Dầu Brent', N'Khí Gas'`
+      //     break;
+      //   case 1: //Đồng và vàng
+      //     name = `N'Đồng', N'Vàng'`
+      //     break
+      //   case 2: //HRC và thép
+      //     name = `N'Thép HRC', N'Thép'`
+      //     break
+      //   case 3: //cotton và đường
+      //     name = `N'Bông', N'Đường'`
+      //     break
+      //   case 4: //cao su và ure
+      //     name = `N'Cao su', N'Ure'`
+      //     break
+      //   case 5: //dxy và us10y
+      //     name = `N'Dollar Index', N'U.S.10Y'`
+      //     table = 'macroEconomic.dbo.WorldIndices'
+      //     break
+      //   default:
+      //     break;
+      // }
       // const query = `
       // WITH temp
       // AS (SELECT

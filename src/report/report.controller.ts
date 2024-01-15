@@ -377,8 +377,8 @@ export class ReportController {
   @ApiOperation({summary: 'Biến động giá cả hàng hóa'})
   @ApiOkResponse({status: HttpStatus.OK, type: ExchangeRateUSDEURResponse})
   @Get('bien-dong-gia-ca-hang-hoa')
-  async commodityPriceFluctuations(@Query() q: CommodityPriceFluctuationsDto, @Res() res: Response){
-    const data = await this.reportService.commodityPriceFluctuations(+q.type)
+  async commodityPriceFluctuations(@Res() res: Response){
+    const data = await this.reportService.commodityPriceFluctuations()
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
