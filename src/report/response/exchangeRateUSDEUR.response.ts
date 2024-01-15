@@ -24,6 +24,10 @@ export class ExchangeRateUSDEURResponse {
     }
 
     static mapToList(data?: ExchangeRateUSDEURResponse[]){
+        return data.map(item => new ExchangeRateUSDEURResponse(item))
+    }
+
+    static mapToListV2(data?: ExchangeRateUSDEURResponse[]){
          const dataMapped = data.map(item => new ExchangeRateUSDEURResponse(item))
          return {
             data_0: dataMapped.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas')),

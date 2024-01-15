@@ -1750,7 +1750,7 @@ export class ReportService {
       //   data_0: data.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas'))
       // }
       
-      return ExchangeRateUSDEURResponse.mapToList([...data, ...data_1])
+      return ExchangeRateUSDEURResponse.mapToListV2([...data, ...data_1])
 
     } catch (e) {
       throw new CatchException(e)
