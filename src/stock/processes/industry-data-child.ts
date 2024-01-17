@@ -21,12 +21,12 @@ export const isDecrease = (yesterdayItem: IndustryRawInterface, item: IndustryRa
 };
 
 export const isHigh = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-    return item.close_price >= yesterdayItem.close_price * 1.07 && item.close_price !== yesterdayItem.close_price
+    return item.close_price >= (yesterdayItem.close_price + yesterdayItem.close_price * 0.07) && item.close_price !== yesterdayItem.close_price
         ? BooleanEnum.True : BooleanEnum.False;
 };
 
 export const isLow = (yesterdayItem: IndustryRawInterface, item: IndustryRawInterface): BooleanEnum => {
-    return item.close_price <= yesterdayItem.close_price * 0.93 && item.close_price !== yesterdayItem.close_price
+    return item.close_price <=  (yesterdayItem.close_price - yesterdayItem.close_price * 0.07) && item.close_price !== yesterdayItem.close_price
         ? BooleanEnum.True : BooleanEnum.False;
 };
 process.on('message', async (data: any) => {
