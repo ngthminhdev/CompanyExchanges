@@ -19,6 +19,8 @@ export interface IndustryRawInterface {
   ref_price: number;
   high: number;
   low: number;
+  floorPrice: number;
+  ceilingPrice: number;
   date_time: Date | string;
   total_market_cap: number
 }

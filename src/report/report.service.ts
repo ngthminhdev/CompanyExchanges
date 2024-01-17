@@ -1275,6 +1275,8 @@ export class ReportService {
               t.code AS ticker,
               t.closePrice AS close_price,
               t.highPrice AS high,
+              t.floorPrice,
+              t.ceilingPrice,
               t.lowPrice AS low,
               t.date AS date_time
             FROM marketTrade.dbo.tickerTradeVND t
