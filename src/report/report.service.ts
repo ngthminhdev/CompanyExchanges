@@ -1285,7 +1285,7 @@ export class ReportService {
             AND i.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
             `
       const dataToday = await this.dbServer.query(query(latestDate))
-      const dataYesterday = await this.dbServer.query(query(weekDate))
+      const dataYesterday = await this.dbServer.query(query(previousDate))
 
       const result = dataToday.map((item) => {
         const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
