@@ -1206,7 +1206,7 @@ export class ReportService {
     }
   }
 
-  async industry() {
+  async industry(type: number) {
     try {
       const {
         latestDate,
@@ -1287,7 +1287,7 @@ export class ReportService {
             AND i.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
             `
       const dataToday = await this.dbServer.query(query(latestDate))
-      const dataYesterday = await this.dbServer.query(query(previousDate))
+      const dataYesterday = await this.dbServer.query(query(type ? weekDate : previousDate))
 
       const result = dataToday.map((item) => {
         const yesterdayItem = dataYesterday.find(i => i.ticker === item.ticker);
@@ -1622,7 +1622,7 @@ export class ReportService {
 
   async profitablePerformanceIndustry() {
     try {
-      const promise_1 = this.industry()
+      const promise_1 = this.industry(1)
       const promise_2 = this.stockMarket(2)
 
       const [data_1, data_2] = await Promise.all([promise_1, promise_2])

@@ -293,8 +293,8 @@ export class ReportController {
   @ApiOperation({summary: 'Phân ngành'})
   @ApiOkResponse({status: HttpStatus.OK})
   @Get('phan-nganh')
-  async industry(@Res() res: Response){
-    const data = await this.reportService.industry()
+  async industry(@Query() q: StockMarketDto, @Res() res: Response){
+    const data = await this.reportService.industry(+q.type || 0)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
