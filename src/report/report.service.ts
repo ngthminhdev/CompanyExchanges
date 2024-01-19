@@ -1912,6 +1912,14 @@ export class ReportService {
       throw new CatchException(e)
     }
   }
+
+  async getDateSessionV2(){
+    try {
+      
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
 }
 
 
