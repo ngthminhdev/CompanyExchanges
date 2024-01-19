@@ -298,7 +298,7 @@ export class ReportService {
       select prev, week, month, ytd
       from date_ranges;`
       )
-      
+
       const prev = moment(date[0].prev).format('YYYY-MM-DD')
       const month = moment(date[0].month).format('YYYY-MM-DD')
       const week = moment(date[0].week).format('YYYY-MM-DD')
@@ -1214,11 +1214,12 @@ export class ReportService {
         weekDate,
         monthDate,
         firstDateYear,
-      }: SessionDatesInterface = await this.stockService.getSessionDate(
+      } = await this.getDateSessionV2(
         '[RATIO].[dbo].[ratioInday]',
         'date',
-        this.dbServer
+        // this.dbServer
       );
+      
       const marketCapQuery = `
           SELECT
           i.date AS date_time,
@@ -1282,7 +1283,7 @@ export class ReportService {
             FROM marketTrade.dbo.tickerTradeVND t
             INNER JOIN marketInfor.dbo.info i
               ON t.code = i.code
-            WHERE t.date = '${date}'
+            WHERE t.date = '${UtilCommonTemplate.toDate(date)}'
             AND i.floor = 'HOSE'
             AND i.LV2 IN (N'Ngân hàng', N'Dịch vụ tài chính', N'Bất động sản', N'Tài nguyên', N'Xây dựng & Vật liệu', N'Thực phẩm & Đồ uống', N'Hóa chất', N'Dịch vụ bán lẻ', N'Công nghệ', N'Dầu khí')
             `
@@ -1747,11 +1748,11 @@ export class ReportService {
       HAVING COUNT(date) = 2)
       ORDER BY date, name
       `
-      const [data, data_1] = await Promise.all([this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2)]) 
+      const [data, data_1] = await Promise.all([this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2)])
       // return {
       //   data_0: data.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas'))
       // }
-      
+
       return ExchangeRateUSDEURResponse.mapToListV2([...data, ...data_1])
 
     } catch (e) {
@@ -1899,23 +1900,45 @@ export class ReportService {
       `
       const data = await this.mssqlService.query<InterestRateResponse[]>(query)
       data[0].value = data[1].value = data[2].value = 0
-      return data.map(item => ({...item, date: UtilCommonTemplate.toDate(item.date) || ''}))
+      return data.map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) || '' }))
     } catch (e) {
       throw new CatchException(e)
     }
   }
 
-  async priceChange(code: string){
+  async priceChange(code: string) {
     try {
-      
+
     } catch (e) {
       throw new CatchException(e)
     }
   }
 
-  async getDateSessionV2(){
+  async getDateSessionV2(table: string, column: string) {
     try {
-      
+      const now = moment((await this.mssqlService.query(`select max(${column}) as date from ${table}`))[0].date).format('YYYY-MM-DD')
+
+      const date = await this.mssqlService.query(
+        `with date_ranges as (
+          select
+              max(case when ${column} <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then ${column} else null end) as prev,
+              max(case when ${column} <= '${moment(now).subtract(1, 'week').format('YYYY-MM-DD')}' then ${column} else null end) as week,
+              max(case when ${column} <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then ${column} else null end) as month,
+              max(case when ${column} <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' then ${column} else null end) as year,
+              max(case when ${column} <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then ${column} else null end) as ytd
+          from ${table}
+      )
+      select prev, week, month, year, ytd
+      from date_ranges;`
+      )
+
+      return {
+        latestDate: now,
+        previousDate: date[0].prev,
+        weekDate: date[0].week,
+        monthDate: date[0].month,
+        firstDateYear: date[0].ytd
+      }
     } catch (e) {
       throw new CatchException(e)
     }
