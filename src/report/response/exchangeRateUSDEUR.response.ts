@@ -35,7 +35,7 @@ export class ExchangeRateUSDEURResponse {
             data_2: dataMapped.filter(item => item.name.includes('Thép HRC') || item.name.includes('Thép')),
             data_3: dataMapped.filter(item => item.name.includes('Bông') || item.name.includes('Đường')),
             data_4: dataMapped.filter(item => item.name.includes('Cao su') || item.name.includes('Ure')),
-            data_5: dataMapped.filter(item => item.name.includes('Dollar Index') || item.name.includes('U.S.10Y'))
+            data_5: dataMapped.filter(item => item.name.includes('Dollar Index') || item.name.includes('U.S.10Y')).map(item => ({...item, name: item.name == 'Dollar Index' ? item.name + ' (điểm)' : item.name + ' (%)'}))
          }
     }
 }
