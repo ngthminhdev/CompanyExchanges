@@ -1297,8 +1297,8 @@ export class ReportService {
           equal: isEqual(yesterdayItem, item),
           increase: isIncrease(yesterdayItem, item),
           decrease: isDecrease(yesterdayItem, item),
-          high: isHigh(yesterdayItem, item),
-          low: isLow(yesterdayItem, item),
+          high: isHigh(yesterdayItem, item, type),
+          low: isLow(yesterdayItem, item, type),
         };
       });
 
