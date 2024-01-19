@@ -1385,18 +1385,17 @@ export class ReportService {
 
       //thong tin vnindex
       const promise_1 = this.mssqlService.query(`
-      SELECT
+      with temp as (SELECT
         code,
         i.date,
         closePrice,
-        change,
-        perChange
+        closePrice - lead(closePrice) over (partition by code order by date desc) as change,
+        (closePrice - lead(closePrice) over (partition by code order by date desc)) / lead(closePrice) over (partition by code order by date desc) * 100 as perChange
       FROM marketTrade.dbo.indexTradeVND i
       WHERE i.code IN ('VNINDEX', 'HNX')
-      AND date = (SELECT
-        MAX(date)
-      FROM marketTrade.dbo.indexTradeVND)
-      ORDER BY code DESC
+      AND date in ('${UtilCommonTemplate.toDate(date[0].week)}', '${UtilCommonTemplate.toDate(date[0].now)}')
+)
+select * from temp where date = (select max(date) from temp)
       `)
 
       //top nganh noi bat
