@@ -73,7 +73,7 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('tin-quoc-te')
   async newsInternational(@Query() q: QueryNewsDto, @Res() res: Response){
-    const data = await this.reportService.newsInternational(+q.quantity)
+    const data = await this.reportService.newsInternational(+q.quantity, +q.type || 0)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
@@ -81,7 +81,7 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('tin-trong-nuoc')
   async newsDomestic(@Query() q: QueryNewsDto, @Res() res: Response){
-    const data = await this.reportService.newsDomestic(+q.quantity)
+    const data = await this.reportService.newsDomestic(+q.quantity, +q.type || 0)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 

@@ -217,7 +217,9 @@ export enum RedisKeys {
 
   //Tin tuần
   weekNewsInternational = 'week-news-international',
+  weekNewsInternationalNotFilter = 'week-news-international-not-filter',
   weekNewsDomestic = 'week-news-domestic',
+  weekNewsDomesticNotFilter = 'week-news-domestic-not-filter',
   saveStockRecommendWeek = 'save-stock-recommend-week',
   flexiblePage = 'flexible-page-week'
 }

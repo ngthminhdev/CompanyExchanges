@@ -125,23 +125,35 @@ export class ReportService {
     return
   }
 
-  async newsInternational(quantity: number) {
+  async newsInternational(quantity: number, type: number) {
     try {
-      const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity || 7} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucQuocTe order by Date desc
-      `)
+      let data = []
+      if(!type) {
+        data = await this.mssqlService.query<NewsInternationalResponse[]>(`
+        select distinct top ${quantity || 7} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucQuocTe order by Date desc
+        `)
+      }else {
+        data = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter)
+      }
+      
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
+
     } catch (e) {
       throw new CatchException(e)
     }
   }
 
-  async newsDomestic(quantity: number) {
+  async newsDomestic(quantity: number, type: number) {
     try {
-      const data = await this.mssqlService.query<NewsInternationalResponse[]>(`
-      select distinct top ${quantity || 6} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucViMo order by Date desc
-      `)
+      let data = []
+      if(!type) {
+        data = await this.mssqlService.query<NewsInternationalResponse[]>(`
+        select distinct top ${quantity || 6} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucViMo order by Date desc
+        `)
+      }else{
+        data = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter)
+      }
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
     } catch (e) {
@@ -726,11 +738,20 @@ export class ReportService {
         default:
           break;
       }
+      if(id == 0) {
+        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter)
+        await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, new Set([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
+      }
+      if(id == 1) {
+        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter)
+        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, new Set([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
+      }
       await this.redis.set(name_redis, value, { ttl: TimeToLive.OneYear })
     } catch (e) {
       throw new CatchException(e)
     }
   }
+
 
   async getNews(id: number) {
     try {
