@@ -740,11 +740,11 @@ export class ReportService {
       }
       if(id == 0) {
         const data_week: any[] = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter) || []
-        await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, [...new Set([...data_week, ...value])] , {ttl: TimeToLive.OneDay})
+        await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, this.removeDuplicateObjects([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
       }
       if(id == 1) {
         const data_week: any[] = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
-        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, [...new Set([...data_week, ...value])] , {ttl: TimeToLive.OneDay})
+        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, this.removeDuplicateObjects([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
       }
       await this.redis.set(name_redis, value, { ttl: TimeToLive.OneYear })
     } catch (e) {
@@ -752,6 +752,21 @@ export class ReportService {
     }
   }
 
+  removeDuplicateObjects(arr: any[]) {
+    const uniqueObjects = [];
+    const uniqueObjectStrings = [];
+
+    for (const obj of arr) {
+        const objString = JSON.stringify(obj);
+
+        if (!uniqueObjectStrings.includes(objString)) {
+            uniqueObjectStrings.push(objString);
+            uniqueObjects.push(obj);
+        }
+    }
+
+    return uniqueObjects;
+}
 
   async getNews(id: number) {
     try {
