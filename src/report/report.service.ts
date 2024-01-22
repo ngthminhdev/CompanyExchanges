@@ -133,7 +133,7 @@ export class ReportService {
         select distinct top ${quantity || 7} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucQuocTe order by Date desc
         `)
       }else {
-        data = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter)
+        data = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter) || []
       }
       
       const dataMapped = NewsInternationalResponse.mapToList(data)
@@ -152,7 +152,7 @@ export class ReportService {
         select distinct top ${quantity || 6} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucViMo order by Date desc
         `)
       }else{
-        data = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter)
+        data = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
       }
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
