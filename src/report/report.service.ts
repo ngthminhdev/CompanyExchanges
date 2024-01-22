@@ -154,6 +154,8 @@ export class ReportService {
       }else{
         data = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
       }
+      console.log(data);
+      
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
     } catch (e) {
@@ -739,12 +741,12 @@ export class ReportService {
           break;
       }
       if(id == 0) {
-        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter)
+        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter) || []
         await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, new Set([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
       }
       if(id == 1) {
-        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter)
-        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, new Set([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
+        const data_week: any[] = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
+        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, [...new Set([...data_week, ...value])] , {ttl: TimeToLive.OneDay})
       }
       await this.redis.set(name_redis, value, { ttl: TimeToLive.OneYear })
     } catch (e) {
