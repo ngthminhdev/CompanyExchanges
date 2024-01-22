@@ -838,7 +838,7 @@ export class ReportService {
     }
   }
 
-  async saveMarketWeekComment(text: string) {
+  async saveMarketWeekComment(text: string[]) {
     try {
       await this.redis.set(RedisKeys.saveMarketWeekComment, text, { ttl: TimeToLive.OneYear })
     } catch (e) {
@@ -1943,7 +1943,10 @@ select * from temp where date = (select max(date) from temp)
 
   async priceChange(code: string) {
     try {
-
+      const {latestDate, monthDate, month3Date} = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
+      console.log({latestDate, monthDate, month3Date});
+      
+      const query = ``
     } catch (e) {
       throw new CatchException(e)
     }
@@ -1959,11 +1962,12 @@ select * from temp where date = (select max(date) from temp)
               max(case when ${column} <= '${moment(now).subtract(1, 'day').format('YYYY-MM-DD')}' then ${column} else null end) as prev,
               max(case when ${column} <= '${moment(now).subtract(1, 'week').format('YYYY-MM-DD')}' then ${column} else null end) as week,
               max(case when ${column} <= '${moment(now).subtract(1, 'month').format('YYYY-MM-DD')}' then ${column} else null end) as month,
+              max(case when ${column} <= '${moment(now).subtract(3, 'month').format('YYYY-MM-DD')}' then ${column} else null end) as month_3,
               max(case when ${column} <= '${moment(now).subtract(1, 'year').format('YYYY-MM-DD')}' then ${column} else null end) as year,
               max(case when ${column} <= '${moment(now).startOf('year').format('YYYY-MM-DD')}' then ${column} else null end) as ytd
           from ${table}
       )
-      select prev, week, month, year, ytd
+      select prev, week, month, month_3, year, ytd
       from date_ranges;`
       )
 
@@ -1972,6 +1976,7 @@ select * from temp where date = (select max(date) from temp)
         previousDate: date[0].prev,
         weekDate: date[0].week,
         monthDate: date[0].month,
+        month3Date: date[0].month_3,
         firstDateYear: date[0].ytd
       }
     } catch (e) {

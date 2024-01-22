@@ -301,7 +301,7 @@ export class ReportController {
   @ApiOperation({summary: 'Lưu diễn biến thị trường bản tin tuần trang 1'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Post('luu-dien-bien-thi-truong-tuan')
-  async saveMarketWeekMovements(@Body() b: SaveMarketMovementsDto, @Res() res: Response){
+  async saveMarketWeekMovements(@Body() b: SaveMarketCommentDto, @Res() res: Response){
     const data = await this.reportService.saveMarketWeekComment(b.text)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
@@ -432,6 +432,14 @@ export class ReportController {
   @Get('tuong-quan-bien-dong-gia')
   async priceFluctuationCorrelation(@Query() b: StockDto, @Res() res: Response){
     const data = await this.reportService.priceFluctuationCorrelation(b.stock)
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
+  @ApiOperation({summary: 'Biến động giá (%)'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Get('bien-dong-gia')
+  async priceChange(@Query() b: StockDto, @Res() res: Response){
+    const data = await this.reportService.priceChange(b.stock)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
