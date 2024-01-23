@@ -45,11 +45,6 @@ export class ISaveStockRecommendWeek {
         type: Number
     })
     thoi_gian_nam_giu: number
-
-    @ApiProperty({
-        type: Number
-    })
-    is_sell: number
 }
 
 export class SaveStockRecommendWeekDto {

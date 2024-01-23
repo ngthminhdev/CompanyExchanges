@@ -33,6 +33,8 @@ import { AfterNoonReport2Response, StockMarketResponse } from './response/stockM
 import { TopScoreResponse } from './response/topScore.response';
 import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
 import { InterestRateResponse } from '../macro/responses/interest-rate.response'
+import { BuyingAndSellingStatisticsResponse } from './response/buyingAndSellingStatistics.response';
+import * as calTech from 'technicalindicators';
 
 @Injectable()
 export class ReportService {
@@ -128,14 +130,14 @@ export class ReportService {
   async newsInternational(quantity: number, type: number) {
     try {
       let data = []
-      if(!type) {
+      if (!type) {
         data = await this.mssqlService.query<NewsInternationalResponse[]>(`
         select distinct top ${quantity || 7} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucQuocTe order by Date desc
         `)
-      }else {
+      } else {
         data = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter) || []
       }
-      
+
       const dataMapped = NewsInternationalResponse.mapToList(data)
       return dataMapped
 
@@ -147,11 +149,11 @@ export class ReportService {
   async newsDomestic(quantity: number, type: number) {
     try {
       let data = []
-      if(!type) {
+      if (!type) {
         data = await this.mssqlService.query<NewsInternationalResponse[]>(`
         select distinct top ${quantity || 6} Title as title, Href as href, Date, SubTitle as sub_title from macroEconomic.dbo.TinTucViMo order by Date desc
         `)
-      }else{
+      } else {
         data = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
       }
       const dataMapped = NewsInternationalResponse.mapToList(data)
@@ -738,13 +740,13 @@ export class ReportService {
         default:
           break;
       }
-      if(id == 0) {
+      if (id == 0) {
         const data_week: any[] = await this.redis.get(RedisKeys.weekNewsInternationalNotFilter) || []
-        await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, this.removeDuplicateObjects([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
+        await this.redis.set(RedisKeys.weekNewsInternationalNotFilter, this.removeDuplicateObjects([...data_week, ...value]), { ttl: TimeToLive.OneDay })
       }
-      if(id == 1) {
+      if (id == 1) {
         const data_week: any[] = await this.redis.get(RedisKeys.weekNewsDomesticNotFilter) || []
-        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, this.removeDuplicateObjects([...data_week, ...value]) , {ttl: TimeToLive.OneDay})
+        await this.redis.set(RedisKeys.weekNewsDomesticNotFilter, this.removeDuplicateObjects([...data_week, ...value]), { ttl: TimeToLive.OneDay })
       }
       await this.redis.set(name_redis, value, { ttl: TimeToLive.OneYear })
     } catch (e) {
@@ -757,16 +759,16 @@ export class ReportService {
     const uniqueObjectStrings = [];
 
     for (const obj of arr) {
-        const objString = JSON.stringify(obj);
+      const objString = JSON.stringify(obj);
 
-        if (!uniqueObjectStrings.includes(objString)) {
-            uniqueObjectStrings.push(objString);
-            uniqueObjects.push(obj);
-        }
+      if (!uniqueObjectStrings.includes(objString)) {
+        uniqueObjectStrings.push(objString);
+        uniqueObjects.push(obj);
+      }
     }
 
     return uniqueObjects;
-}
+  }
 
   async getNews(id: number) {
     try {
@@ -1255,7 +1257,7 @@ export class ReportService {
         'date',
         // this.dbServer
       );
-      
+
       const marketCapQuery = `
           SELECT
           i.date AS date_time,
@@ -1943,12 +1945,257 @@ select * from temp where date = (select max(date) from temp)
 
   async priceChange(code: string) {
     try {
-      const {latestDate, monthDate, month3Date} = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
-      console.log({latestDate, monthDate, month3Date});
-      
-      const query = ``
+      const { latestDate, monthDate, month3Date, firstDateYear } = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
+
+      const month = moment(monthDate).format('YYYY-MM-DD')
+      const month_3 = moment(month3Date).format('YYYY-MM-DD')
+      const ytd = moment(firstDateYear).format('YYYY-MM-DD')
+
+      const same_day = UtilCommonTemplate.checkSameDate([latestDate, month, month_3, ytd])
+      const pivot = same_day.map(item => `[${item}]`).join(',')
+
+      const query = `
+      WITH temp
+      AS (SELECT
+        closePrice,
+        code,
+        date
+      FROM marketTrade.dbo.tickerTradeVND
+      WHERE code = '${code}'
+      AND date IN ('${latestDate}', '${month}', '${month_3}', '${ytd}')
+      UNION ALL
+      SELECT
+        closePrice,
+        code,
+        date
+      FROM marketTrade.dbo.indexTradeVND
+      WHERE code = 'VNINDEX'
+      AND date IN ('${latestDate}', '${month}', '${month_3}', '${ytd}')
+      UNION ALL
+      SELECT
+        closePrice,
+        code,
+        date
+      FROM marketTrade.dbo.inDusTrade
+      WHERE code = (SELECT
+        LV2
+      FROM marketInfor.dbo.info
+      WHERE code = '${code}')
+      AND floor = 'ALL'
+      AND date IN ('${latestDate}', '${month}', '${month_3}', '${ytd}'))
+      SELECT
+        ([${latestDate}] - [${month}]) / [${month}] * 100 AS month,
+        ([${latestDate}] - [${month_3}]) / [${month_3}] * 100 AS month_3,
+        ([${latestDate}] - [${ytd}]) / [${ytd}] * 100 AS ytd,
+        code
+      FROM (SELECT
+        *
+      FROM temp) AS source PIVOT (SUM(closePrice) FOR date IN (${pivot})) AS chuyen
+      `
+
+      const data = await this.mssqlService.query(query)
+      return data
     } catch (e) {
       throw new CatchException(e)
+    }
+  }
+
+  async buyingAndSellingStatistics(code: string) {
+    try {
+      const query = `
+      SELECT
+        totalBuyOrder as buy,
+        totalSellOrder as sell,
+        date
+      FROM marketTrade.dbo.orderTicker
+      WHERE code = '${code}'
+      AND date BETWEEN DATEADD(MONTH, -3, (SELECT
+        MAX(date)
+      FROM marketTrade.dbo.orderTicker
+      WHERE code = '${code}')
+      ) AND (SELECT
+        MAX(date)
+      FROM marketTrade.dbo.orderTicker
+      WHERE code = '${code}')
+      ORDER BY date
+      `
+      const data = await this.mssqlService.query<BuyingAndSellingStatisticsResponse[]>(query)
+      return BuyingAndSellingStatisticsResponse.mapToList(data)
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async technicalIndex(code: string) {
+    try {
+      const { latestDate, yearDate } = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
+      const data: { closePrice: number, date: string, highPrice: number, lowPrice: number }[] = await this.mssqlService.query(`select closePrice, highPrice, lowPrice, date from marketTrade.dbo.tickerTradeVND where code = '${code}' order by date`)
+
+      const day = data.map(item => item.date).filter(item => new Date(item) >= new Date(yearDate)).reverse()
+
+      const price = data.map(item => item.closePrice)
+      const highPrice = data.map(item => item.highPrice)
+      const lowPrice = data.map(item => item.lowPrice)
+
+      const rsi = calTech.rsi({ values: price, period: 14 }).reverse()
+      const cci = calTech.cci({ close: price, low: lowPrice, high: highPrice, period: 14 }).reverse()
+      const williams = calTech.williamsr({ close: price, low: lowPrice, high: highPrice, period: 14 }).reverse()
+      const adx = calTech.adx({ close: price, low: lowPrice, high: highPrice, period: 14 }).reverse()
+      const stochastic = calTech.stochastic({ close: price, low: lowPrice, high: highPrice, period: 14, signalPeriod: 3 }).reverse()
+      const stochasticRsi = calTech.stochasticrsi({ values: price, kPeriod: 3, dPeriod: 3, rsiPeriod: 14, stochasticPeriod: 14 }).reverse()
+      const macd = calTech.macd({ values: price, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false }).reverse()
+
+      const ma5 = calTech.sma({ period: 5, values: price })
+      const ma10 = calTech.sma({ period: 10, values: price })
+      const ma20 = calTech.sma({ period: 20, values: price })
+      const ma50 = calTech.sma({ period: 50, values: price })
+      const ma100 = calTech.sma({ period: 100, values: price })
+      const ma200 = calTech.sma({ period: 200, values: price })
+      const sar = calTech.psar({ high: highPrice, low: lowPrice, max: 0.2, step: 0.02 })
+
+      const rsi_date = []
+      const cci_date = []
+      const williams_date = []
+      const adx_date = []
+      const stochastic_date = []
+      const stochasticRsi_date = []
+      const macd_date = []
+
+      const allTech = day.map((item, index) =>
+      // ({
+      //   date: UtilCommonTemplate.toDate(item),
+      //   rsi: rsi[index],
+      //   cci: cci[index],
+      //   williams: williams[index],
+      //   adx: adx[index],
+      //   stochastic: stochastic[index],
+      //   stochasticRsi: stochasticRsi[index],
+      //   macd: {
+      //     macd: macd[index].MACD,
+      //     macdSignal: macd[index].signal
+      //   },
+      //   macdHistogram: macd[index].histogram
+      // })
+      {
+        const date = UtilCommonTemplate.toDate(item)
+        rsi_date.push({ value: rsi[index], date })
+        cci_date.push({ value: cci_date[index], date })
+        williams_date.push({ value: williams_date[index], date })
+        adx_date.push({ value: adx_date[index], date })
+        stochastic_date.push({ value: stochastic_date[index], date })
+        stochasticRsi_date.push({ value: stochasticRsi_date[index], date })
+        macd_date.push({ value: macd_date[index], date })
+      }
+      )
+      return {
+        rsi: {
+          value: rsi_date[0].value,
+          rate: this.ratingTechnicalIndex('rsi', {value: rsi_date[0].value}),
+          chart: rsi_date.reverse(),
+        },
+        stochastic: {
+          value: stochastic_date[0].value,
+          rate: this.ratingTechnicalIndex('stochastic', {k: stochastic_date[0].value.k, d: stochastic_date[0].value.d}),
+          // chart: 
+        }
+      }
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  ratingTechnicalIndex(name: 'rsi' | 'stochastic' | 'stochasticRsi' | 'macd' | 'macdHistogram' | 'adx' | 'williams' | 'cci',
+   o: { value?: number, d?: number, k?: number, macd?: number, signal?: number, histogramT?: number, histogramT1?: number, pdi?: number, mdi?: number, adx?: number }) {
+    //0 - Tích cực, 1 - Tiêu cực, 2 - Trung lập
+    let rate = 0
+    switch (name) {
+      case 'rsi':
+        if (o.value < 30) {
+          rate = 0
+        } else if (o.value > 70) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break;
+      case 'stochastic':
+        if (o.k > o.d && o.k < 20) {
+          rate = 0
+        } else if (o.k < o.d && o.k > 80) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'stochasticRsi':
+        if (o.value < 20) {
+          rate = 0
+        } else if (o.value > 80) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'macd':
+        if (o.macd > o.signal) {
+          rate = 0
+        } else if (o.macd < o.signal) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'macdHistogram':
+        if (o.histogramT > o.histogramT1) {
+          rate = 0
+        } else if (o.histogramT < o.histogramT1) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'adx':
+        if (o.adx > 25 && o.pdi > o.mdi) {
+          rate = 0
+        } else if (o.adx > 25 && o.pdi < o.mdi) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'williams':
+        if (o.value < -80) {
+          rate = 0
+        } else if (o.value > -20) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      case 'cci':
+        if (o.value < -100) {
+          rate = 0
+        } else if (o.value > 100) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
+      default:
+        break;
+    }
+    switch (rate) {
+      case 0:
+        return 'Tích cực'
+        break;
+      case 1:
+        return 'Tiêu cực'
+        break
+      case 2:
+        return 'Trung lập'
+        break
+      default:
+        break;
     }
   }
 
@@ -1977,6 +2224,7 @@ select * from temp where date = (select max(date) from temp)
         weekDate: date[0].week,
         monthDate: date[0].month,
         month3Date: date[0].month_3,
+        yearDate: date[0].year,
         firstDateYear: date[0].ytd
       }
     } catch (e) {

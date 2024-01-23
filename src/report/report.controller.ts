@@ -6,18 +6,18 @@ import { FormDataRequest } from 'nestjs-form-data';
 import { CatchException } from '../exceptions/common.exception';
 import { StockDto } from '../shares/dto/stock.dto';
 import { BaseResponse } from '../utils/utils.response';
-import { CommodityPriceFluctuationsDto } from './dto/commodityPriceFluctuations.dto';
 import { getNewsDto } from './dto/get-news.dto';
 import { IdentifyMarketDto, SaveStockRecommendDto } from './dto/identifyMarket.dto';
 import { QueryNewsDto } from './dto/queryNews.dto';
 import { SaveNewsDto } from './dto/save-news.dto';
-import { SaveMarketCommentDto, SaveMarketMovementsDto } from './dto/saveMarketMovements.dto';
+import { SaveMarketCommentDto } from './dto/saveMarketMovements.dto';
 import { SaveStockRecommendWeekDto } from './dto/saveStockRecommendWeek.dto';
 import { SetFlexiblePageDto } from './dto/setFlexiblePage.dto';
 import { StockMarketDto } from './dto/stockMarket.dto';
 import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
 import { AfternoonReport1, IStockContribute } from './response/afternoonReport1.response';
+import { BuyingAndSellingStatisticsResponse } from './response/buyingAndSellingStatistics.response';
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ExchangeRateUSDEURResponse } from './response/exchangeRateUSDEUR.response';
@@ -407,7 +407,7 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({}))
   }
 
-  @ApiOperation({summary: 'Danh sách cổ phiếu khuyến nghị bản tin tuần'})
+  @ApiOperation({summary: 'Lấy trang linh động'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('trang-linh-dong')
   async getFlexiblePage(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
@@ -423,7 +423,7 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('thong-tin-co-phieu')
   async stockInfo(@Query() b: StockDto, @Res() res: Response){
-    const data = await this.reportService.stockInfo(b.stock)
+    const data = await this.reportService.stockInfo(b.stock.toUpperCase())
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
@@ -431,7 +431,7 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('tuong-quan-bien-dong-gia')
   async priceFluctuationCorrelation(@Query() b: StockDto, @Res() res: Response){
-    const data = await this.reportService.priceFluctuationCorrelation(b.stock)
+    const data = await this.reportService.priceFluctuationCorrelation(b.stock.toUpperCase())
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
@@ -439,8 +439,15 @@ export class ReportController {
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Get('bien-dong-gia')
   async priceChange(@Query() b: StockDto, @Res() res: Response){
-    const data = await this.reportService.priceChange(b.stock)
+    const data = await this.reportService.priceChange(b.stock.toUpperCase())
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Chỉ số kỹ thuật'})
+  @ApiOkResponse({status: HttpStatus.OK, type: BuyingAndSellingStatisticsResponse})
+  @Get('chi-so-ky-thuat')
+  async technicalIndex(@Query() b: StockDto, @Res() res: Response){
+    const data = await this.reportService.technicalIndex(b.stock.toUpperCase())
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
 }
