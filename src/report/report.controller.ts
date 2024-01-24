@@ -27,6 +27,7 @@ import { MorningHoseResponse } from './response/morningHose.response';
 import { NewsEnterpriseResponse } from './response/newsEnterprise.response';
 import { NewsInternationalResponse } from './response/newsInternational.response';
 import { AfterNoonReport2Response } from './response/stockMarket.response';
+import { TechnicalIndexResponse } from './response/technicalIndex.response';
 import { TopScoreResponse } from './response/topScore.response';
 import { TransactionValueFluctuationsResponse } from './response/transactionValueFluctuations.response';
 @Controller('report')
@@ -444,7 +445,7 @@ export class ReportController {
   }
 
   @ApiOperation({summary: 'Chỉ số kỹ thuật'})
-  @ApiOkResponse({status: HttpStatus.OK, type: BuyingAndSellingStatisticsResponse})
+  @ApiOkResponse({status: HttpStatus.OK, type: TechnicalIndexResponse})
   @Get('chi-so-ky-thuat')
   async technicalIndex(@Query() b: StockDto, @Res() res: Response){
     const data = await this.reportService.technicalIndex(b.stock.toUpperCase())
