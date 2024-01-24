@@ -2028,12 +2028,13 @@ select * from temp where date = (select max(date) from temp)
 
   async technicalIndex(code: string) {
     try {
-      const { latestDate, yearDate } = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
+      const { yearDate } = await this.getDateSessionV2('marketTrade.dbo.tickerTradeVND', 'date')
       const data: { closePrice: number, date: string, highPrice: number, lowPrice: number }[] = await this.mssqlService.query(`select closePrice, highPrice, lowPrice, date from marketTrade.dbo.tickerTradeVND where code = '${code}' order by date`)
 
       const day = data.map(item => item.date).filter(item => new Date(item) >= new Date(yearDate)).reverse()
 
       const price = data.map(item => item.closePrice)
+      const lastPrice = price[price.length - 1]
       const highPrice = data.map(item => item.highPrice)
       const lowPrice = data.map(item => item.lowPrice)
 
@@ -2044,14 +2045,20 @@ select * from temp where date = (select max(date) from temp)
       const stochastic = calTech.stochastic({ close: price, low: lowPrice, high: highPrice, period: 14, signalPeriod: 3 }).reverse()
       const stochasticRsi = calTech.stochasticrsi({ values: price, kPeriod: 3, dPeriod: 3, rsiPeriod: 14, stochasticPeriod: 14 }).reverse()
       const macd = calTech.macd({ values: price, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false }).reverse()
-
-      const ma5 = calTech.sma({ period: 5, values: price })
-      const ma10 = calTech.sma({ period: 10, values: price })
-      const ma20 = calTech.sma({ period: 20, values: price })
-      const ma50 = calTech.sma({ period: 50, values: price })
-      const ma100 = calTech.sma({ period: 100, values: price })
-      const ma200 = calTech.sma({ period: 200, values: price })
       const sar = calTech.psar({ high: highPrice, low: lowPrice, max: 0.2, step: 0.02 })
+
+      const arr = [5, 10, 20, 50, 100, 200]
+
+      const table = arr.map(item => {
+        const ma = calTech.sma({ period: item, values: price })
+        const ema = calTech.ema({ period: item, values: price })
+
+        return {
+          name: `MA${item}`,
+          single: this.ratingTechnicalIndex('ma', { value: ma[ma.length - 1], price: lastPrice }),
+          hat: this.ratingTechnicalIndex('ma', { value: ema[ema.length - 1], price: lastPrice })
+        }
+      })
 
       const rsi_date = []
       const cci_date = []
@@ -2060,52 +2067,84 @@ select * from temp where date = (select max(date) from temp)
       const stochastic_date = []
       const stochasticRsi_date = []
       const macd_date = []
+      const macd_histogram_date = []
 
-      const allTech = day.map((item, index) =>
-      // ({
-      //   date: UtilCommonTemplate.toDate(item),
-      //   rsi: rsi[index],
-      //   cci: cci[index],
-      //   williams: williams[index],
-      //   adx: adx[index],
-      //   stochastic: stochastic[index],
-      //   stochasticRsi: stochasticRsi[index],
-      //   macd: {
-      //     macd: macd[index].MACD,
-      //     macdSignal: macd[index].signal
-      //   },
-      //   macdHistogram: macd[index].histogram
-      // })
-      {
+      day.map((item, index) => {
         const date = UtilCommonTemplate.toDate(item)
         rsi_date.push({ value: rsi[index], date })
-        cci_date.push({ value: cci_date[index], date })
-        williams_date.push({ value: williams_date[index], date })
-        adx_date.push({ value: adx_date[index], date })
-        stochastic_date.push({ value: stochastic_date[index], date })
-        stochasticRsi_date.push({ value: stochasticRsi_date[index], date })
-        macd_date.push({ value: macd_date[index], date })
+        cci_date.push({ value: cci[index], date })
+        williams_date.push({ value: williams[index], date })
+        adx_date.push({ ...adx[index], date })
+        stochastic_date.push({ ...stochastic[index], date })
+        stochasticRsi_date.push({ k: stochasticRsi[0].k, d: stochasticRsi[0].d, date })
+        macd_date.push({ macd: macd[index].MACD, signal: macd[index].signal, date })
+        macd_histogram_date.push({ value: macd[index].histogram, date })
       }
       )
-      return {
+
+      const chart = {
         rsi: {
-          value: rsi_date[0].value,
-          rate: this.ratingTechnicalIndex('rsi', {value: rsi_date[0].value}),
+          value: rsi[0],
+          rate: this.ratingTechnicalIndex('rsi', { value: rsi[0] }),
           chart: rsi_date.reverse(),
         },
         stochastic: {
-          value: stochastic_date[0].value,
-          rate: this.ratingTechnicalIndex('stochastic', {k: stochastic_date[0].value.k, d: stochastic_date[0].value.d}),
-          // chart: 
+          value: stochastic[0],
+          rate: this.ratingTechnicalIndex('stochastic', { k: stochastic[0].k, d: stochastic[0].d }),
+          chart: stochastic_date.reverse()
+        },
+        cci: {
+          value: cci[0],
+          rate: this.ratingTechnicalIndex('cci', { value: cci[0] }),
+          chart: cci_date.reverse()
+        },
+        stochasticRsi: {
+          value: {
+            k: stochasticRsi[0].k,
+            d: stochasticRsi[0].d
+          },
+          rate: this.ratingTechnicalIndex('stochasticRsi', { value: stochasticRsi[0].stochRSI }),
+          chart: stochasticRsi_date.reverse()
+        },
+        williams: {
+          value: williams[0],
+          rate: this.ratingTechnicalIndex('williams', { value: williams[0] }),
+          chart: williams_date.reverse()
+        },
+        macd: {
+          value: {
+            macd: macd[0].MACD,
+            signal: macd[0].signal
+          },
+          rate: this.ratingTechnicalIndex('macd', { macd: macd[0].MACD, signal: macd[0].signal }),
+          chart: macd_date.reverse()
+        },
+        adx: {
+          value: adx[0],
+          rate: this.ratingTechnicalIndex('adx', { adx: adx[0].adx, pdi: adx[0].pdi, mdi: adx[0].mdi }),
+          chart: adx_date.reverse()
+        },
+        macdHistogram: {
+          value: macd[0].histogram,
+          rate: this.ratingTechnicalIndex('macdHistogram', { histogramT: macd[0].histogram, histogramT1: macd[1].histogram }),
+          chart: macd_histogram_date.reverse()
         }
+      }
+
+      return {
+        ...chart,
+        table,
+        technicalSignal: this.countRate([chart.rsi.rate, chart.stochastic.rate, chart.cci.rate, chart.stochasticRsi.rate, chart.williams.rate, chart.macd.rate, chart.adx.rate, chart.macdHistogram.rate]),
+        trendSignal: this.countRate(table.map(item => [item.single, item.hat]).flat()),
+        generalSignal: this.countRate([chart.rsi.rate, chart.stochastic.rate, chart.cci.rate, chart.stochasticRsi.rate, chart.williams.rate, chart.macd.rate, chart.adx.rate, chart.macdHistogram.rate, ...table.map(item => [item.single, item.hat]).flat()])
       }
     } catch (e) {
       throw new CatchException(e)
     }
   }
 
-  ratingTechnicalIndex(name: 'rsi' | 'stochastic' | 'stochasticRsi' | 'macd' | 'macdHistogram' | 'adx' | 'williams' | 'cci',
-   o: { value?: number, d?: number, k?: number, macd?: number, signal?: number, histogramT?: number, histogramT1?: number, pdi?: number, mdi?: number, adx?: number }) {
+  ratingTechnicalIndex(name: 'ma' | 'rsi' | 'stochastic' | 'stochasticRsi' | 'macd' | 'macdHistogram' | 'adx' | 'williams' | 'cci',
+    o: { value?: number, d?: number, k?: number, macd?: number, signal?: number, histogramT?: number, histogramT1?: number, pdi?: number, mdi?: number, adx?: number, price?: number }) {
     //0 - Tích cực, 1 - Tiêu cực, 2 - Trung lập
     let rate = 0
     switch (name) {
@@ -2181,6 +2220,15 @@ select * from temp where date = (select max(date) from temp)
           rate = 2
         }
         break
+      case 'ma':
+        if (o.value > o.price) {
+          rate = 0
+        } else if (o.value < o.price) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
       default:
         break;
     }
@@ -2196,6 +2244,34 @@ select * from temp where date = (select max(date) from temp)
         break
       default:
         break;
+    }
+  }
+
+  countRate(str: string[]) {
+    let positive = 0
+    let negative = 0
+    let neutral = 0
+
+    str.forEach(item => {
+      switch (item) {
+        case 'Tích cực':
+          positive = positive + 1
+          break;
+        case 'Tiêu cực':
+          negative = negative + 1
+          break;
+        case 'Trung lập':
+          neutral = neutral + 1
+          break;
+        default:
+          break;
+      }
+    })
+
+    return {
+      positive,
+      negative,
+      neutral
     }
   }
 
