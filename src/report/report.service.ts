@@ -833,9 +833,9 @@ export class ReportService {
     }
   }
 
-  async saveMarketComment(text: string[]) {
+  async saveMarketComment(text: string[], img: string) {
     try {
-      await this.redis.set(RedisKeys.saveMarketComment, text, { ttl: TimeToLive.OneYear })
+      await this.redis.set(RedisKeys.saveMarketComment, {img, text}, { ttl: TimeToLive.OneYear })
     } catch (e) {
       throw new CatchException(e)
     }
@@ -1046,10 +1046,11 @@ export class ReportService {
               order by row_num asc
       `
       const data = await this.mssqlService.query(query)
+      const dataRedis: any = await this.redis.get(RedisKeys.saveMarketComment)
       return new AfterNoonReport2Response({
         table: data,
-        text: await this.redis.get(RedisKeys.saveMarketComment) || [],
-        image: await this.redis.get('image-report'),
+        text: dataRedis?.text || [],
+        image: dataRedis?.img || '',
       })
     } catch (e) {
       throw new CatchException(e)

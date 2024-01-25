@@ -224,23 +224,23 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
-  @Post('upload-image-report')
-  @UseInterceptors(AnyFilesInterceptor())
-  @ApiOperation({summary: 'Up hình report chiều trang 2', description: 'Truyền lên file jpg, tên gì cũng được'})
-  async uploadReportAfternoon(@UploadedFiles() file: any, @Res() res: Response){
-    try {
-      await this.reportService.uploadImageReport(file, 0)
-      return res.status(HttpStatus.OK).send(new BaseResponse({}))
-    } catch (error) {
-      throw new CatchException(error)
-    }
-  }
+  // @Post('upload-image-report')
+  // @UseInterceptors(AnyFilesInterceptor())
+  // @ApiOperation({summary: 'Up hình report chiều trang 2', description: 'Truyền lên file jpg, tên gì cũng được'})
+  // async uploadReportAfternoon(@UploadedFiles() file: any, @Res() res: Response){
+  //   try {
+  //     await this.reportService.uploadImageReport(file, 0)
+  //     return res.status(HttpStatus.OK).send(new BaseResponse({}))
+  //   } catch (error) {
+  //     throw new CatchException(error)
+  //   }
+  // }
 
   @ApiOperation({summary: 'Lưu nhận định thị trường bản tin chiều trang 2'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
   @Post('luu-nhan-dinh-thi-truong-chieu')
   async saveMarketComment(@Body() b: SaveMarketCommentDto, @Res() res: Response){
-    const data = await this.reportService.saveMarketComment(b.text)
+    const data = await this.reportService.saveMarketComment(b.text, b.img)
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 

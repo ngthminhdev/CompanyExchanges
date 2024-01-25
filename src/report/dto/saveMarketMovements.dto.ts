@@ -13,4 +13,9 @@ export class SaveMarketCommentDto {
         isArray: true
     })
     text: string[]
+
+    @ApiProperty({
+        type: String,
+    })
+    img: string
 }
