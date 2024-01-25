@@ -21,6 +21,7 @@ import { BuyingAndSellingStatisticsResponse } from './response/buyingAndSellingS
 import { EventResponse } from './response/event.response';
 import { ExchangeRateResponse } from './response/exchangeRate.response';
 import { ExchangeRateUSDEURResponse } from './response/exchangeRateUSDEUR.response';
+import { GetStockRecommendWeekResponse } from './response/getStockRecommendWeek.response';
 import { LiquidityMarketResponse } from './response/liquidityMarket.response';
 import { MerchandiseResponse } from './response/merchandise.response';
 import { MorningHoseResponse } from './response/morningHose.response';
@@ -383,16 +384,16 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
-  @ApiOperation({summary: 'Lưu danh sách cổ phiếu khuyến nghị bản tin tuần'})
-  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
-  @Post('luu-co-phieu-khuyen-nghi-tuan')
-  async saveStockRecommendWeek(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
-    const data = await this.reportService.saveStockRecommendWeek(b.value)
-    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
-  }
+  // @ApiOperation({summary: 'Lưu danh sách cổ phiếu khuyến nghị bản tin tuần'})
+  // @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  // @Post('luu-co-phieu-khuyen-nghi-tuan')
+  // async saveStockRecommendWeek(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
+  //   const data = await this.reportService.saveStockRecommendWeek(b.value)
+  //   return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  // }
 
   @ApiOperation({summary: 'Danh sách cổ phiếu khuyến nghị bản tin tuần'})
-  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @ApiOkResponse({status: HttpStatus.OK, type: GetStockRecommendWeekResponse})
   @Get('co-phieu-khuyen-nghi-tuan')
   async stockRecommendWeek(@Body() b: SaveStockRecommendWeekDto, @Res() res: Response){
     const data = await this.reportService.getStockRecommendWeek()

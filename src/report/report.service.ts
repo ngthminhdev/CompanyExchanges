@@ -35,6 +35,7 @@ import { TransactionValueFluctuationsResponse } from './response/transactionValu
 import { InterestRateResponse } from '../macro/responses/interest-rate.response'
 import { BuyingAndSellingStatisticsResponse } from './response/buyingAndSellingStatistics.response';
 import * as calTech from 'technicalindicators';
+import { GetStockRecommendWeekResponse } from './response/getStockRecommendWeek.response';
 
 @Injectable()
 export class ReportService {
@@ -1799,21 +1800,40 @@ select * from temp where date = (select max(date) from temp)
 
   async getStockRecommendWeek() {
     try {
-      const data: ISaveStockRecommendWeek[] = await this.redis.get(RedisKeys.saveStockRecommendWeek)
-      if (!data) return []
+      // const data: ISaveStockRecommendWeek[] = await this.redis.get(RedisKeys.saveStockRecommendWeek)
+      // if (!data) return []
 
-      const price: { price: number, code: string }[] = await this.mssqlService.query(`select closePrice as price, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')}) and date = (select max(date) from marketTrade.dbo.tickerTradeVND)`)
+      // const price: { price: number, code: string }[] = await this.mssqlService.query(`select closePrice as price, code from marketTrade.dbo.tickerTradeVND where code in (${data.map(item => `'${item.code}'`).join(', ')}) and date = (select max(date) from marketTrade.dbo.tickerTradeVND)`)
 
-      return data.map(item => {
-        const gia_thi_truong = (price.find(price => price.code == item.code)).price || 0
-        return {
-          ...item,
-          gia_thi_truong,
-          ty_suat_sinh_loi_ky_vong: (item.gia_muc_tieu / item.gia_khuyen_nghi - 1) * 100,
-          ty_suat_loi_nhuan: item.is_buy == 1 ? (gia_thi_truong * 1000 / item.gia_khuyen_nghi - 1) * 100 : 0,
-          ty_suat_sinh_loi_lo: item.gia_ban != 0 ? (item.gia_ban / item.gia_khuyen_nghi - 1) * 100 : 0
-        }
-      })
+      // return data.map(item => {
+      //   const gia_thi_truong = (price.find(price => price.code == item.code)).price || 0
+      //   return {
+      //     ...item,
+      //     gia_thi_truong,
+      //     ty_suat_sinh_loi_ky_vong: (item.gia_muc_tieu / item.gia_khuyen_nghi - 1) * 100,
+      //     ty_suat_loi_nhuan: item.is_buy == 1 ? (gia_thi_truong * 1000 / item.gia_khuyen_nghi - 1) * 100 : 0,
+      //     ty_suat_sinh_loi_lo: item.gia_ban != 0 ? (item.gia_ban / item.gia_khuyen_nghi - 1) * 100 : 0
+      //   }
+      // })
+
+      const query = `select code, date,
+      GiaKhuyenNghi as gia_khuyen_nghi,
+      GiaMucTieu as gia_muc_tieu,
+      GiaDungLo as gia_dung_lo,
+      TySuatSinhLoiKyVong as ty_suat_sinh_loi_ky_vong,
+      ThoiGianNamGiuDukien as thoi_gian_nam_giu_du_kien,
+      GhiChu as ghi_chu,
+      GiaThiTruong as gia_thi_truong,
+      TySuatloinhuan as ty_suat_loi_nhuan,
+      GiaBan as gia_ban,
+      TySuatSinhLoiLo as ty_suat_sinh_loi_lo,
+      ThoiGianNamGiu as thoi_gian_nam_giu,
+      GhiChu2 as ghi_chu_2
+      from PHANTICH.dbo.KhuyenNghiTuan`
+      const data = await this.mssqlService.query<GetStockRecommendWeekResponse[]>(query)
+
+      const dataMapped = GetStockRecommendWeekResponse.mapToList(data)
+      return dataMapped
 
     } catch (e) {
       throw new CatchException(e)
@@ -1924,17 +1944,19 @@ select * from temp where date = (select max(date) from temp)
 
   async priceFluctuationCorrelation(code: string) {
     try {
-      const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.tickerTradeVND where code = '${code}'`))[0].date).format('YYYY-MM-DD')
+      const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.historyTicker where code = '${code}'`))[0].date).format('YYYY-MM-DD')
       const year = moment(now).subtract(1, 'year').format('YYYY-MM-DD')
 
       const query = `
-      select perChange as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
+      with temp as (select perChange as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
       union all
       select perChange as value, date, code from marketTrade.dbo.tickerTradeVND where code = '${code}' and date between '${year}' and '${now}'
       union all
       select (closePrice - lead(closePrice) over (order by date desc)) / lead(closePrice) over (order by date desc) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
-      order by date asc, code asc
+      )
+      select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc
       `
+      
       const data = await this.mssqlService.query<InterestRateResponse[]>(query)
       data[0].value = data[1].value = data[2].value = 0
       return data.map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) || '' }))
