@@ -2036,24 +2036,25 @@ select * from temp where date = (select max(date) from temp)
     try {
       const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.historyTicker where code = '${code}'`))[0].date).format('YYYY-MM-DD')
       const year = moment(now).subtract(1, 'year').format('YYYY-MM-DD')
-
-      const basePriceTicker = (await this.mssqlService.query(`select top 1 closePrice from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
-      const basePriceIndex = (await this.mssqlService.query(`select top 1 closePrice from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
-      const basePriceIndustry = (await this.mssqlService.query(`select top 1 closePrice, date from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
-
-      const query = `
-      with temp as (select perChange as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
-      union all
-      select perChange as value, date, code from marketTrade.dbo.tickerTradeVND where code = '${code}' and date between '${year}' and '${now}'
-      union all
-      select (closePrice - lead(closePrice) over (order by date desc)) / lead(closePrice) over (order by date desc) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
-      )
-      select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc
-      `
-      console.log(query);
       
-      const data = await this.mssqlService.query<InterestRateResponse[]>(query)
-      data[0].value = data[1].value = data[2].value = 0
+      const query_2 = `
+      with base as (select closePrice, code from marketTrade.dbo.tickerTradeVND where date = '2022-12-30' and code = '${code}'
+      union
+      select closePrice, code from marketTrade.dbo.indexTradeVND where date = '2022-12-30' and code = 'VNINDEX'
+      union
+      select sum(t.closePrice) as closePrice, (select LV2 from marketInfor.dbo.info where code = '${code}') as code
+      from marketTrade.dbo.tickerTradeVND t
+      inner join marketInfor.dbo.info i on i.code = t.code
+      where date = '2022-12-30' and i.LV2 = (select LV2 from marketInfor.dbo.info where code = '${code}')),
+      temp as (select (closePrice - (select closePrice from base where code = '${code}')) / (select closePrice from base where code = '${code}') * 100 as value, date, code from marketTrade.dbo.tickerTradeVND where code = '${code}' and date between '${year}' and '${now}'
+            union all
+            select (closePrice - (select closePrice from base where code = 'VNINDEX')) / (select closePrice from base where code = 'VNINDEX') * 100 as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
+            union all
+            select (closePrice - (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}'))) / (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}')) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
+            )
+            select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc`
+      
+      const data = await this.mssqlService.query<InterestRateResponse[]>(query_2)
       return data.map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) || '' }))
     } catch (e) {
       throw new CatchException(e)
