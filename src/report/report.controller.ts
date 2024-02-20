@@ -445,6 +445,14 @@ export class ReportController {
     return res.status(HttpStatus.OK).send(new BaseResponse({data}))
   }
 
+  @ApiOperation({summary: 'Thống kê lệnh mua bán chủ động'})
+  @ApiOkResponse({status: HttpStatus.OK, type: BuyingAndSellingStatisticsResponse})
+  @Get('thong-ke-lenh-mua-ban')
+  async buyingAndSellingStatistics(@Query() b: StockDto, @Res() res: Response){
+    const data = await this.reportService.buyingAndSellingStatistics(b.stock.toUpperCase())
+    return res.status(HttpStatus.OK).send(new BaseResponse({data}))
+  }
+
   @ApiOperation({summary: 'Chỉ số kỹ thuật'})
   @ApiOkResponse({status: HttpStatus.OK, type: TechnicalIndexResponse})
   @Get('chi-so-ky-thuat')
