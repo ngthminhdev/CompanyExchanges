@@ -1755,7 +1755,7 @@ select * from temp where date = (select max(date) from temp)
         name + ' (' + unit + ')' AS name,
         price as value
       FROM macroEconomic.dbo.HangHoa
-      WHERE name IN (N'Dầu Brent', N'Khí Gas', N'Đồng', N'Vàng', N'Thép HRC', N'Thép', N'Bông', N'Đường', N'Cao su', N'Ure')
+      WHERE name IN (N'Dầu Brent', N'Khí Gas')
       AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
       SELECT
         *
@@ -1764,9 +1764,91 @@ select * from temp where date = (select max(date) from temp)
         date
       FROM temp
       GROUP BY date
-      HAVING COUNT(date) = 10)
+      HAVING COUNT(date) = 2)
       ORDER BY date, name
       `
+
+      const query_1 = `
+      WITH temp
+      AS (SELECT
+        date,
+        name + ' (' + unit + ')' AS name,
+        price as value
+      FROM macroEconomic.dbo.HangHoa
+      WHERE name IN (N'Đồng', N'Vàng')
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 2)
+      ORDER BY date, name
+      `
+      
+      const query_3 = `
+      WITH temp
+      AS (SELECT
+        date,
+        name + ' (' + unit + ')' AS name,
+        price as value
+      FROM macroEconomic.dbo.HangHoa
+      WHERE name IN (N'Thép HRC', N'Thép')
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 2)
+      ORDER BY date, name
+      `
+
+      const query_4 = `
+      WITH temp
+      AS (SELECT
+        date,
+        name + ' (' + unit + ')' AS name,
+        price as value
+      FROM macroEconomic.dbo.HangHoa
+      WHERE name IN (N'Bông', N'Đường')
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 2)
+      ORDER BY date, name
+      `
+
+      const query_5 = `
+      WITH temp
+      AS (SELECT
+        date,
+        name + ' (' + unit + ')' AS name,
+        price as value
+      FROM macroEconomic.dbo.HangHoa
+      WHERE name IN (N'Cao su', N'Ure')
+      AND date BETWEEN '${moment().subtract(1, 'year').format('YYYY-MM-DD')}' AND '${moment().format('YYYY-MM-DD')}')
+      SELECT
+        *
+      FROM temp
+      WHERE date IN (SELECT
+        date
+      FROM temp
+      GROUP BY date
+      HAVING COUNT(date) = 2)
+      ORDER BY date, name
+      `
+
+
 
       const query_2 = `
       WITH temp
@@ -1787,12 +1869,19 @@ select * from temp where date = (select max(date) from temp)
       HAVING COUNT(date) = 2)
       ORDER BY date, name
       `
-      const [data, data_1] = await Promise.all([this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2)])
+      const [data, data_2, data_1, data_3, data_4, data_5] = await Promise.all([
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), 
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2),
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_1),
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_3),
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_4),
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_5),
+      ])
       // return {
       //   data_0: data.filter(item => item.name.includes('Dầu Brent') || item.name.includes('Khí Gas'))
       // }
 
-      return ExchangeRateUSDEURResponse.mapToListV2([...data, ...data_1])
+      return ExchangeRateUSDEURResponse.mapToListV2([...data, ...data_2, ...data_1, ...data_3, ...data_4, ...data_5])
 
     } catch (e) {
       throw new CatchException(e)
@@ -1948,6 +2037,10 @@ select * from temp where date = (select max(date) from temp)
       const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.historyTicker where code = '${code}'`))[0].date).format('YYYY-MM-DD')
       const year = moment(now).subtract(1, 'year').format('YYYY-MM-DD')
 
+      const basePriceTicker = (await this.mssqlService.query(`select top 1 closePrice from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
+      const basePriceIndex = (await this.mssqlService.query(`select top 1 closePrice from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
+      const basePriceIndustry = (await this.mssqlService.query(`select top 1 closePrice, date from marketTrade.dbo.tickerTradeVND where code = '${code}' and date <= '2023-12-31' order by date desc`))[0].closePrice
+
       const query = `
       with temp as (select perChange as value, date, code from marketTrade.dbo.indexTradeVND where code = 'VNINDEX' and date between '${year}' and '${now}'
       union all
@@ -1957,6 +2050,7 @@ select * from temp where date = (select max(date) from temp)
       )
       select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc
       `
+      console.log(query);
       
       const data = await this.mssqlService.query<InterestRateResponse[]>(query)
       data[0].value = data[1].value = data[2].value = 0
@@ -2015,6 +2109,7 @@ select * from temp where date = (select max(date) from temp)
         *
       FROM temp) AS source PIVOT (SUM(closePrice) FOR date IN (${pivot})) AS chuyen
       `
+      
 
       const data = await this.mssqlService.query(query)
       return data
