@@ -2059,7 +2059,7 @@ select * from temp where date = (select max(date) from temp)
       const [data, data_redis] = await Promise.all([this.mssqlService.query(query) as any, this.redis.get(RedisKeys.reportTechnical) as any]) 
 
       return {
-        ...data,
+        ...data[0],
         text: data_redis?.text || [],
         table: data_redis?.table || [],
         img: data_redis?.img || '',
