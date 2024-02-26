@@ -24,10 +24,10 @@ export class SetInfoReportTechnicalDto {
     img: any
 
     @ApiProperty({
-        type: Number,
+        type: String,
         description: 'Khuyến nghị mua hoặc bán'
     })
-    is_sell: number
+    is_sell: string
 
     @ApiProperty({
         type: Number
