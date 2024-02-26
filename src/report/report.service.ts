@@ -36,6 +36,8 @@ import { InterestRateResponse } from '../macro/responses/interest-rate.response'
 import { BuyingAndSellingStatisticsResponse } from './response/buyingAndSellingStatistics.response';
 import * as calTech from 'technicalindicators';
 import { GetStockRecommendWeekResponse } from './response/getStockRecommendWeek.response';
+import { Time } from 'mssql';
+import { SetInfoReportTechnicalDto } from './dto/setInfoReportTechnical.dto';
 
 @Injectable()
 export class ReportService {
@@ -835,7 +837,7 @@ export class ReportService {
 
   async saveMarketComment(text: string[], img: string) {
     try {
-      await this.redis.set(RedisKeys.saveMarketComment, {img, text}, { ttl: TimeToLive.OneYear })
+      await this.redis.set(RedisKeys.saveMarketComment, { img, text }, { ttl: TimeToLive.OneYear })
     } catch (e) {
       throw new CatchException(e)
     }
@@ -1482,6 +1484,35 @@ select * from temp where date = (select max(date) from temp)
         AND t.date = v.date
       ORDER BY t.point DESC
       `)
+      console.log(`
+      WITH temp
+      AS (SELECT
+        SUM(c.point) AS point,
+        symbol AS code,
+        '${now.to}' AS date
+      FROM WEBSITE_SERVER.dbo.CPAH c
+      WHERE date BETWEEN '${now.from}' AND '${now.to}'
+      AND c.floor = 'HSX'
+      GROUP BY symbol),
+      price
+      AS (SELECT
+        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS perChange,
+        code,
+        date
+      FROM marketTrade.dbo.tickerTradeVND
+      WHERE date IN ('${moment(date[0].week).format('YYYY-MM-DD')}', '${moment(date[0].now).format('YYYY-MM-DD')}')
+      AND floor = 'HOSE')
+      SELECT
+        t.point,
+        t.code,
+        v.perChange
+      FROM temp t
+      INNER JOIN price v
+        ON t.code = v.code
+        AND t.date = v.date
+      ORDER BY t.point DESC
+      `);
+
 
       //tong gtgd
       const promise_4 = this.mssqlService.query(`
@@ -1787,7 +1818,7 @@ select * from temp where date = (select max(date) from temp)
       HAVING COUNT(date) = 2)
       ORDER BY date, name
       `
-      
+
       const query_3 = `
       WITH temp
       AS (SELECT
@@ -1870,7 +1901,7 @@ select * from temp where date = (select max(date) from temp)
       ORDER BY date, name
       `
       const [data, data_2, data_1, data_3, data_4, data_5] = await Promise.all([
-        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query), 
+        this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query),
         this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_2),
         this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_1),
         this.mssqlService.query<ExchangeRateUSDEURResponse[]>(query_3),
@@ -2025,8 +2056,19 @@ select * from temp where date = (select max(date) from temp)
       FROM RATIO.dbo.ratioInday
       WHERE code = '${code}')
       `
-      const data = await this.mssqlService.query(query)
-      return data
+      const [data, data_redis] = await Promise.all([this.mssqlService.query(query) as any, this.redis.get(RedisKeys.reportTechnical) as any]) 
+
+      return {
+        ...data,
+        text: data_redis?.text || [],
+        table: data_redis?.table || [],
+        img: data_redis?.img || '',
+        is_sell: data_redis?.is_sell || 0,
+        gia_muc_tieu: data_redis?.gia_muc_tieu || 0,
+        gia_thi_truong: data_redis?.gia_thi_truong || 0,
+        loi_nhuan_ky_vong: data_redis?.loi_nhuan_ky_vong || 0,
+        gia_ban_dung_lo: data_redis?.gia_ban_dung_lo || 0,
+      }
     } catch (e) {
       throw new CatchException(e)
     }
@@ -2036,7 +2078,7 @@ select * from temp where date = (select max(date) from temp)
     try {
       const now = moment((await this.mssqlService.query(`select max(date) as date from marketTrade.dbo.historyTicker where code = '${code}'`))[0].date).format('YYYY-MM-DD')
       const year = moment(now).subtract(1, 'year').format('YYYY-MM-DD')
-      
+
       const query_2 = `
       with base as (select closePrice, code from marketTrade.dbo.tickerTradeVND where date = '2022-12-30' and code = '${code}'
       union
@@ -2053,7 +2095,7 @@ select * from temp where date = (select max(date) from temp)
             select (closePrice - (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}'))) / (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}')) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
             )
             select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc`
-      
+
       const data = await this.mssqlService.query<InterestRateResponse[]>(query_2)
       return data.map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) || '' }))
     } catch (e) {
@@ -2110,7 +2152,7 @@ select * from temp where date = (select max(date) from temp)
         *
       FROM temp) AS source PIVOT (SUM(closePrice) FOR date IN (${pivot})) AS chuyen
       `
-      
+
 
       const data = await this.mssqlService.query(query)
       return data
@@ -2422,6 +2464,18 @@ select * from temp where date = (select max(date) from temp)
         yearDate: date[0].year,
         firstDateYear: date[0].ytd
       }
+    } catch (e) {
+      throw new CatchException(e)
+    }
+  }
+
+  async setInfoReportTechnical(value: SetInfoReportTechnicalDto){
+    try {
+      await this.minio.put(`resources`, `report/technical/${value.img.originalname}`, value.img.buffer, {
+        'Content-Type': value.img.mimetype,
+        'X-Amz-Meta-Testing': 1234,
+      })
+      await this.redis.set(`${RedisKeys.reportTechnical}:${value.code}`, {...value, img: `/resources/report/technical/${value.img.originalname}`}, {ttl: TimeToLive.OneWeek})
     } catch (e) {
       throw new CatchException(e)
     }

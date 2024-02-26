@@ -13,6 +13,7 @@ import { SaveNewsDto } from './dto/save-news.dto';
 import { SaveMarketCommentDto } from './dto/saveMarketMovements.dto';
 import { SaveStockRecommendWeekDto } from './dto/saveStockRecommendWeek.dto';
 import { SetFlexiblePageDto } from './dto/setFlexiblePage.dto';
+import { SetInfoReportTechnicalDto } from './dto/setInfoReportTechnical.dto';
 import { StockMarketDto } from './dto/stockMarket.dto';
 import { TopNetBuyingAndSellingDto } from './dto/topNetBuyingAndSelling.dto';
 import { ReportService } from './report.service';
@@ -420,6 +421,14 @@ export class ReportController {
   /**
    * Báo cáo phân tích kỹ thuật
    */
+  @FormDataRequest()
+  @ApiOperation({summary: 'Lưu thông tin báo cáo phân tích kỹ thuật'})
+  @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})
+  @Post('luu-thong-tin-bao-cao-ky-thuat')
+  async setInfoReportTechnical(@Body() b: SetInfoReportTechnicalDto, @Res() res: Response){
+    await this.reportService.setInfoReportTechnical(b)
+    return res.status(HttpStatus.OK).send(new BaseResponse({}))
+  }
 
   @ApiOperation({summary: 'Thông tin cổ phiếu'})
   @ApiOkResponse({status: HttpStatus.OK, type: NewsInternationalResponse})

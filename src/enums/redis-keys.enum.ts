@@ -221,5 +221,8 @@ export enum RedisKeys {
   weekNewsDomestic = 'week-news-domestic',
   weekNewsDomesticNotFilter = 'week-news-domestic-not-filter',
   saveStockRecommendWeek = 'save-stock-recommend-week',
-  flexiblePage = 'flexible-page-week'
+  flexiblePage = 'flexible-page-week',
+
+  //Báo cáo phân tích kỹ thuật
+  reportTechnical = 'report-technical'
 }
