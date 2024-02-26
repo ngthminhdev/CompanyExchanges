@@ -2063,7 +2063,7 @@ select * from temp where date = (select max(date) from temp)
         text: data_redis?.text || [],
         table: data_redis?.table || [],
         img: data_redis?.img || '',
-        is_sell: data_redis?.is_sell || 0,
+        is_sell: data_redis?.is_sell || '',
         gia_muc_tieu: data_redis?.gia_muc_tieu || 0,
         gia_thi_truong: data_redis?.gia_thi_truong || 0,
         loi_nhuan_ky_vong: data_redis?.loi_nhuan_ky_vong || 0,
