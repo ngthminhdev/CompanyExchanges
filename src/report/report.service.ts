@@ -2027,7 +2027,7 @@ select * from temp where date = (select max(date) from temp)
       FROM RATIO.dbo.ratioInday
       WHERE code = '${code}')
       `
-      const [data, data_redis] = await Promise.all([this.mssqlService.query(query) as any, this.redis.get(RedisKeys.reportTechnical) as any]) 
+      const [data, data_redis] = await Promise.all([this.mssqlService.query(query) as any, this.redis.get(RedisKeys.reportTechnical) as any])
 
       return {
         ...data[0],
@@ -2192,6 +2192,12 @@ select * from temp where date = (select max(date) from temp)
         }
       })
 
+      table.push({
+        name: `SAR`,
+        single: this.ratingTechnicalIndex('sar', { value: sar[sar.length - 1], price: lastPrice }),
+        hat: ''
+      })
+
       const rsi_date = []
       const cci_date = []
       const williams_date = []
@@ -2275,7 +2281,7 @@ select * from temp where date = (select max(date) from temp)
     }
   }
 
-  ratingTechnicalIndex(name: 'ma' | 'rsi' | 'stochastic' | 'stochasticRsi' | 'macd' | 'macdHistogram' | 'adx' | 'williams' | 'cci',
+  ratingTechnicalIndex(name: 'ma' | 'rsi' | 'stochastic' | 'stochasticRsi' | 'macd' | 'macdHistogram' | 'adx' | 'williams' | 'cci' | 'sar',
     o: { value?: number, d?: number, k?: number, macd?: number, signal?: number, histogramT?: number, histogramT1?: number, pdi?: number, mdi?: number, adx?: number, price?: number }) {
     //0 - Tích cực, 1 - Tiêu cực, 2 - Trung lập
     let rate = 0
@@ -2361,6 +2367,15 @@ select * from temp where date = (select max(date) from temp)
           rate = 2
         }
         break
+      case 'sar':
+        if (o.value < o.price) {
+          rate = 0
+        } else if (o.value > o.price) {
+          rate = 1
+        } else {
+          rate = 2
+        }
+        break
       default:
         break;
     }
@@ -2440,13 +2455,13 @@ select * from temp where date = (select max(date) from temp)
     }
   }
 
-  async setInfoReportTechnical(value: SetInfoReportTechnicalDto){
+  async setInfoReportTechnical(value: SetInfoReportTechnicalDto) {
     try {
       await this.minio.put(`resources`, `report/technical/${value.img.originalname}`, value.img.buffer, {
         'Content-Type': value.img.mimetype,
         'X-Amz-Meta-Testing': 1234,
       })
-      await this.redis.set(`${RedisKeys.reportTechnical}:${value.code}`, {...value, img: `/resources/report/technical/${value.img.originalname}`}, {ttl: TimeToLive.OneWeek})
+      await this.redis.set(`${RedisKeys.reportTechnical}:${value.code}`, { ...value, img: `/resources/report/technical/${value.img.originalname}` }, { ttl: TimeToLive.OneWeek })
     } catch (e) {
       throw new CatchException(e)
     }
