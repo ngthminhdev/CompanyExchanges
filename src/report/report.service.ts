@@ -2208,7 +2208,7 @@ select * from temp where date = (select max(date) from temp)
         williams_date.push({ value: williams[index], date })
         adx_date.push({ ...adx[index], date })
         stochastic_date.push({ ...stochastic[index], date })
-        stochasticRsi_date.push({ k: stochasticRsi[0].k, d: stochasticRsi[0].d, date })
+        stochasticRsi_date.push({ k: stochasticRsi[index].k, d: stochasticRsi[index].d, date })
         macd_date.push({ k: macd[index].MACD, d: macd[index].signal, date })
         macd_histogram_date.push({ value: macd[index].histogram, date })
       }
