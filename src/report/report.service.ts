@@ -1484,35 +1484,6 @@ select * from temp where date = (select max(date) from temp)
         AND t.date = v.date
       ORDER BY t.point DESC
       `)
-      console.log(`
-      WITH temp
-      AS (SELECT
-        SUM(c.point) AS point,
-        symbol AS code,
-        '${now.to}' AS date
-      FROM WEBSITE_SERVER.dbo.CPAH c
-      WHERE date BETWEEN '${now.from}' AND '${now.to}'
-      AND c.floor = 'HSX'
-      GROUP BY symbol),
-      price
-      AS (SELECT
-        (closePrice - LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC)) / LEAD(closePrice) OVER (PARTITION BY code ORDER BY date DESC) * 100 AS perChange,
-        code,
-        date
-      FROM marketTrade.dbo.tickerTradeVND
-      WHERE date IN ('${moment(date[0].week).format('YYYY-MM-DD')}', '${moment(date[0].now).format('YYYY-MM-DD')}')
-      AND floor = 'HOSE')
-      SELECT
-        t.point,
-        t.code,
-        v.perChange
-      FROM temp t
-      INNER JOIN price v
-        ON t.code = v.code
-        AND t.date = v.date
-      ORDER BY t.point DESC
-      `);
-
 
       //tong gtgd
       const promise_4 = this.mssqlService.query(`
@@ -2238,7 +2209,7 @@ select * from temp where date = (select max(date) from temp)
         adx_date.push({ ...adx[index], date })
         stochastic_date.push({ ...stochastic[index], date })
         stochasticRsi_date.push({ k: stochasticRsi[0].k, d: stochasticRsi[0].d, date })
-        macd_date.push({ macd: macd[index].MACD, signal: macd[index].signal, date })
+        macd_date.push({ k: macd[index].MACD, d: macd[index].signal, date })
         macd_histogram_date.push({ value: macd[index].histogram, date })
       }
       )
