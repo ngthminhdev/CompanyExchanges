@@ -1921,7 +1921,9 @@ select * from temp where date = (select max(date) from temp)
       TySuatSinhLoiLo as ty_suat_sinh_loi_lo,
       ThoiGianNamGiu as thoi_gian_nam_giu,
       GhiChu2 as ghi_chu_2
-      from PHANTICH.dbo.KhuyenNghiTuan`
+      from PHANTICH.dbo.KhuyenNghiTuan
+      order by date asc
+      `
       const data = await this.mssqlService.query<GetStockRecommendWeekResponse[]>(query)
 
       const dataMapped = GetStockRecommendWeekResponse.mapToList(data)
@@ -2065,8 +2067,7 @@ select * from temp where date = (select max(date) from temp)
             union all
             select (closePrice - (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}'))) / (select closePrice from base where code = (select LV2 from marketInfor.dbo.info where code = '${code}')) * 100 as value, date, code from marketTrade.dbo.inDusTrade where code = (select LV2 from marketInfor.dbo.info where code = '${code}') and floor = 'ALL' and date between '${year}' and '${now}'
             )
-            select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc`
-
+            select * from temp where date not in (select date from temp group by date having count(date) < 3) order by date asc, code desc` 
       const data = await this.mssqlService.query<InterestRateResponse[]>(query_2)
       return data.map(item => ({ ...item, date: UtilCommonTemplate.toDate(item.date) || '' }))
     } catch (e) {
@@ -2123,8 +2124,6 @@ select * from temp where date = (select max(date) from temp)
         *
       FROM temp) AS source PIVOT (SUM(closePrice) FOR date IN (${pivot})) AS chuyen
       `
-
-
       const data = await this.mssqlService.query(query)
       return data
     } catch (e) {
@@ -2183,7 +2182,7 @@ select * from temp where date = (select max(date) from temp)
 
       const table = arr.map(item => {
         const ma = calTech.sma({ period: item, values: price })
-        const ema = calTech.ema({ period: item, values: price })
+        const ema = calTech.ema({ period: item, values: price })  
 
         return {
           name: `MA${item}`,
