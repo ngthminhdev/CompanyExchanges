@@ -2359,9 +2359,9 @@ select * from temp where date = (select max(date) from temp)
         break
       case 'ma':
         if (o.value > o.price) {
-          rate = 0
-        } else if (o.value < o.price) {
           rate = 1
+        } else if (o.value < o.price) {
+          rate = 0
         } else {
           rate = 2
         }
